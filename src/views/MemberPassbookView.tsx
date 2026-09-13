@@ -26,9 +26,21 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   const [showBuySharesModal, setShowBuySharesModal] = useState(false);
   const [sharesToBuy, setSharesToBuy] = useState(2);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
+  const [memberQuery, setMemberQuery] = useState('');
 
   const t = getTranslations(language);
   const member = selectedMember || members[0];
+
+  const visibleMembers = memberQuery.trim()
+    ? members.filter((m) => {
+        const q = memberQuery.trim().toLowerCase();
+        return (
+          m.name.toLowerCase().includes(q) ||
+          m.no.includes(q) ||
+          (m.phone || '').replace(/[\s-]/g, '').includes(q.replace(/[\s-]/g, ''))
+        );
+      })
+    : members;
 
   const handleCashRepaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,8 +106,21 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
         <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-1">
           {t.passbook.selectMember}
         </label>
+        <div className="relative mb-2">
+          <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">
+            search
+          </span>
+          <input
+            type="search"
+            value={memberQuery}
+            onChange={(e) => setMemberQuery(e.target.value)}
+            placeholder={t.common.search}
+            aria-label={t.passbook.selectMember}
+            className="w-full min-h-[42px] pl-9 pr-3 bg-surface-card border border-border-line rounded-lg text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary"
+          />
+        </div>
         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {members.map((m) => {
+          {visibleMembers.map((m) => {
             const isSelected = m.id === member.id;
             return (
               <button
@@ -113,6 +138,9 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
               </button>
             );
           })}
+          {visibleMembers.length === 0 && (
+            <span className="text-xs text-text-muted py-1.5">—</span>
+          )}
         </div>
       </div>
 

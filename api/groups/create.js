@@ -1,19 +1,18 @@
+import { cors, createGroupSchema, rateLimit, validate } from '../_lib.js';
+
 export default function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-group-id');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!cors(req, res, 'POST,OPTIONS')) return;
+  if (!rateLimit(req, res, { limit: 10, windowMs: 60000 })) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const input = validate(createGroupSchema, req.body || {}, res);
+  if (!input) return;
 
   const {
     name, boxIdentifier, location, meetingDay, sharePrice,
     welfareMonthly, cycleDurationMonths, adminName, adminPhone,
     adminProvider, adminPin, plan,
-  } = req.body || {};
-
-  if (!name || !adminName || !adminPhone) {
-    return res.status(400).json({ error: 'Group name, secretary/admin name, and phone are required' });
-  }
+  } = input;
 
   const cleanSlug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 16);
   const groupId = `grp-${cleanSlug}-${Date.now().toString(36).slice(-4)}`;

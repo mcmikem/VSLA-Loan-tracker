@@ -1,10 +1,9 @@
 import { getSeedForGroup, resolveGroupId } from './_seed.js';
+import { cors, rateLimit, stateSchema, validate } from './_lib.js';
 
 export default function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-group-id');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!cors(req, res, 'GET,POST,OPTIONS')) return;
+  if (!rateLimit(req, res, { limit: 120, windowMs: 60000 })) return;
 
   const groupId = resolveGroupId(req);
 
@@ -15,10 +14,9 @@ export default function handler(req, res) {
 
   if (req.method === 'POST') {
     const payload = req.body || {};
-    const nextState = payload.state || payload;
-    if (!nextState || typeof nextState !== 'object' || Array.isArray(nextState)) {
-      return res.status(400).json({ error: 'Invalid state object' });
-    }
+    const raw = payload.state || payload;
+    const nextState = validate(stateSchema, raw, res);
+    if (!nextState) return;
     nextState.groupId = groupId;
     nextState.lastBackupDate = new Date().toISOString();
     // Stateless: echo back. Browser localStorage is the source of truth on Vercel.

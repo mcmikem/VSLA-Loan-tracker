@@ -1,16 +1,14 @@
 import { getBakwataSeed, getKibuliSeed } from '../_seed.js';
+import { cors, joinGroupSchema, rateLimit, validate } from '../_lib.js';
 
 export default function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-group-id');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!cors(req, res, 'POST,OPTIONS')) return;
+  if (!rateLimit(req, res, { limit: 20, windowMs: 60000 })) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { inviteCode, memberName, phone, provider, nationalId, pin } = req.body || {};
-  if (!inviteCode || !memberName || !phone) {
-    return res.status(400).json({ error: 'Invite code, member name, and phone are required' });
-  }
+  const input = validate(joinGroupSchema, req.body || {}, res);
+  if (!input) return;
+  const { inviteCode, memberName, phone, provider, nationalId, pin } = input;
 
   const code = String(inviteCode).trim().toUpperCase();
   const known = [getBakwataSeed(), getKibuliSeed()];
