@@ -18,7 +18,8 @@ export type ScreenId =
   | 'legal'
   | 'reports'
   | 'about'
-  | 'help';
+  | 'help'
+  | 'shop';
 
 export interface ApprovalItem {
   id: string;
@@ -111,6 +112,38 @@ export interface WelfareGrant {
   date: string;
   minutesRef: string;
   type: 'medical' | 'bereavement' | 'other';
+}
+
+export interface ShopProduct {
+  id: string;
+  name: string;
+  sellerType: 'group' | 'member';
+  sellerName?: string;
+  costPrice: number;
+  salePrice: number;
+  stockQty: number;
+  soldQty: number;
+  unit: string;
+}
+
+export interface ProductSale {
+  id: string;
+  productId: string;
+  productName: string;
+  sellerType: 'group' | 'member';
+  qty: number;
+  unitPrice: number;
+  costAtSale: number;
+  buyer: string;
+  method: 'cash' | 'momo';
+  timestamp: string;
+}
+
+export interface ProductExpense {
+  id: string;
+  label: string;
+  amount: number;
+  timestamp: string;
 }
 
 export interface BackupSnapshot {
@@ -229,6 +262,9 @@ export interface VSLAState {
   approvals: ApprovalItem[];
   fines: PendingFine[];
   welfareGrants: WelfareGrant[];
+  products?: ShopProduct[];
+  productSales?: ProductSale[];
+  productExpenses?: ProductExpense[];
   recentMeetingsCount: number;
   lastBackupDate: string;
   snapshots: BackupSnapshot[];

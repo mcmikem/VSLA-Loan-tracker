@@ -531,6 +531,12 @@ export const DEFAULT_INITIAL_STATE = {
   currentUser: SEED_ACCOUNTS[0],
   availableAccounts: SEED_ACCOUNTS,
   activePreset: 'meeting_close',
+  products: [
+    { id: 'p1', name: 'Maize Flour (Group Stock)', sellerType: 'group', costPrice: 8000, salePrice: 10000, stockQty: 40, soldQty: 6, unit: 'kg' },
+    { id: 'p2', name: 'Dried Fish', sellerType: 'member', sellerName: 'Sarah Nabukalu', costPrice: 5000, salePrice: 7000, stockQty: 20, soldQty: 0, unit: 'pcs' },
+  ],
+  productSales: [],
+  productExpenses: [],
   snapshots: [
     {
       id: 'snap-seed',

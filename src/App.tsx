@@ -33,6 +33,7 @@ import { ConstitutionFinesView } from './views/ConstitutionFinesView';
 import { BackupAuditView } from './views/BackupAuditView';
 import { LegalView } from './views/LegalView';
 import { MeetingWizardView } from './views/MeetingWizardView';
+import { ShopView, NewProductInput, SaleInput } from './views/ShopView';
 import { ReportsView, LATE_FINE_AMOUNT } from './views/ReportsView';
 import { AboutView } from './views/AboutView';
 import { HelpView } from './views/HelpView';
@@ -806,7 +807,6 @@ export function App() {
 
   // ---- Meeting wizard bulk commits (single state write each) ----
   const wizardSharePrice = vslaState.groupProfile?.sharePrice || 10000;
-
   const handleWizardShares = (items: { memberId: string; shares: number }[]) => {
     const map = new Map(items.map((i) => [i.memberId, Math.min(5, Math.max(0, i.shares))]));
     let total = 0;
@@ -957,6 +957,51 @@ export function App() {
     );
   };
 
+  const handleWizardSales = (items: { productId: string; qty: number; unitPrice: number; buyer: string }[]) => {
+    const products = vslaState.products || [];
+    let revenue = 0;
+    let profit = 0;
+    const sales: any[] = [];
+    const updatedProducts = products.map((p) => {
+      const item = items.find((i) => i.productId === p.id);
+      if (!item || p.sellerType !== 'group') return p;
+      const qty = Math.min(Math.max(0, Math.floor(item.qty)), p.stockQty);
+      if (qty <= 0) return p;
+      const rev = qty * item.unitPrice;
+      revenue += rev;
+      profit += (item.unitPrice - p.costPrice) * qty;
+      sales.push({
+        id: 'sale-' + Date.now().toString(36) + '-' + p.id,
+        productId: p.id,
+        productName: p.name,
+        sellerType: 'group',
+        qty,
+        unitPrice: item.unitPrice,
+        costAtSale: p.costPrice,
+        buyer: item.buyer,
+        method: 'cash',
+        timestamp: new Date().toISOString(),
+      });
+      return { ...p, stockQty: p.stockQty - qty, soldQty: p.soldQty + qty };
+    });
+    if (sales.length === 0) return;
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          products: updatedProducts,
+          productSales: [...sales, ...(vslaState.productSales || [])],
+          boxCashBalance: vslaState.boxCashBalance + revenue,
+          loanFundBalance: vslaState.loanFundBalance + profit,
+        },
+        currentUser.name,
+        `Wizard: meeting sales (${sales.length} product(s))`,
+        `Meeting #${vslaState.recentMeetingsCount + 1} · revenue UGX ${revenue.toLocaleString()}`,
+        revenue
+      )
+    );
+  };
+
   const handleRequestWelfarePayout = (memberId: string, amount: number, reason: string) => {
     const member = vslaState.members.find((m) => m.id === memberId) || vslaState.members[0];
     const payout: ApprovalItem = {
@@ -1007,6 +1052,104 @@ export function App() {
       meetingRef: `Meeting #${vslaState.recentMeetingsCount}`,
       status: 'pending',
     });
+  };
+
+  // ---- Shop / marketplace ----
+  const handleAddProduct = (input: NewProductInput): string | null => {
+    if (!input.name) return 'Give the product a name.';
+    if (input.costPrice < 0 || input.salePrice <= 0) return 'Set a valid cost and sale price.';
+    if (input.stockQty <= 0) return 'Stock quantity must be at least 1.';
+    const stockCost = input.costPrice * input.stockQty;
+    if (input.sellerType === 'group' && stockCost > vslaState.boxCashBalance) {
+      return `Not enough box cash (UGX ${vslaState.boxCashBalance.toLocaleString()} < UGX ${stockCost.toLocaleString()}).`;
+    }
+    const product = {
+      id: 'prod-' + Date.now().toString(36),
+      name: input.name,
+      sellerType: input.sellerType,
+      sellerName: input.sellerName,
+      costPrice: input.costPrice,
+      salePrice: input.salePrice,
+      stockQty: input.stockQty,
+      soldQty: 0,
+      unit: input.unit,
+    };
+    const expense = input.sellerType === 'group'
+      ? [{ id: 'exp-' + Date.now().toString(36), label: `Stock purchase: ${input.name} × ${input.stockQty}`, amount: stockCost, timestamp: new Date().toISOString() }, ...(vslaState.productExpenses || [])]
+      : vslaState.productExpenses || [];
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          products: [...(vslaState.products || []), product],
+          productExpenses: expense,
+          boxCashBalance: input.sellerType === 'group' ? vslaState.boxCashBalance - stockCost : vslaState.boxCashBalance,
+        },
+        currentUser.name,
+        input.sellerType === 'group' ? `Bought group stock: ${input.name} × ${input.stockQty}` : `Listed member business: ${input.name}`,
+        input.sellerType === 'group' ? `Cost UGX ${stockCost.toLocaleString()} from box cash` : (input.sellerName || ''),
+        input.sellerType === 'group' ? stockCost : undefined
+      )
+    );
+    return null;
+  };
+
+  const handleSellProduct = (sale: SaleInput) => {
+    const product = (vslaState.products || []).find((p) => p.id === sale.productId);
+    if (!product) return;
+    const qty = Math.min(Math.max(0, Math.floor(sale.qty)), product.stockQty);
+    if (qty <= 0) return;
+    const revenue = qty * sale.unitPrice;
+    const profit = (sale.unitPrice - product.costPrice) * qty;
+    const isGroup = product.sellerType === 'group';
+    const updatedProducts = (vslaState.products || []).map((p) =>
+      p.id === product.id ? { ...p, stockQty: p.stockQty - qty, soldQty: p.soldQty + qty } : p
+    );
+    const record = {
+      id: 'sale-' + Date.now().toString(36),
+      productId: product.id,
+      productName: product.name,
+      sellerType: product.sellerType,
+      qty,
+      unitPrice: sale.unitPrice,
+      costAtSale: product.costPrice,
+      buyer: sale.buyer,
+      method: sale.method,
+      timestamp: new Date().toISOString(),
+    };
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          products: updatedProducts,
+          productSales: [record, ...(vslaState.productSales || [])],
+          boxCashBalance: isGroup ? vslaState.boxCashBalance + revenue : vslaState.boxCashBalance,
+          loanFundBalance: isGroup ? vslaState.loanFundBalance + profit : vslaState.loanFundBalance,
+        },
+        currentUser.name,
+        `Sold ${qty} × ${product.name} to ${sale.buyer} (${sale.method})`,
+        isGroup ? `Revenue UGX ${revenue.toLocaleString()} · profit UGX ${profit.toLocaleString()} to loan fund` : 'Member business sale (no fund movement)',
+        revenue
+      )
+    );
+  };
+
+  const handleAddExpense = (label: string, amount: number) => {
+    const amt = Math.min(Math.max(0, Math.floor(amount)), vslaState.boxCashBalance);
+    if (amt <= 0) return;
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          productExpenses: [{ id: 'exp-' + Date.now().toString(36), label, amount: amt, timestamp: new Date().toISOString() }, ...(vslaState.productExpenses || [])],
+          boxCashBalance: vslaState.boxCashBalance - amt,
+        },
+        currentUser.name,
+        `Shop expense: ${label}`,
+        'Paid from box cash',
+        amt
+      )
+    );
   };
 
   const selectedMember =
@@ -1101,9 +1244,22 @@ export function App() {
           <HelpView onNavigate={handleNavigateScreen} language={language} />
         )}
 
+        {currentScreen === 'shop' && (
+          <ShopView
+            products={vslaState.products || []}
+            boxCashBalance={vslaState.boxCashBalance}
+            onNavigate={handleNavigateScreen}
+            onAddProduct={handleAddProduct}
+            onSell={handleSellProduct}
+            onAddExpense={handleAddExpense}
+            language={language}
+          />
+        )}
+
         {currentScreen === 'meeting_wizard' && (
           <MeetingWizardView
             members={vslaState.members}
+            products={vslaState.products || []}
             meetingNo={vslaState.recentMeetingsCount + 1}
             sharePrice={vslaState.groupProfile?.sharePrice || 10000}
             welfareAmount={vslaState.groupProfile?.welfareMonthly || 5000}
@@ -1117,6 +1273,7 @@ export function App() {
             onRecordRepaymentsBulk={handleWizardRepayments}
             onSubmitLoan={handleSubmitNewLoan}
             onRecordFinesBulk={handleWizardFines}
+            onRecordSalesBulk={handleWizardSales}
             onCompleteMeeting={handleCompleteWizardMeeting}
             onAdjustDiscrepancy={handleDiscrepancyAdjustment}
           />

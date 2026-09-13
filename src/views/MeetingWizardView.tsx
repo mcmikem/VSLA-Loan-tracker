@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Language, Member, ScreenId } from '../types';
+import { Language, Member, ScreenId, ShopProduct } from '../types';
 
 export interface WizardShareItem {
   memberId: string;
@@ -27,6 +27,7 @@ export interface WizardLoanForm {
 
 interface MeetingWizardViewProps {
   members: Member[];
+  products: ShopProduct[];
   meetingNo: number;
   sharePrice: number;
   welfareAmount: number;
@@ -40,6 +41,7 @@ interface MeetingWizardViewProps {
   onRecordRepaymentsBulk: (items: WizardRepayItem[]) => void;
   onSubmitLoan: (loan: { memberName: string; memberNo: string; amount: number; term: string; serviceFee: number; phone: string; provider: 'MTN' | 'Airtel' }) => void;
   onRecordFinesBulk: (items: WizardFineItem[]) => void;
+  onRecordSalesBulk: (items: { productId: string; qty: number; unitPrice: number; buyer: string }[]) => void;
   onCompleteMeeting: (countedCash: number, minutes: string) => void;
   onAdjustDiscrepancy: (amount: number, reason: string, method: string) => void;
 }
@@ -56,6 +58,7 @@ interface Draft {
   repaymentsRecorded: boolean;
   loansRecorded: boolean;
   finesRecorded: boolean;
+  salesRecorded: boolean;
   counted: string;
   minutes: string;
   completed: boolean;
@@ -74,6 +77,7 @@ const blankDraft = (): Draft => ({
   repaymentsRecorded: false,
   loansRecorded: false,
   finesRecorded: false,
+  salesRecorded: false,
   counted: '',
   minutes: '',
   completed: false,
@@ -96,6 +100,7 @@ function loadDraft(): Draft {
  */
 export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   members,
+  products,
   meetingNo,
   sharePrice,
   welfareAmount,
@@ -109,6 +114,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   onRecordRepaymentsBulk,
   onSubmitLoan,
   onRecordFinesBulk,
+  onRecordSalesBulk,
   onCompleteMeeting,
   onAdjustDiscrepancy,
 }) => {
@@ -124,6 +130,8 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   const [payoutAmount, setPayoutAmount] = useState('');
   const [payoutReason, setPayoutReason] = useState('');
   const [discrepancyNote, setDiscrepancyNote] = useState('');
+  const [saleQty, setSaleQty] = useState<Record<string, number>>({});
+  const [saleBuyer, setSaleBuyer] = useState('');
 
   useEffect(() => {
     try {
@@ -145,6 +153,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
     str('Repayments', 'Okusasula', 'Malipo'),
     str('New Loans', 'Ebyewolo', 'Mikopo'),
     str('Fines', 'Engassi', 'Faini'),
+    str('Sales', 'Okutunda', 'Mauzo'),
     str('Close & Seal', 'Ggala & Siba', 'Funga'),
   ];
 
@@ -237,6 +246,19 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
     patch({ finesRecorded: true });
   };
 
+  const groupProducts = products.filter((p) => p.sellerType === 'group' && p.stockQty > 0);
+
+  const commitSales = () => {
+    const items = Object.entries(saleQty)
+      .map(([productId, qty]) => ({ productId, qty: Math.max(0, Math.floor(qty || 0)), unitPrice: products.find((p) => p.id === productId)?.salePrice || 0, buyer: saleBuyer.trim() || 'Meeting sales' }))
+      .filter((x) => x.qty > 0 && x.unitPrice > 0);
+    if (items.length === 0) return;
+    onRecordSalesBulk(items);
+    setSaleQty({});
+    setSaleBuyer('');
+    patch({ salesRecorded: true });
+  };
+
   const commitPayout = () => {
     const amt = Math.floor(Number(payoutAmount) || 0);
     if (!payoutMember || amt <= 0 || !payoutReason.trim()) return;
@@ -294,7 +316,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </div>
         </div>
         <span className="font-mono text-xs font-bold text-[#00261b] bg-white px-2 py-1 rounded border">
-          {draft.step + 1}/7
+          {draft.step + 1}/8
         </span>
       </div>
 
@@ -529,7 +551,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           ))}
           {draft.finesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa', 'Imerekodiwa')}</p>}
           {stepBtn(
-            draft.finesRecorded ? str('Continue to Close →', 'Weeyongereyo →', 'Endelea →') : `${str('Record', 'Kaza', 'Hifadhi')} ${stagedFines.length} ${str('fine(s)', 'engassi', 'faini')}`,
+            draft.finesRecorded ? str('Continue to Sales →', 'Weeyongereyo →', 'Endelea →') : `${str('Record', 'Kaza', 'Hifadhi')} ${stagedFines.length} ${str('fine(s)', 'engassi', 'faini')}`,
             () => {
               if (!draft.finesRecorded) commitFines();
               else patch({ step: 6 });
@@ -538,13 +560,60 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             stagedFines.length === 0 && !draft.finesRecorded
           )}
           {!draft.finesRecorded && stagedFines.length === 0 && (
-            <button type="button" onClick={() => patch({ step: 6 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No fines — go to Close', 'Tewali ngassi', 'Hakuna faini')}</button>
+            <button type="button" onClick={() => patch({ step: 6 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No fines — go to Sales', 'Tewali ngassi', 'Hakuna faini')}</button>
           )}
         </section>
       )}
 
-      {/* STEP 7: CLOSE & SEAL */}
+      {/* STEP 7: SALES */}
       {draft.step === 6 && (
+        <section className="space-y-2">
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[6]}</h3>
+            <p className="text-[11px] text-[#4B5563] mt-0.5">{str('Group stock only · profit returns to the loan fund', 'Ebyamaguzi byekibiina byokka', 'Bidhaa za kikundi tu')}</p>
+          </div>
+          {groupProducts.length === 0 && (
+            <p className="text-xs text-[#4B5563] bg-white border border-[#E5E7EB] rounded-xl p-4 text-center">
+              {str('No group stock. Add products in Shop first.', 'Tewali bintu. Yongera mu Shop.', 'Hakuna bidhaa. Weka dukani.')}
+            </p>
+          )}
+          {groupProducts.map((p) => {
+            const q = saleQty[p.id] || 0;
+            return (
+              <div key={p.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold truncate">{p.name}</p>
+                  <p className="text-[11px] font-mono text-[#4B5563]">{str('Stock:', 'Zisigadde:', 'Zipo:')} {p.stockQty} · UGX {p.salePrice.toLocaleString()}/{p.unit}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button type="button" onClick={() => setSaleQty({ ...saleQty, [p.id]: Math.max(0, q - 1) })} className="w-9 h-9 rounded-lg bg-[#F6F7F6] border border-[#E5E7EB] font-bold">−</button>
+                  <span className="font-mono font-bold w-5 text-center">{q}</span>
+                  <button type="button" onClick={() => setSaleQty({ ...saleQty, [p.id]: Math.min(p.stockQty, q + 1) })} className="w-9 h-9 rounded-lg bg-[#00261b] text-white font-bold">+</button>
+                </div>
+              </div>
+            );
+          })}
+          {groupProducts.length > 0 && (
+            <input value={saleBuyer} onChange={(e) => setSaleBuyer(e.target.value)} placeholder={str('Buyer / note (optional)', 'Aguzze', 'Mnunuzi')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white" />
+          )}
+          {draft.salesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa', 'Imerekodiwa')}</p>}
+          {stepBtn(
+            draft.salesRecorded ? str('Continue to Close →', 'Weeyongereyo →', 'Endelea →') : str('Record sales', 'Kaza okutunda', 'Hifadhi mauzo'),
+            () => {
+              if (!draft.salesRecorded) commitSales();
+              else patch({ step: 7 });
+            },
+            true,
+            Object.values(saleQty).every((q) => !(q > 0)) && !draft.salesRecorded
+          )}
+          {!draft.salesRecorded && (
+            <button type="button" onClick={() => patch({ step: 7 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No sales — go to Close', 'Tewali kutunda', 'Hakuna mauzo')}</button>
+          )}
+        </section>
+      )}
+
+      {/* STEP 8: CLOSE & SEAL */}
+      {draft.step === 7 && (
         <section className="space-y-2">
           <div className="bg-[#0b3d2e] text-white rounded-xl p-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#bcedd7]">{steps[6]}</h3>

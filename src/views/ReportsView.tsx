@@ -33,6 +33,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     .reduce((s, f) => s + f.amount, 0);
 
   const debtors = members.filter((m) => (m.loanBalance || 0) > 0);
+  const shopProfit = (state.productSales || [])
+    .filter((s) => s.sellerType === 'group')
+    .reduce((sum, s) => sum + (s.unitPrice - s.costAtSale) * s.qty, 0);
   const repaymentRate =
     totalSavings + totalLoansOut > 0
       ? Math.round((totalSavings / (totalSavings + totalLoansOut)) * 100)
@@ -207,6 +210,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             {metric(str('Member savings', 'Enterekanya', 'Akiba'), `UGX ${totalSavings.toLocaleString()}`, `${members.length} ${str('members', 'bakiise', 'wanachama')}`)}
             {metric(str('Loans outstanding', 'Amabanja', 'Mikopo nje'), `UGX ${totalLoansOut.toLocaleString()}`, `${debtors.length} ${str('borrowers', 'beewola', 'wakopaji')}`)}
             {metric(str('Welfare held', 'Obuyambi', 'Jamii'), `UGX ${totalWelfare.toLocaleString()}`, str('emergency buffer', 'olwobuzibu', 'dharura'))}
+            {metric(str('Shop profit', 'Magoba ga dduuka', 'Faida ya duka'), `UGX ${shopProfit.toLocaleString()}`, str('to loan fund', 'mu byewolo', 'mfukoni'))}
             {metric(str('Fines in/out', 'Engassi', 'Faini'), `UGX ${finesCollected.toLocaleString()}`, `${str('pending', 'ziri mu kkubo', 'zinasubiri')} UGX ${finesPending.toLocaleString()}`)}
           </div>
           {/* Repayment health bar */}
