@@ -200,6 +200,40 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               </button>
 
               <button
+                onClick={() => handleSelectMoreOption('help', 'more')}
+                className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
+              >
+                <div className="w-9 h-9 rounded-lg bg-surface-container-low text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">help</span>
+                </div>
+                <div>
+                  <span className="font-bold text-sm block text-primary">
+                    {language === 'LU' ? 'Buyambi' : language === 'SW' ? 'Msaada' : 'Help & Support'}
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {language === 'LU' ? 'Ebyokuddamu ne WhatsApp' : language === 'SW' ? 'Maswali na WhatsApp' : 'FAQs & WhatsApp'}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleSelectMoreOption('about', 'more')}
+                className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
+              >
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">info</span>
+                </div>
+                <div>
+                  <span className="font-bold text-sm block text-primary">
+                    {language === 'LU' ? 'Ebikwata ku App' : language === 'SW' ? 'Kuhusu App' : 'About the App'}
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {language === 'LU' ? 'Kyiki n\'okugiteeka' : language === 'SW' ? 'Maelezo na usakinishaji' : 'What it does & install'}
+                  </span>
+                </div>
+              </button>
+
+              <button
                 onClick={() => handleSelectMoreOption('meeting_close', 'meetings')}
                 className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
               >

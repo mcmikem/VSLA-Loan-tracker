@@ -15,7 +15,9 @@ export type ScreenId =
   | 'constitution_fines'
   | 'backup'
   | 'legal'
-  | 'reports';
+  | 'reports'
+  | 'about'
+  | 'help';
 
 export interface ApprovalItem {
   id: string;

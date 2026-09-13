@@ -33,6 +33,11 @@ import { ConstitutionFinesView } from './views/ConstitutionFinesView';
 import { BackupAuditView } from './views/BackupAuditView';
 import { LegalView } from './views/LegalView';
 import { ReportsView, LATE_FINE_AMOUNT } from './views/ReportsView';
+import { AboutView } from './views/AboutView';
+import { HelpView } from './views/HelpView';
+import { OnboardingTour, ONBOARDING_KEY, SEEN_VERSION_KEY } from './components/OnboardingTour';
+import { WhatsNewModal } from './components/WhatsNewModal';
+import { APP_VERSION } from './data/changelog';
 import { withAudit } from './utils/audit';
 import { ShareOutResult } from './utils/shareout';
 
@@ -59,6 +64,35 @@ export function App() {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [groupModalDefaultTab, setGroupModalDefaultTab] = useState<'directory' | 'register' | 'join'>('directory');
   const [isShareInviteOpen, setIsShareInviteOpen] = useState(false);
+  const [showTour, setShowTour] = useState<boolean>(() => {
+    try {
+      return !localStorage.getItem(ONBOARDING_KEY);
+    } catch (e) {
+      return false;
+    }
+  });
+  const [showWhatsNew, setShowWhatsNew] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SEEN_VERSION_KEY) !== APP_VERSION && !!localStorage.getItem(ONBOARDING_KEY);
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const dismissTour = () => {
+    try {
+      localStorage.setItem(ONBOARDING_KEY, '1');
+      localStorage.setItem(SEEN_VERSION_KEY, APP_VERSION);
+    } catch (e) {}
+    setShowTour(false);
+  };
+
+  const dismissWhatsNew = () => {
+    try {
+      localStorage.setItem(SEEN_VERSION_KEY, APP_VERSION);
+    } catch (e) {}
+    setShowWhatsNew(false);
+  };
 
   // Centralized VSLA State
   const [vslaState, setVslaState] = useState<VSLAState>(() => {
@@ -862,6 +896,18 @@ export function App() {
           />
         )}
 
+        {currentScreen === 'about' && (
+          <AboutView
+            onNavigate={handleNavigateScreen}
+            language={language}
+            groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
+          />
+        )}
+
+        {currentScreen === 'help' && (
+          <HelpView onNavigate={handleNavigateScreen} language={language} />
+        )}
+
         {currentScreen === 'meeting_close' && (
           <MeetingCloseBoxView
             onOpenDiscrepancyModal={() => setIsDiscrepancyModalOpen(true)}
@@ -1005,6 +1051,10 @@ export function App() {
         inviteCode={vslaState.inviteCode || vslaState.groupProfile?.inviteCode || 'BAK-4290'}
         location={vslaState.groupProfile?.location || 'Kalerwe Market, Kawempe'}
       />
+
+      {/* First-run tour + What's-new sheet */}
+      {showTour && <OnboardingTour language={language} onDone={dismissTour} />}
+      {!showTour && showWhatsNew && <WhatsNewModal onClose={dismissWhatsNew} />}
 
       {/* Universal Sticky Bottom Navigation Bar */}
       <BottomNavBar

@@ -16,9 +16,10 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'LU'>('LU');
-  const [smsSent, setSmsSent] = useState(false);
 
   const formattedCash = boxCashBalance.toLocaleString('en-US');
+
+  const handleTogglePlay = () => {
 
   const lugandaText = `Olukuŋŋaana #${meetingNumber} lwa Bakwata lufundikiddwa. Ssente eziri mu sanduuko ziri shillingi za Uganda emitwalo ${Math.round(boxCashBalance / 10000)} (UGX ${formattedCash}). Bammemba ${membersCount} beetabye. Sanduuko esibiddwa n'ekkufulu essatu ez'abakwasi b'ebisumuluzo.`;
 
@@ -45,10 +46,9 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
     }
   };
 
-  const handleSendBulkSMS = () => {
-    setSmsSent(true);
-    setTimeout(() => setSmsSent(false), 4000);
-  };
+  const reminderText = `[BAKWATA VSLA] Reminder: Meeting #${meetingNumber + 1} is this Friday 4PM at Kalerwe Market. Bring your passbook + shares. Okujjukiza: Olukuŋŋaana lujja ku Lwokutaano 4pm.`;
+  const reminderSmsHref = `sms:?body=${encodeURIComponent(reminderText)}`;
+  const reminderWaHref = `https://wa.me/?text=${encodeURIComponent(reminderText)}`;
 
   return (
     <main className="w-full max-w-lg mx-auto px-4 pt-4 pb-14 flex-1 space-y-4">
@@ -129,44 +129,39 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
         </div>
       </section>
 
-      {/* SMS Community Blast Notification */}
+      {/* Meeting reminders: real SMS / WhatsApp deep links */}
       <section className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-secondary text-base">sms</span>
-              SMS Notification Blast
-            </h3>
-            <p className="text-[11px] text-text-muted mt-0.5">
-              Send encrypted audit SMS summaries to all {membersCount} registered mobile phone numbers.
-            </p>
-          </div>
-        </div>
-
-        <div className="p-3 bg-canvas-bg rounded-lg border border-border-line text-xs font-mono space-y-1">
-          <div className="text-[10px] text-text-muted uppercase font-bold">SMS Template Preview:</div>
-          <p className="text-on-surface text-[11px]">
-            [BAKWATA VSLA] Mtg #{meetingNumber} Closed. Box Balance: UGX {formattedCash}. Welfare: Verified. Keyholders: 3/3 Padlocks. Thank you for saving!
+        <div>
+          <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-secondary text-base">notifications_active</span>
+            Meeting Reminders
+          </h3>
+          <p className="text-[11px] text-text-muted mt-0.5">
+            Opens your SMS / WhatsApp with the reminder pre-written — just pick members and send.
           </p>
         </div>
-
-        {smsSent ? (
-          <div className="p-3 bg-status-ok-bg border border-secondary text-status-ok-tx rounded-lg text-xs font-bold flex items-center justify-between animate-in fade-in">
-            <span className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-base">task_alt</span>
-              SMS broadcast sent to {membersCount} member phones via MTN/Airtel gateway!
-            </span>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSendBulkSMS}
-            className="w-full py-2.5 bg-surface-container hover:bg-surface-container-high border border-border-strong text-primary rounded-lg font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition"
+        <div className="p-3 bg-canvas-bg rounded-lg border border-border-line text-xs font-mono space-y-1">
+          <div className="text-[10px] text-text-muted uppercase font-bold">Reminder preview:</div>
+          <p className="text-on-surface text-[11px]">{reminderText}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <a
+            href={reminderSmsHref}
+            className="py-2.5 bg-primary-container text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
           >
-            <span className="material-symbols-outlined text-base text-primary">send</span>
-            <span>Dispatch SMS to {membersCount} Members</span>
-          </button>
-        )}
+            <span className="material-symbols-outlined text-base">sms</span>
+            <span>SMS App</span>
+          </a>
+          <a
+            href={reminderWaHref}
+            target="_blank"
+            rel="noreferrer"
+            className="py-2.5 bg-secondary text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95"
+          >
+            <span className="material-symbols-outlined text-base">chat</span>
+            <span>WhatsApp</span>
+          </a>
+        </div>
       </section>
 
       {/* Village Meeting Protocol Guidelines */}

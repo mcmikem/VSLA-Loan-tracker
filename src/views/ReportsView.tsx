@@ -41,6 +41,18 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const str = (en: string, lu: string, sw: string) =>
     language === 'LU' ? lu : language === 'SW' ? sw : en;
 
+  const [chartTab, setChartTab] = React.useState<'tables' | 'charts'>('tables');
+
+  const topSavers = [...members].sort((a, b) => (b.sharesTotal || 0) - (a.sharesTotal || 0)).slice(0, 8);
+  const maxSaved = Math.max(1, ...topSavers.map((m) => m.sharesTotal || 0));
+  const fundTotal = Math.max(1, totalSavings + totalLoansOut + totalWelfare);
+  const donutSegs = [
+    { label: str('Savings', 'Enterekanya', 'Akiba'), value: totalSavings, color: '#006d30' },
+    { label: str('Loans out', 'Amabanja', 'Mikopo'), value: totalLoansOut, color: '#EAB308' },
+    { label: str('Welfare', 'Obuyambi', 'Jamii'), value: totalWelfare, color: '#0b3d2e' },
+  ];
+  let donutOffset = 25;
+
   const exportCsv = () => {
     const rows = [
       ['Group', state.groupName, state.boxIdentifier],
@@ -100,6 +112,92 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </span>
       </div>
 
+      <div className="flex bg-surface-card p-1 rounded-xl border border-border-strong text-xs font-bold no-print">
+        <button
+          type="button"
+          onClick={() => setChartTab('tables')}
+          className={`flex-1 py-2 rounded-lg transition ${chartTab === 'tables' ? 'bg-primary-container text-white shadow-sm' : 'text-text-muted hover:text-primary'}`}
+        >
+          {str('Tables', 'Emiwendo', 'Majedwali')}
+        </button>
+        <button
+          type="button"
+          onClick={() => setChartTab('charts')}
+          className={`flex-1 py-2 rounded-lg transition ${chartTab === 'charts' ? 'bg-primary-container text-white shadow-sm' : 'text-text-muted hover:text-primary'}`}
+        >
+          {str('Charts', 'Ebifaananyi', 'Chati')}
+        </button>
+      </div>
+
+      {chartTab === 'charts' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm">
+            <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">
+              {str('Where the money sits', 'Ssente we ziri', 'Fedha zilipo')}
+            </h3>
+            <div className="flex items-center gap-4">
+              <svg viewBox="0 0 42 42" className="w-28 h-28 shrink-0" role="img" aria-label="Fund split">
+                <circle cx="21" cy="21" r="15.9" fill="none" stroke="#E5E7EB" strokeWidth="7" />
+                {donutSegs.map((s) => {
+                  const frac = s.value / fundTotal;
+                  const el = (
+                    <circle
+                      key={s.label}
+                      cx="21"
+                      cy="21"
+                      r="15.9"
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth="7"
+                      strokeDasharray={`${(frac * 100).toFixed(1)} ${(100 - frac * 100).toFixed(1)}`}
+                      strokeDashoffset={donutOffset.toFixed(1)}
+                      strokeLinecap="butt"
+                    />
+                  );
+                  donutOffset -= frac * 100;
+                  return el;
+                })}
+              </svg>
+              <div className="space-y-1.5 text-xs">
+                {donutSegs.map((s) => (
+                  <div key={s.label} className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: s.color }} />
+                    <span className="text-text-muted">{s.label}</span>
+                    <span className="font-mono font-bold">{Math.round((s.value / fundTotal) * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm">
+            <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">
+              {str('Top savers', 'Abatereka ennyo', 'Wanaoweka akiba')}
+            </h3>
+            <div className="space-y-2">
+              {topSavers.map((m) => (
+                <div key={m.id}>
+                  <div className="flex justify-between text-[11px] mb-0.5">
+                    <span className="font-semibold truncate">{m.name} <span className="font-mono text-text-muted">#{m.no}</span></span>
+                    <span className="font-mono font-bold shrink-0 ml-2">{(m.sharesTotal || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="w-full bg-border-line rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-secondary h-2 rounded-full"
+                      style={{ width: `${Math.max(2, Math.round(((m.sharesTotal || 0) / maxSaved) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {topSavers.length === 0 && (
+                <p className="text-xs text-text-muted">{str('No savings yet.', 'Tewali nterekanya.', 'Hakuna akiba.')}</p>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {chartTab === 'tables' && (
       <div className="print-area space-y-4">
         <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm">
           <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
@@ -192,6 +290,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
         </section>
       </div>
+      )}
 
       <div className="flex gap-2 no-print">
         <button
