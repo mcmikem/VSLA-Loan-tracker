@@ -334,6 +334,7 @@ export function App() {
   };
 
   useEffect(() => {
+    document.title = 'Bakwata VSLA — Group App';
     fetchGroupsList();
     fetchStateFromServer(currentGroupId);
   }, [fetchGroupsList, fetchStateFromServer, currentGroupId]);
