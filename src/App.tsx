@@ -32,7 +32,9 @@ import { AudioBroadcastView } from './views/AudioBroadcastView';
 import { ConstitutionFinesView } from './views/ConstitutionFinesView';
 import { BackupAuditView } from './views/BackupAuditView';
 import { LegalView } from './views/LegalView';
+import { ReportsView, LATE_FINE_AMOUNT } from './views/ReportsView';
 import { withAudit } from './utils/audit';
+import { ShareOutResult } from './utils/shareout';
 
 export function App() {
   const [language, setLanguage] = useState<Language>('EN');
@@ -719,6 +721,67 @@ export function App() {
     localStorage.setItem('bakwata_vsla_state', JSON.stringify(DEFAULT_INITIAL_STATE));
   };
 
+  // Execute Cycle Share-Out: post payouts to ledgers, clear debts, start new cycle
+  const handleExecuteShareOut = (result: ShareOutResult) => {
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const updatedMembers = vslaState.members.map((m) => {
+      const p = result.payouts.find((x) => x.memberId === m.id);
+      const net = p?.netPayout || 0;
+      const entry = {
+        id: 'led-shareout-' + Date.now() + '-' + m.id,
+        meetingNo: vslaState.recentMeetingsCount,
+        meetingCode: 'SHARE-OUT',
+        title: `Cycle ${vslaState.cycle} Share-Out Paid`,
+        badge: 'SHARE-OUT',
+        subtitle: `Gross UGX ${((p?.grossPayout) || 0).toLocaleString()} · Loan deducted UGX ${((p?.deductedLoan) || 0).toLocaleString()} · New cycle started`,
+        amountText: `UGX ${net.toLocaleString()}`,
+        isPositive: true,
+        date: dateStr,
+      };
+      return {
+        ...m,
+        sharesCount: 0,
+        sharesTotal: 0,
+        maxBorrowLimit: 0,
+        loanBalance: 0,
+        activeLoan: undefined,
+        ledger: [entry, ...m.ledger],
+      };
+    });
+
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          members: updatedMembers,
+          boxCashBalance: 0,
+          loanFundBalance: 0,
+          welfareFundBalance: 0,
+          cycle: vslaState.cycle + 1,
+          cycleMonth: 1,
+        },
+        currentUser.name,
+        `Executed Cycle ${vslaState.cycle} share-out`,
+        `${result.payouts.length} members paid UGX ${result.totalNetPayout.toLocaleString()}; loans recovered UGX ${result.totalDeductedLoans.toLocaleString()}`,
+        result.totalNetPayout
+      )
+    );
+  };
+
+  // Arrears automation: propose a standard late fine for a debtor
+  const handleProposeArrearsFine = (member: Member) => {
+    handleLevyFine({
+      id: 'fine-' + Date.now(),
+      memberNo: member.no,
+      memberName: member.name,
+      reason: `Overdue loan balance UGX ${member.loanBalance.toLocaleString()} (auto-proposed)`,
+      amount: LATE_FINE_AMOUNT,
+      timeNote: 'Auto-proposed from Reports',
+      meetingRef: `Meeting #${vslaState.recentMeetingsCount}`,
+      status: 'pending',
+    });
+  };
+
   const selectedMember =
     vslaState.members.find((m) => m.id === selectedMemberId) || vslaState.members[0];
 
@@ -790,6 +853,15 @@ export function App() {
           />
         )}
 
+        {currentScreen === 'reports' && (
+          <ReportsView
+            state={vslaState}
+            onNavigate={handleNavigateScreen}
+            onProposeFine={handleProposeArrearsFine}
+            language={language}
+          />
+        )}
+
         {currentScreen === 'meeting_close' && (
           <MeetingCloseBoxView
             onOpenDiscrepancyModal={() => setIsDiscrepancyModalOpen(true)}
@@ -854,6 +926,7 @@ export function App() {
                 .reduce((sum, f) => sum + f.amount, 0) || 750000
             }
             onNavigate={handleNavigateScreen}
+            onExecuteShareOut={handleExecuteShareOut}
           />
         )}
 

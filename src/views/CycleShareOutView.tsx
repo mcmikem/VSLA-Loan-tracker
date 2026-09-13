@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Member, ScreenId } from '../types';
+import { MemberPayout, ShareOutResult, computeShareOut } from '../utils/shareout';
 
 interface CycleShareOutViewProps {
   members?: Member[];
   loanFundBalance?: number;
   finesCollected?: number;
   onNavigate: (screen: ScreenId) => void;
+  onExecuteShareOut?: (result: ShareOutResult) => void;
 }
 
 export const CycleShareOutView: React.FC<CycleShareOutViewProps> = ({
@@ -13,27 +15,34 @@ export const CycleShareOutView: React.FC<CycleShareOutViewProps> = ({
   loanFundBalance = 8750000,
   finesCollected = 750000,
   onNavigate,
+  onExecuteShareOut,
 }) => {
   const [disbursalMode, setDisbursalMode] = useState<'cash' | 'momo'>('cash');
   const [isSimulated, setIsSimulated] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'roster'>('overview');
+  const [confirmExecute, setConfirmExecute] = useState(false);
+  const [executed, setExecuted] = useState(false);
 
-  // Compute total shares from real members
-  const totalSharesSold = members.length > 0
-    ? members.reduce((sum, m) => sum + (m.sharesCount || 0), 0)
-    : 875;
-
-  const totalShareCapital = members.length > 0
-    ? members.reduce((sum, m) => sum + (m.sharesTotal || 0), 0)
-    : 8750000;
-
-  const interestEarned = Math.round(loanFundBalance * 0.32);
-  const totalPool = totalShareCapital + interestEarned + finesCollected;
-  const valuePerShare = totalSharesSold > 0 ? Math.round(totalPool / totalSharesSold) : 13850;
-  const profitPercentage = (((valuePerShare - 10000) / 10000) * 100).toFixed(1);
+  // Real engine: identical math for preview and execution
+  const result = computeShareOut(members, loanFundBalance, finesCollected);
+  const {
+    totalSharesSold,
+    totalShareCapital,
+    interestEarned,
+    totalPool,
+    valuePerShare,
+    profitPercentage,
+  } = result;
 
   const handlePrintSlips = () => {
     window.print();
+  };
+
+  const handleExecute = () => {
+    if (!onExecuteShareOut) return;
+    onExecuteShareOut(result);
+    setExecuted(true);
+    setConfirmExecute(false);
   };
 
   return (
@@ -197,6 +206,46 @@ export const CycleShareOutView: React.FC<CycleShareOutViewProps> = ({
                   <span className="material-symbols-outlined text-sm">print</span>
                   Print Full Share-Out Audit Roster
                 </button>
+                {onExecuteShareOut && !executed && !confirmExecute && (
+                  <button
+                    onClick={() => setConfirmExecute(true)}
+                    className="w-full py-2.5 bg-primary-container text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1"
+                    type="button"
+                  >
+                    <span className="material-symbols-outlined text-sm">payments</span>
+                    Execute Share-Out (posts to ledgers)
+                  </button>
+                )}
+                {confirmExecute && !executed && (
+                  <div className="p-3 bg-white border-2 border-primary rounded-lg space-y-2">
+                    <p className="text-xs font-bold text-primary">
+                      Pay UGX {result.totalNetPayout.toLocaleString('en-US')} to {members.length} members?
+                      UGX {result.totalDeductedLoans.toLocaleString('en-US')} in loans will be deducted first.
+                      Shares reset for the new cycle. This cannot be undone — take a snapshot first.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleExecute}
+                        className="flex-1 py-2 bg-primary-container text-white font-bold text-xs rounded-lg"
+                        type="button"
+                      >
+                        Confirm Payout
+                      </button>
+                      <button
+                        onClick={() => setConfirmExecute(false)}
+                        className="flex-1 py-2 bg-canvas-bg border border-border-line font-bold text-xs rounded-lg"
+                        type="button"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {executed && (
+                  <p className="text-xs font-bold text-status-ok-tx">
+                    Share-out executed and posted to every passbook. New cycle started.
+                  </p>
+                )}
               </div>
             ) : (
               <button
@@ -232,34 +281,31 @@ export const CycleShareOutView: React.FC<CycleShareOutViewProps> = ({
           </div>
 
           <div className="space-y-2 text-xs max-h-[420px] overflow-y-auto pr-1">
-            {members.map((m) => {
-              const shares = m.sharesCount || Math.round(m.sharesTotal / 10000);
-              const saved = m.sharesTotal;
-              const payout = shares * valuePerShare;
-              const profit = payout - saved;
+            {result.payouts.map((p: MemberPayout) => {
 
               return (
                 <div
-                  key={m.id}
+                  key={p.memberId}
                   className="p-2.5 bg-canvas-bg rounded-lg border border-border-line flex items-center justify-between gap-2"
                 >
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-primary">{m.name}</span>
+                      <span className="font-bold text-primary">{p.memberName}</span>
                       <span className="text-[10px] font-mono bg-white px-1 py-0.2 rounded border">
-                        #{m.no}
+                        #{p.memberNo}
                       </span>
                     </div>
                     <span className="text-[11px] text-text-muted">
-                      {shares} shares · Saved UGX {saved.toLocaleString('en-US')}
+                      {p.shares} shares · Saved UGX {p.saved.toLocaleString('en-US')}
+                      {p.deductedLoan > 0 && ` · Loan deducted UGX ${p.deductedLoan.toLocaleString('en-US')}`}
                     </span>
                   </div>
                   <div className="text-right font-mono shrink-0">
                     <span className="font-bold text-secondary text-sm block">
-                      UGX {payout.toLocaleString('en-US')}
+                      UGX {p.netPayout.toLocaleString('en-US')}
                     </span>
                     <span className="text-[10px] text-status-ok-tx font-bold font-sans">
-                      +UGX {profit.toLocaleString('en-US')} profit
+                      +UGX {p.profit.toLocaleString('en-US')} profit
                     </span>
                   </div>
                 </div>

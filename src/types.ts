@@ -14,7 +14,8 @@ export type ScreenId =
   | 'audio_broadcast'
   | 'constitution_fines'
   | 'backup'
-  | 'legal';
+  | 'legal'
+  | 'reports';
 
 export interface ApprovalItem {
   id: string;
