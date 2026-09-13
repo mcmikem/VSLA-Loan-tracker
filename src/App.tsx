@@ -31,6 +31,8 @@ import { WelfareFundView } from './views/WelfareFundView';
 import { AudioBroadcastView } from './views/AudioBroadcastView';
 import { ConstitutionFinesView } from './views/ConstitutionFinesView';
 import { BackupAuditView } from './views/BackupAuditView';
+import { LegalView } from './views/LegalView';
+import { withAudit } from './utils/audit';
 
 export function App() {
   const [language, setLanguage] = useState<Language>('EN');
@@ -340,23 +342,40 @@ export function App() {
       item.id === id ? { ...item, status: 'approved' as const } : item
     );
 
-    persistState({
-      ...vslaState,
-      boxCashBalance: boxCash,
-      loanFundBalance: loanFund,
-      welfareFundBalance: welfareFund,
-      approvals: updatedApprovals,
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          boxCashBalance: boxCash,
+          loanFundBalance: loanFund,
+          welfareFundBalance: welfareFund,
+          approvals: updatedApprovals,
+        },
+        currentUser.name,
+        `Approved ${targetItem.type.replace(/_/g, ' ')} ${targetItem.reqNumber}`,
+        `${targetItem.memberName} (#${targetItem.memberNo})`,
+        targetItem.amount
+      )
+    );
   };
 
   const handleRejectItem = (id: string) => {
+    const targetItem = vslaState.approvals.find((a) => a.id === id);
     const updatedApprovals = vslaState.approvals.map((item) =>
       item.id === id ? { ...item, status: 'rejected' as const } : item
     );
-    persistState({
-      ...vslaState,
-      approvals: updatedApprovals,
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          approvals: updatedApprovals,
+        },
+        currentUser.name,
+        `Rejected ${targetItem?.type.replace(/_/g, ' ') || 'request'} ${targetItem?.reqNumber || ''}`,
+        `${targetItem?.memberName || 'Unknown'} (#${targetItem?.memberNo || '-'})`,
+        targetItem?.amount
+      )
+    );
   };
 
   // Discrepancy Adjustment
@@ -370,15 +389,24 @@ export function App() {
       boxCash = boxCash + amount;
     }
 
-    persistState({
-      ...vslaState,
-      welfareFundBalance: welfareFund,
-      boxCashBalance: boxCash,
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          welfareFundBalance: welfareFund,
+          boxCashBalance: boxCash,
+        },
+        currentUser.name,
+        `Cash discrepancy adjustment (${method})`,
+        reason,
+        amount
+      )
+    );
   };
 
   // Member Repayment
   const handleRecordRepaymentInPassbook = (amount: number, memberId: string) => {
+    const targetMember = vslaState.members.find((m) => m.id === memberId);
     const updatedMembers = vslaState.members.map((m) => {
       if (m.id === memberId) {
         const newLoanBalance = Math.max(0, m.loanBalance - amount);
@@ -410,17 +438,26 @@ export function App() {
       return m;
     });
 
-    persistState({
-      ...vslaState,
-      members: updatedMembers,
-      boxCashBalance: vslaState.boxCashBalance + amount,
-      loanFundBalance: vslaState.loanFundBalance + amount,
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          members: updatedMembers,
+          boxCashBalance: vslaState.boxCashBalance + amount,
+          loanFundBalance: vslaState.loanFundBalance + amount,
+        },
+        currentUser.name,
+        'Recorded loan repayment',
+        `${targetMember?.name || 'Member'} (#${targetMember?.no || '-'})`,
+        amount
+      )
+    );
   };
 
   // Member Buy Shares
   const handleBuyShares = (sharesCount: number, memberId: string) => {
     const cost = sharesCount * 10000;
+    const targetMember = vslaState.members.find((m) => m.id === memberId);
     const updatedMembers = vslaState.members.map((m) => {
       if (m.id === memberId) {
         const newSharesCount = m.sharesCount + sharesCount;
@@ -459,20 +496,36 @@ export function App() {
       return m;
     });
 
-    persistState({
-      ...vslaState,
-      members: updatedMembers,
-      boxCashBalance: vslaState.boxCashBalance + cost,
-      loanFundBalance: vslaState.loanFundBalance + cost,
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          members: updatedMembers,
+          boxCashBalance: vslaState.boxCashBalance + cost,
+          loanFundBalance: vslaState.loanFundBalance + cost,
+        },
+        currentUser.name,
+        `Stamped ${sharesCount} share(s)`,
+        `${targetMember?.name || 'Member'} (#${targetMember?.no || '-'})`,
+        cost
+      )
+    );
   };
 
   // Mobile Money Success
   const handleMoMoSuccess = (amount: number, desc: string) => {
-    persistState({
-      ...vslaState,
-      boxCashBalance: vslaState.boxCashBalance + amount,
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          boxCashBalance: vslaState.boxCashBalance + amount,
+        },
+        currentUser.name,
+        'Mobile Money collection confirmed',
+        desc,
+        amount
+      )
+    );
   };
 
   // Submit New Loan Application
@@ -504,19 +557,35 @@ export function App() {
       maxBorrowable: member.maxBorrowLimit,
     };
 
-    persistState({
-      ...vslaState,
-      approvals: [newApproval, ...vslaState.approvals],
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          approvals: [newApproval, ...vslaState.approvals],
+        },
+        currentUser.name,
+        `Submitted loan request ${newApproval.reqNumber}`,
+        `${loan.memberName} (#${loan.memberNo})`,
+        loan.amount
+      )
+    );
   };
 
   // Disburse Welfare Grant
   const handleDisburseWelfareGrant = (grant: WelfareGrant) => {
-    persistState({
-      ...vslaState,
-      welfareFundBalance: Math.max(0, vslaState.welfareFundBalance - grant.amount),
-      welfareGrants: [grant, ...vslaState.welfareGrants],
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          welfareFundBalance: Math.max(0, vslaState.welfareFundBalance - grant.amount),
+          welfareGrants: [grant, ...vslaState.welfareGrants],
+        },
+        currentUser.name,
+        'Disbursed welfare grant',
+        `${grant.memberName} (#${grant.memberNo}) — ${grant.reason}`,
+        grant.amount
+      )
+    );
   };
 
   // Fine Handlers
@@ -526,28 +595,53 @@ export function App() {
     const updatedFines = vslaState.fines.map((f) =>
       f.id === id ? { ...f, status: 'collected' as const } : f
     );
-    persistState({
-      ...vslaState,
-      fines: updatedFines,
-      boxCashBalance: vslaState.boxCashBalance + amount,
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          fines: updatedFines,
+          boxCashBalance: vslaState.boxCashBalance + amount,
+        },
+        currentUser.name,
+        'Collected fine',
+        `${target?.memberName || 'Member'} (#${target?.memberNo || '-'}) — ${target?.reason || ''}`,
+        amount
+      )
+    );
   };
 
   const handleWaiveFine = (id: string) => {
+    const target = vslaState.fines.find((f) => f.id === id);
     const updatedFines = vslaState.fines.map((f) =>
       f.id === id ? { ...f, status: 'waived' as const } : f
     );
-    persistState({
-      ...vslaState,
-      fines: updatedFines,
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          fines: updatedFines,
+        },
+        currentUser.name,
+        'Waived fine',
+        `${target?.memberName || 'Member'} (#${target?.memberNo || '-'}) — ${target?.reason || ''}`,
+        target?.amount
+      )
+    );
   };
 
   const handleLevyFine = (fine: PendingFine) => {
-    persistState({
-      ...vslaState,
-      fines: [fine, ...vslaState.fines],
-    });
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          fines: [fine, ...vslaState.fines],
+        },
+        currentUser.name,
+        'Levied fine',
+        `${fine.memberName} (#${fine.memberNo}) — ${fine.reason}`,
+        fine.amount
+      )
+    );
   };
 
   // Backup & Restore Handlers
@@ -688,6 +782,14 @@ export function App() {
           />
         )}
 
+        {currentScreen === 'legal' && (
+          <LegalView
+            onNavigate={handleNavigateScreen}
+            language={language}
+            groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
+          />
+        )}
+
         {currentScreen === 'meeting_close' && (
           <MeetingCloseBoxView
             onOpenDiscrepancyModal={() => setIsDiscrepancyModalOpen(true)}
@@ -720,6 +822,10 @@ export function App() {
             onNavigate={handleNavigateScreen}
             onRecordRepayment={handleRecordRepaymentInPassbook}
             onBuyShares={handleBuyShares}
+            language={language}
+            groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
+            boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}
+            issuerName={currentUser.name}
           />
         )}
 

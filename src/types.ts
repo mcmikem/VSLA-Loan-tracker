@@ -13,7 +13,8 @@ export type ScreenId =
   | 'welfare_fund'
   | 'audio_broadcast'
   | 'constitution_fines'
-  | 'backup';
+  | 'backup'
+  | 'legal';
 
 export interface ApprovalItem {
   id: string;
@@ -119,6 +120,15 @@ export interface BackupSnapshot {
   data: string; // JSON string
 }
 
+export interface AuditEntry {
+  id: string;
+  timestamp: string;
+  actorName: string;
+  action: string;
+  details: string;
+  amount?: number;
+}
+
 export interface UserAccount {
   id: string;
   memberId?: string;
@@ -218,6 +228,7 @@ export interface VSLAState {
   recentMeetingsCount: number;
   lastBackupDate: string;
   snapshots: BackupSnapshot[];
+  auditLog?: AuditEntry[];
   currentUser?: UserAccount;
   availableAccounts?: UserAccount[];
   activePreset?: string;

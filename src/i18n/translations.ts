@@ -248,6 +248,13 @@ export const translations = {
       shareCodeWhatsApp: 'Share to WhatsApp',
       shareCodeSMS: 'Send SMS',
     },
+    // Legal & Constitution
+    legal: {
+      title: 'Legal & Constitution',
+      termsTab: 'Terms',
+      privacyTab: 'Privacy',
+      constitutionTab: 'Constitution',
+    },
   },
 
   LU: {
@@ -465,6 +472,13 @@ export const translations = {
       shareCodeWhatsApp: 'Weereza ku WhatsApp',
       shareCodeSMS: 'Weereza ku SMS',
     },
+    // Legal & Constitution (Oluganda)
+    legal: {
+      title: 'Amateeka n\'Ssemateeka',
+      termsTab: 'Amateeka',
+      privacyTab: 'Ebyama',
+      constitutionTab: 'Ssemateeka',
+    },
   },
 
   SW: {
@@ -681,6 +695,13 @@ export const translations = {
       currency: 'UGX',
       shareCodeWhatsApp: 'Tuma kwa WhatsApp',
       shareCodeSMS: 'Tuma kwa SMS',
+    },
+    // Legal & Constitution (Kiswahili)
+    legal: {
+      title: 'Sheria na Katiba',
+      termsTab: 'Masharti',
+      privacyTab: 'Faragha',
+      constitutionTab: 'Katiba',
     },
   },
 };

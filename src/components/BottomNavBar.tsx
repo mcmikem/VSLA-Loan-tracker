@@ -151,6 +151,23 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               </button>
 
               <button
+                onClick={() => handleSelectMoreOption('legal', 'more')}
+                className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
+              >
+                <div className="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">policy</span>
+                </div>
+                <div>
+                  <span className="font-bold text-sm block text-primary">
+                    {t.legal.title}
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {language === 'LU' ? 'Amateeka n\'ebyama' : language === 'SW' ? 'Masharti na faragha' : 'Terms, privacy, bylaws'}
+                  </span>
+                </div>
+              </button>
+
+              <button
                 onClick={() => handleSelectMoreOption('momo_push', 'meetings')}
                 className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
               >

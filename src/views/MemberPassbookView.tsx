@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Language, Member, ScreenId } from '../types';
 import { getTranslations } from '../i18n/translations';
+import { ReceiptData, ReceiptModal } from '../components/ReceiptModal';
 
 interface MemberPassbookViewProps {
   members: Member[];
@@ -10,6 +11,9 @@ interface MemberPassbookViewProps {
   onRecordRepayment: (amount: number, memberId: string) => void;
   onBuyShares: (sharesCount: number, memberId: string) => void;
   language?: Language;
+  groupName?: string;
+  boxIdentifier?: string;
+  issuerName?: string;
 }
 
 export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
@@ -20,6 +24,9 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   onRecordRepayment,
   onBuyShares,
   language = 'EN',
+  groupName = 'Bakwata Savings Group',
+  boxIdentifier = 'BOX-KLA-042',
+  issuerName = 'Group Secretary',
 }) => {
   const [showRepaymentModal, setShowRepaymentModal] = useState(false);
   const [repaymentAmount, setRepaymentAmount] = useState(40000);
@@ -27,9 +34,42 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   const [sharesToBuy, setSharesToBuy] = useState(2);
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [memberQuery, setMemberQuery] = useState('');
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
   const t = getTranslations(language);
   const member = selectedMember || members[0];
+
+  const todayStr = () =>
+    new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const downloadFile = (filename: string, content: string, mime: string) => {
+    const url = URL.createObjectURL(new Blob([content], { type: mime }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportMember = (format: 'json' | 'csv') => {
+    if (!member) return;
+    const base = `passbook_${member.no}_${member.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
+    if (format === 'json') {
+      downloadFile(`${base}.json`, JSON.stringify({ groupName, boxIdentifier, exportedAt: new Date().toISOString(), member }, null, 2), 'application/json');
+    } else {
+      const rows = [
+        ['Member No', 'Name', 'Phone', 'Shares', 'Savings (UGX)', 'Loan Balance (UGX)', 'Welfare (UGX)'],
+        [member.no, member.name, member.phone, String(member.sharesCount), String(member.sharesTotal), String(member.loanBalance), String(member.welfareBalance)],
+        [],
+        ['Date', 'Title', 'Detail', 'Amount'],
+        ...member.ledger.map((l) => [l.date, l.title, `${l.subtitle} ${l.extraText || ''}`.trim(), l.amountText]),
+      ];
+      const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+      downloadFile(`${base}.csv`, csv, 'text/csv');
+    }
+  };
 
   const visibleMembers = memberQuery.trim()
     ? members.filter((m) => {
@@ -47,6 +87,18 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
     if (repaymentAmount <= 0) return;
     onRecordRepayment(repaymentAmount, member.id);
     setShowRepaymentModal(false);
+    setReceipt({
+      kind: 'repayment',
+      refNo: `RCPT-${Date.now().toString(36).toUpperCase()}`,
+      date: todayStr(),
+      memberName: member.name,
+      memberNo: member.no,
+      amount: repaymentAmount,
+      extraLine: `Loan repayment · New balance UGX ${Math.max(0, member.loanBalance - repaymentAmount).toLocaleString()}`,
+      issuerName,
+      groupName,
+      boxIdentifier,
+    });
     const msg =
       language === 'LU'
         ? `Okusasula kwa cash kwa UGX ${repaymentAmount.toLocaleString()} kuweereddwa ${member.name}!`
@@ -62,6 +114,18 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
     if (sharesToBuy <= 0) return;
     onBuyShares(sharesToBuy, member.id);
     setShowBuySharesModal(false);
+    setReceipt({
+      kind: 'shares',
+      refNo: `RCPT-${Date.now().toString(36).toUpperCase()}`,
+      date: todayStr(),
+      memberName: member.name,
+      memberNo: member.no,
+      amount: sharesToBuy * 10000,
+      extraLine: `${sharesToBuy} share(s) stamped · Total ${member.sharesCount + sharesToBuy} shares`,
+      issuerName,
+      groupName,
+      boxIdentifier,
+    });
     const msg =
       language === 'LU'
         ? `Emigabo ${sharesToBuy} mipya (UGX ${(sharesToBuy * 10000).toLocaleString()}) gisimbiddwa kyetemba kya ${member.name}!`
@@ -157,6 +221,26 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-surface-container-high text-primary">
             Cycle 4 · Wk 28
           </span>
+        </div>
+
+        {/* Member record export */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleExportMember('json')}
+            className="flex-1 min-h-[40px] px-3 bg-surface-card border border-border-line rounded-lg text-xs font-bold text-primary flex items-center justify-center gap-1.5 active:scale-[0.99]"
+          >
+            <span className="material-symbols-outlined text-[16px]">download</span>
+            Record (.json)
+          </button>
+          <button
+            type="button"
+            onClick={() => handleExportMember('csv')}
+            className="flex-1 min-h-[40px] px-3 bg-surface-card border border-border-line rounded-lg text-xs font-bold text-primary flex items-center justify-center gap-1.5 active:scale-[0.99]"
+          >
+            <span className="material-symbols-outlined text-[16px]">table_view</span>
+            Sheet (.csv)
+          </button>
         </div>
 
         {/* MEMBER IDENTITY HERO CARD */}
@@ -637,6 +721,8 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
           </div>
         </div>
       )}
+
+      <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />
     </div>
   );
 };

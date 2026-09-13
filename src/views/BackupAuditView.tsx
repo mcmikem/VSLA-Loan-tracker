@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { VSLAState, BackupSnapshot, ScreenId } from '../types';
+import { formatAuditTime } from '../utils/audit';
 
 interface BackupAuditViewProps {
   state: VSLAState;
@@ -23,7 +24,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
   const [restoreFeedback, setRestoreFeedback] = useState<{ type: 'ok' | 'err'; message: string } | null>(null);
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'export' | 'restore' | 'snapshots'>('export');
+  const [activeTab, setActiveTab] = useState<'export' | 'restore' | 'snapshots' | 'audit'>('export');
   const [isCopied, setIsCopied] = useState(false);
 
   // Generate downloadable JSON
@@ -299,6 +300,18 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
           <span className="material-symbols-outlined text-sm">history</span>
           Snapshots ({state.snapshots?.length || 0})
         </button>
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition ${
+            activeTab === 'audit'
+              ? 'bg-primary-container text-white shadow-sm'
+              : 'text-text-muted hover:text-primary'
+          }`}
+          type="button"
+        >
+          <span className="material-symbols-outlined text-sm">receipt_long</span>
+          Audit ({state.auditLog?.length || 0})
+        </button>
       </div>
 
       {/* TAB 1: EXPORT */}
@@ -559,6 +572,48 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
               ))
             )}
           </section>
+        </div>
+      )}
+
+      {/* TAB 4: AUDIT TRAIL */}
+      {activeTab === 'audit' && (
+        <div className="space-y-2 animate-in fade-in duration-150">
+          <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-primary flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-secondary">verified_user</span>
+              Immutable Audit Trail
+            </h3>
+            <p className="text-xs text-text-muted mt-0.5">
+              Every cash movement, approval and waiver — stamped with officer and time. Newest first.
+            </p>
+          </section>
+          {(!state.auditLog || state.auditLog.length === 0) ? (
+            <div className="bg-surface-card border border-border-line rounded-xl p-4 text-center text-xs text-text-muted">
+              No audited actions yet. Approvals, repayments, fines and payouts will appear here.
+            </div>
+          ) : (
+            state.auditLog.map((entry) => (
+              <div
+                key={entry.id}
+                className="bg-surface-card border border-border-line rounded-xl p-3 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-primary">{entry.action}</p>
+                    <p className="text-[11px] text-text-muted mt-0.5">{entry.details}</p>
+                    <p className="text-[10px] text-text-muted mt-1 font-mono">
+                      {entry.actorName} · {formatAuditTime(entry.timestamp)}
+                    </p>
+                  </div>
+                  {typeof entry.amount === 'number' && (
+                    <span className="font-mono text-xs font-bold text-secondary shrink-0">
+                      UGX {entry.amount.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
