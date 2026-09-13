@@ -2,23 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "buildCommand": "npx vite build",
-  "outputDirectory": "dist",
-  "rewrites": [
-    {
-      "source": "/api/backup/restore",
-      "destination": "/api/backup?action=restore"
-    },
-    {
-      "source": "/api/backup/snapshot",
-      "destination": "/api/backup?action=snapshot"
-    },
-    {
-      "source": "/api/backup/reset",
-      "destination": "/api/backup?action=reset"
-    },
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
-  ]
+  "outputDirectory": "dist"
 }
