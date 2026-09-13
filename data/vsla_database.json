@@ -1,0 +1,757 @@
+{
+  "groupName": "Bakwata Savings Group",
+  "boxIdentifier": "BOX-KLA-042",
+  "cycle": 4,
+  "cycleMonth": 7,
+  "totalCycleMonths": 10,
+  "boxCashBalance": 1420000,
+  "loanFundBalance": 9950000,
+  "welfareFundBalance": 790000,
+  "lastBackupDate": "2026-09-12T10:52:01.847Z",
+  "recentMeetingsCount": 28,
+  "activePreset": "meeting_close",
+  "currentUser": {
+    "id": "acc-sec",
+    "memberNo": "SEC-01",
+    "name": "Grace Akello",
+    "phone": "+256 772 445566",
+    "provider": "MTN",
+    "role": "secretary",
+    "roleTitle": "General Secretary & Box Teller",
+    "zone": "Kalerwe Central Office",
+    "pin": "1234",
+    "avatarInitials": "GA",
+    "avatarBg": "bg-emerald-700",
+    "nationalId": "CM84029103KL9",
+    "permissions": {
+      "canLockBox": true,
+      "canApproveLoans": true,
+      "canDisburseWelfare": true,
+      "canRecordShares": true,
+      "canRequestLoan": true,
+      "canManageBackups": true
+    }
+  },
+  "availableAccounts": [
+    {
+      "id": "acc-sec",
+      "memberNo": "SEC-01",
+      "name": "Grace Akello",
+      "phone": "+256 772 445566",
+      "provider": "MTN",
+      "role": "secretary",
+      "roleTitle": "General Secretary & Box Teller",
+      "zone": "Kalerwe Central Office",
+      "pin": "1234",
+      "avatarInitials": "GA",
+      "avatarBg": "bg-emerald-700",
+      "nationalId": "CM84029103KL9",
+      "permissions": {
+        "canLockBox": true,
+        "canApproveLoans": true,
+        "canDisburseWelfare": true,
+        "canRecordShares": true,
+        "canRequestLoan": true,
+        "canManageBackups": true
+      }
+    },
+    {
+      "id": "acc-kh1",
+      "memberId": "m1",
+      "memberNo": "01",
+      "name": "Sarah Nabukalu",
+      "phone": "+256 772 123456",
+      "provider": "MTN",
+      "role": "keyholder",
+      "roleTitle": "Keyholder 1 (Padlock Key A)",
+      "zone": "Kalerwe Market Zone B · Produce",
+      "pin": "1234",
+      "avatarInitials": "SN",
+      "avatarBg": "bg-amber-600",
+      "nationalId": "CF79018492KA4",
+      "permissions": {
+        "canLockBox": true,
+        "canApproveLoans": true,
+        "canDisburseWelfare": false,
+        "canRecordShares": false,
+        "canRequestLoan": true,
+        "canManageBackups": false
+      }
+    },
+    {
+      "id": "acc-tres",
+      "memberId": "m4",
+      "memberNo": "04",
+      "name": "Peter Ssemwogerere",
+      "phone": "+256 701 987654",
+      "provider": "Airtel",
+      "role": "treasurer",
+      "roleTitle": "Group Treasurer & Keyholder 2 (Key B)",
+      "zone": "Kalerwe Zone A · Hardware",
+      "pin": "1234",
+      "avatarInitials": "PS",
+      "avatarBg": "bg-blue-700",
+      "nationalId": "CM75043128KB1",
+      "permissions": {
+        "canLockBox": true,
+        "canApproveLoans": true,
+        "canDisburseWelfare": true,
+        "canRecordShares": true,
+        "canRequestLoan": true,
+        "canManageBackups": true
+      }
+    },
+    {
+      "id": "acc-kh3",
+      "memberNo": "09",
+      "name": "David Alupo",
+      "phone": "+256 782 998877",
+      "provider": "MTN",
+      "role": "keyholder",
+      "roleTitle": "Keyholder 3 (Padlock Key C)",
+      "zone": "Kalerwe Zone C · Elder Council",
+      "pin": "1234",
+      "avatarInitials": "DA",
+      "avatarBg": "bg-purple-700",
+      "nationalId": "CM68019342KC9",
+      "permissions": {
+        "canLockBox": true,
+        "canApproveLoans": true,
+        "canDisburseWelfare": false,
+        "canRecordShares": false,
+        "canRequestLoan": true,
+        "canManageBackups": false
+      }
+    },
+    {
+      "id": "acc-mem1",
+      "memberId": "m2",
+      "memberNo": "02",
+      "name": "Joseph Mukasa",
+      "phone": "+256 772 987654",
+      "provider": "MTN",
+      "role": "member",
+      "roleTitle": "Active Member (Bodaboda Stage)",
+      "zone": "Kalerwe Zone B · Agriculturalist",
+      "pin": "1234",
+      "avatarInitials": "JM",
+      "avatarBg": "bg-teal-700",
+      "nationalId": "CM91054231KD3",
+      "permissions": {
+        "canLockBox": false,
+        "canApproveLoans": false,
+        "canDisburseWelfare": false,
+        "canRecordShares": false,
+        "canRequestLoan": true,
+        "canManageBackups": false
+      }
+    },
+    {
+      "id": "acc-mem2",
+      "memberId": "m7",
+      "memberNo": "07",
+      "name": "Prossy Namutebi",
+      "phone": "+256 772 987111",
+      "provider": "MTN",
+      "role": "member",
+      "roleTitle": "Active Member (Market Tailor)",
+      "zone": "Kalerwe Zone B · Tailor",
+      "pin": "1234",
+      "avatarInitials": "PN",
+      "avatarBg": "bg-rose-700",
+      "nationalId": "CF88034192KE7",
+      "permissions": {
+        "canLockBox": false,
+        "canApproveLoans": false,
+        "canDisburseWelfare": false,
+        "canRecordShares": false,
+        "canRequestLoan": true,
+        "canManageBackups": false
+      }
+    },
+    {
+      "id": "acc-mem3",
+      "memberId": "m12",
+      "memberNo": "12",
+      "name": "Kato Moses",
+      "phone": "+256 782 334455",
+      "provider": "MTN",
+      "role": "member",
+      "roleTitle": "Active Member (Produce Cashier)",
+      "zone": "Kalerwe Market · Cashier",
+      "pin": "1234",
+      "avatarInitials": "KM",
+      "avatarBg": "bg-indigo-700",
+      "nationalId": "CM86092143KF2",
+      "permissions": {
+        "canLockBox": false,
+        "canApproveLoans": false,
+        "canDisburseWelfare": false,
+        "canRecordShares": false,
+        "canRequestLoan": true,
+        "canManageBackups": false
+      }
+    }
+  ],
+  "members": [
+    {
+      "id": "m1",
+      "no": "01",
+      "name": "Sarah Nabukalu",
+      "initials": "SN",
+      "zone": "Kalerwe Zone A · Produce Vendor",
+      "phone": "0772-123-456",
+      "provider": "MTN",
+      "attendance": "28/28",
+      "sharesCount": 45,
+      "sharesTotal": 450000,
+      "maxBorrowLimit": 1350000,
+      "loanBalance": 120000,
+      "welfareBalance": 35000,
+      "isKeyholder": true,
+      "keyholderTitle": "Keyholder 1",
+      "stamps": [
+        {
+          "week": 19,
+          "shares": 5,
+          "status": "validated"
+        },
+        {
+          "week": 20,
+          "shares": 5,
+          "status": "validated"
+        },
+        {
+          "week": 21,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 22,
+          "shares": 5,
+          "status": "validated"
+        },
+        {
+          "week": 23,
+          "shares": 5,
+          "status": "validated"
+        },
+        {
+          "week": 24,
+          "shares": 5,
+          "status": "validated"
+        },
+        {
+          "week": 25,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 28,
+          "shares": 5,
+          "status": "current"
+        },
+        {
+          "week": 29,
+          "shares": 0,
+          "status": "next"
+        },
+        {
+          "week": 30,
+          "shares": 0,
+          "status": "close"
+        }
+      ],
+      "ledger": [
+        {
+          "id": "led-1",
+          "meetingNo": 28,
+          "meetingCode": "WK 28",
+          "title": "Meeting #28: Regular Saving",
+          "subtitle": "5 Shares @ 10k + Welfare Enkoba",
+          "date": "Today, 10:42 AM",
+          "badge": "Box Cash Verified",
+          "amountText": "+UGX 52,000",
+          "isPositive": true,
+          "extraText": "Shares: 50k · Welfare: 2k"
+        },
+        {
+          "id": "led-2",
+          "meetingNo": 27,
+          "meetingCode": "WK 27",
+          "title": "Meeting #27: Loan Repayment",
+          "subtitle": "Principal UGX 35k + Interest UGX 5k",
+          "date": "15 Feb 2025 · 11:15 AM",
+          "badge": "Cash Receipt #27-04",
+          "amountText": "+UGX 40,000",
+          "isPositive": true,
+          "extraText": "Principal: 35k · Int: 5k"
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "no": "02",
+      "name": "Joseph Mukasa",
+      "initials": "JM",
+      "zone": "Kalerwe Zone B · Bodaboda",
+      "phone": "0772-987-654",
+      "provider": "MTN",
+      "attendance": "27/28",
+      "sharesCount": 28,
+      "sharesTotal": 280000,
+      "maxBorrowLimit": 840000,
+      "loanBalance": 60000,
+      "welfareBalance": 35000,
+      "isKeyholder": false,
+      "stamps": [
+        {
+          "week": 19,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 20,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 21,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 22,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 23,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 24,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 25,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 28,
+          "shares": 3,
+          "status": "current"
+        },
+        {
+          "week": 29,
+          "shares": 0,
+          "status": "next"
+        },
+        {
+          "week": 30,
+          "shares": 0,
+          "status": "close"
+        }
+      ],
+      "ledger": [
+        {
+          "id": "led-m1",
+          "meetingNo": 28,
+          "meetingCode": "WK 28",
+          "title": "Meeting #28: Regular Saving",
+          "subtitle": "3 Shares bought + Welfare",
+          "date": "Today, 10:45 AM",
+          "badge": "Cash Verified",
+          "amountText": "+UGX 32,000",
+          "isPositive": true,
+          "extraText": "Shares: 30k · Welfare: 2k"
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "no": "04",
+      "name": "Peter Ssemwogerere",
+      "initials": "PS",
+      "zone": "Kalerwe Zone A · Retailer",
+      "phone": "0701-987-654",
+      "provider": "Airtel",
+      "attendance": "27/28",
+      "sharesCount": 25,
+      "sharesTotal": 320000,
+      "maxBorrowLimit": 960000,
+      "loanBalance": 50000,
+      "welfareBalance": 35000,
+      "isKeyholder": true,
+      "keyholderTitle": "Keyholder 2",
+      "stamps": [
+        {
+          "week": 19,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 20,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 21,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 22,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 23,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 24,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 25,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 28,
+          "shares": 2,
+          "status": "current"
+        },
+        {
+          "week": 29,
+          "shares": 0,
+          "status": "next"
+        },
+        {
+          "week": 30,
+          "shares": 0,
+          "status": "close"
+        }
+      ],
+      "ledger": []
+    },
+    {
+      "id": "m7",
+      "no": "07",
+      "name": "Prossy Namutebi",
+      "initials": "PN",
+      "zone": "Kalerwe Zone B · Tailor",
+      "phone": "0772-987-111",
+      "provider": "MTN",
+      "attendance": "26/28",
+      "sharesCount": 35,
+      "sharesTotal": 350000,
+      "maxBorrowLimit": 1050000,
+      "loanBalance": 0,
+      "welfareBalance": 35000,
+      "isKeyholder": false,
+      "stamps": [
+        {
+          "week": 19,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 20,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 21,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 22,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 23,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 24,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 25,
+          "shares": 3,
+          "status": "validated"
+        },
+        {
+          "week": 28,
+          "shares": 4,
+          "status": "current"
+        },
+        {
+          "week": 29,
+          "shares": 0,
+          "status": "next"
+        },
+        {
+          "week": 30,
+          "shares": 0,
+          "status": "close"
+        }
+      ],
+      "ledger": []
+    },
+    {
+      "id": "m12",
+      "no": "12",
+      "name": "Kato Moses",
+      "initials": "KM",
+      "zone": "Kalerwe Market · Cashier",
+      "phone": "0782-334-455",
+      "provider": "MTN",
+      "attendance": "28/28",
+      "sharesCount": 40,
+      "sharesTotal": 400000,
+      "maxBorrowLimit": 1200000,
+      "loanBalance": 80000,
+      "welfareBalance": 35000,
+      "isKeyholder": false,
+      "stamps": [
+        {
+          "week": 19,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 20,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 21,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 22,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 23,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 24,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 25,
+          "shares": 4,
+          "status": "validated"
+        },
+        {
+          "week": 28,
+          "shares": 4,
+          "status": "current"
+        },
+        {
+          "week": 29,
+          "shares": 0,
+          "status": "next"
+        },
+        {
+          "week": 30,
+          "shares": 0,
+          "status": "close"
+        }
+      ],
+      "ledger": []
+    },
+    {
+      "id": "m14",
+      "no": "14",
+      "name": "John Baptist Walusimbi",
+      "initials": "JW",
+      "zone": "Kalerwe Zone A · Carpenter",
+      "phone": "0702-556-677",
+      "provider": "Airtel",
+      "attendance": "25/28",
+      "sharesCount": 20,
+      "sharesTotal": 200000,
+      "maxBorrowLimit": 600000,
+      "loanBalance": 0,
+      "welfareBalance": 31000,
+      "isKeyholder": false,
+      "stamps": [
+        {
+          "week": 19,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 20,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 21,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 22,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 23,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 24,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 25,
+          "shares": 2,
+          "status": "validated"
+        },
+        {
+          "week": 28,
+          "shares": 2,
+          "status": "current"
+        },
+        {
+          "week": 29,
+          "shares": 0,
+          "status": "next"
+        },
+        {
+          "week": 30,
+          "shares": 0,
+          "status": "close"
+        }
+      ],
+      "ledger": []
+    }
+  ],
+  "approvals": [
+    {
+      "id": "app-1",
+      "type": "vsla_loan",
+      "reqNumber": "#LN-2024-089",
+      "timeText": "12m ago",
+      "memberName": "Joseph Mukasa",
+      "memberNo": "02",
+      "phone": "0772-123-456",
+      "provider": "MTN",
+      "initiator": "Initiated by Secretary (J. Mukasa)",
+      "amount": 600000,
+      "term": "3 months",
+      "serviceFee": 60000,
+      "status": "pending",
+      "totalSavings": 280000,
+      "maxBorrowable": 840000
+    },
+    {
+      "id": "app-2",
+      "type": "welfare_grant",
+      "reqNumber": "#WF-2024-012",
+      "timeText": "35m ago",
+      "memberName": "Sarah Nabukalu",
+      "memberNo": "01",
+      "initiator": "Initiated by Chairperson (S. Nabukalu)",
+      "amount": 150000,
+      "reason": "Mulago Hospital Admission",
+      "status": "pending",
+      "welfareAvailable": 790000,
+      "accountBalance": 35000
+    },
+    {
+      "id": "app-3",
+      "type": "savings_withdrawal",
+      "reqNumber": "#WD-2024-004",
+      "timeText": "2h ago",
+      "memberName": "Peter Ssemwogerere",
+      "memberNo": "04",
+      "initiator": "Initiated by Treasurer (M. Kato)",
+      "amount": 100000,
+      "reason": "Emergency School Fees Partial Withdrawal",
+      "status": "pending",
+      "accountBalance": 320000,
+      "postBalance": 220000
+    }
+  ],
+  "fines": [
+    {
+      "id": "fine-1",
+      "memberNo": "02",
+      "memberName": "Joseph Mukasa",
+      "reason": "Late Attendance (Arrived 10:45 AM)",
+      "amount": 2000,
+      "timeNote": "Meeting #28 · 10:45 AM",
+      "meetingRef": "Meeting #28",
+      "status": "pending"
+    },
+    {
+      "id": "fine-2",
+      "memberNo": "07",
+      "memberName": "Prossy Namutebi",
+      "reason": "Phone Rang in Opening Prayer #27",
+      "amount": 1000,
+      "timeNote": "Meeting #27",
+      "meetingRef": "Meeting #27",
+      "status": "pending"
+    }
+  ],
+  "welfareGrants": [
+    {
+      "id": "grant-1",
+      "memberNo": "01",
+      "memberName": "Sarah Nabukalu",
+      "reason": "Mulago Hospital Admission · Inpatient Surgery",
+      "amount": 150000,
+      "paymentMethod": "Disbursed via Cash Handover (Keyholder 1 witnessed)",
+      "date": "12 Oct 2024",
+      "minutesRef": "Minutes ref #M-27",
+      "type": "medical"
+    },
+    {
+      "id": "grant-2",
+      "memberNo": "14",
+      "memberName": "John Baptist Walusimbi",
+      "reason": "Bereavement / Funeral Support (Mabugo)",
+      "amount": 200000,
+      "paymentMethod": "Disbursed via MTN MoMo · Trans ID: 88941032",
+      "date": "18 Sep 2024",
+      "minutesRef": "Minutes ref #M-24",
+      "type": "bereavement"
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "snap-001",
+      "timestamp": "2026-09-12T10:52:01.847Z",
+      "label": "Pre-Meeting #28 System Checkpoint",
+      "membersCount": 6,
+      "boxCashBalance": 1420000,
+      "loanFundBalance": 9950000,
+      "welfareFundBalance": 790000,
+      "data": ""
+    }
+  ]
+}

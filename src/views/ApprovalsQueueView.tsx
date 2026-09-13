@@ -1,0 +1,459 @@
+import React, { useState } from 'react';
+import { ApprovalItem } from '../types';
+
+interface ApprovalsQueueViewProps {
+  approvals: ApprovalItem[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}
+
+export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
+  approvals,
+  onApprove,
+  onReject,
+}) => {
+  const [filter, setFilter] = useState<'all' | 'vsla_loan' | 'savings_withdrawal' | 'welfare_grant'>('all');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const filteredApprovals = approvals.filter((app) => {
+    if (app.status !== 'pending') return false;
+    if (filter === 'all') return true;
+    return app.type === filter;
+  });
+
+  const pendingCount = approvals.filter((a) => a.status === 'pending').length;
+  const loanCount = approvals.filter((a) => a.type === 'vsla_loan' && a.status === 'pending').length;
+  const withdrawalCount = approvals.filter((a) => a.type === 'savings_withdrawal' && a.status === 'pending').length;
+  const welfareCount = approvals.filter((a) => a.type === 'welfare_grant' && a.status === 'pending').length;
+
+  const handleAction = (id: string, action: 'approve' | 'reject', name: string) => {
+    if (action === 'approve') {
+      onApprove(id);
+      showToast(`Disbursement approved for ${name}. Ledger transaction signed.`);
+    } else {
+      onReject(id);
+      showToast(`Request for ${name} rejected.`);
+    }
+  };
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  return (
+    <main className="w-full max-w-lg mx-auto px-4 pt-4 flex-1 space-y-4 pb-12">
+      {/* Toast */}
+      {toastMessage && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-primary text-white text-xs px-4 py-2.5 rounded-lg shadow-xl flex items-center gap-2 border border-border-strong animate-in fade-in">
+          <span className="material-symbols-outlined text-secondary-fixed text-base">check_circle</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* STICKY QUEUE TITLE & RECONCILIATION SUMMARY BAR */}
+      <div className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-headline-lg font-headline-lg text-primary tracking-tight font-bold">
+              Approvals Queue
+            </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-status-warn-bg text-status-warn-tx font-semibold border border-amber-300 text-xs">
+              <span className="material-symbols-outlined text-[14px]">pending</span>
+              {pendingCount} Pending
+            </span>
+          </div>
+          <div className="text-right">
+            <span className="text-label-sm font-label-sm text-text-muted block text-xs">
+              Fund Disbursable
+            </span>
+            <span className="font-mono text-currency-sm font-bold text-primary">
+              UGX 4,850,000
+            </span>
+          </div>
+        </div>
+
+        {/* Security / Audit Banner */}
+        <div className="bg-surface-container-low border border-border-line rounded-lg p-2.5 flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
+          <p className="text-label-sm font-label-sm text-text-muted leading-snug text-xs">
+            Dual-Authorization active. Executing approval initiates irreversible disbursement from the group bank pool.
+          </p>
+        </div>
+      </div>
+
+      {/* HORIZONTAL FILTER TABS */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+        <button
+          onClick={() => setFilter('all')}
+          className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-label-md font-label-md font-semibold min-h-[44px] flex items-center gap-1.5 active:scale-95 transition-all text-xs ${
+            filter === 'all'
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-surface-card text-text-muted hover:text-primary border border-border-line'
+          }`}
+          type="button"
+        >
+          <span>All ({pendingCount})</span>
+        </button>
+
+        <button
+          onClick={() => setFilter('vsla_loan')}
+          className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-label-md font-label-md font-medium min-h-[44px] flex items-center gap-1.5 active:scale-95 transition-all text-xs ${
+            filter === 'vsla_loan'
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-surface-card text-text-muted hover:text-primary border border-border-line'
+          }`}
+          type="button"
+        >
+          <span>VSLA Loans ({loanCount})</span>
+        </button>
+
+        <button
+          onClick={() => setFilter('savings_withdrawal')}
+          className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-label-md font-label-md font-medium min-h-[44px] flex items-center gap-1.5 active:scale-95 transition-all text-xs ${
+            filter === 'savings_withdrawal'
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-surface-card text-text-muted hover:text-primary border border-border-line'
+          }`}
+          type="button"
+        >
+          <span>Savings Withdrawals ({withdrawalCount})</span>
+        </button>
+
+        <button
+          onClick={() => setFilter('welfare_grant')}
+          className={`whitespace-nowrap px-3.5 py-2 rounded-lg text-label-md font-label-md font-medium min-h-[44px] flex items-center gap-1.5 active:scale-95 transition-all text-xs ${
+            filter === 'welfare_grant'
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-surface-card text-text-muted hover:text-primary border border-border-line'
+          }`}
+          type="button"
+        >
+          <span>Welfare Grants ({welfareCount})</span>
+        </button>
+      </div>
+
+      {/* PENDING APPROVAL CARDS CONTAINER */}
+      <div className="space-y-4">
+        {filteredApprovals.length === 0 ? (
+          <div className="bg-surface-card border border-border-line rounded-xl p-8 text-center space-y-2">
+            <span className="material-symbols-outlined text-4xl text-secondary">
+              check_circle
+            </span>
+            <h3 className="font-bold text-primary">Queue All Cleared</h3>
+            <p className="text-xs text-text-muted">
+              No pending approvals require executive signature under this filter.
+            </p>
+          </div>
+        ) : (
+          filteredApprovals.map((item) => {
+            if (item.type === 'vsla_loan') {
+              return (
+                <div
+                  key={item.id}
+                  className="bg-surface-card border border-border-line rounded-xl shadow-[0px_1px_3px_rgba(0,0,0,0.08)] overflow-hidden transition-all"
+                >
+                  <div className="bg-surface-container-low px-4 py-2.5 border-b border-border-line flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-semibold bg-primary text-primary-fixed border border-primary text-xs">
+                        <span className="material-symbols-outlined text-[14px]">account_balance</span>
+                        VSLA Loan
+                      </span>
+                      <span className="text-xs text-text-muted font-mono">{item.reqNumber}</span>
+                    </div>
+                    <span className="text-xs text-text-muted flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">schedule</span>
+                      {item.timeText}
+                    </span>
+                  </div>
+
+                  <div className="p-4 space-y-3.5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-headline-sm text-primary">
+                            {item.memberName}
+                          </span>
+                          <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
+                            No. {item.memberNo}
+                          </span>
+                        </div>
+                        {item.phone && (
+                          <div className="flex items-center gap-1.5 mt-1 text-xs text-text-muted">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-900 font-bold border border-yellow-300 text-[11px]">
+                              {item.provider} MoMo
+                            </span>
+                            <span className="font-mono text-on-surface">{item.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-text-muted block">Initiator</span>
+                        <span className="text-xs font-semibold text-primary">{item.initiator}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-surface p-3 rounded-lg border border-border-line">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xs text-text-muted">Loan Principal</span>
+                        <div className="text-right">
+                          <span className="font-mono text-currency-display text-primary leading-none text-xl font-bold">
+                            UGX {item.amount.toLocaleString('en-US')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-border-line flex items-center justify-between text-xs text-text-muted">
+                        <span>
+                          Term: <strong className="text-primary">{item.term}</strong>
+                        </span>
+                        <span>
+                          Service Fee (10%):{' '}
+                          <strong className="text-primary font-mono">
+                            UGX {(item.serviceFee || 0).toLocaleString('en-US')}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-status-ok-bg/40 border border-emerald-200 rounded-lg p-3 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-status-ok-tx text-[18px]">
+                            check_circle
+                          </span>
+                          <span className="text-xs font-semibold text-status-ok-tx">
+                            Eligibility Criteria Verified
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold bg-status-ok-bg text-status-ok-tx px-2 py-0.5 rounded border border-emerald-300">
+                          PASS
+                        </span>
+                      </div>
+                      <div className="text-xs text-status-ok-tx grid grid-cols-2 gap-2 pt-1 border-t border-emerald-200/60">
+                        <div>
+                          <span className="block text-emerald-800">Total Savings:</span>
+                          <span className="font-mono font-semibold">
+                            UGX {(item.totalSavings || 0).toLocaleString('en-US')}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="block text-emerald-800">Max Borrowable (3x):</span>
+                          <span className="font-mono font-semibold">
+                            UGX {(item.maxBorrowable || 0).toLocaleString('en-US')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-emerald-800 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">inventory_2</span>
+                        Loan fund box check: Sufficient balance available
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      <button
+                        onClick={() => handleAction(item.id, 'reject', item.memberName)}
+                        className="min-h-[48px] px-3 bg-status-bad-bg border border-status-bad-tx text-status-bad-tx text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                        <span>Reject</span>
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'approve', item.memberName)}
+                        className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">send_to_mobile</span>
+                        <span>Approve & Disburse (MoMo)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (item.type === 'welfare_grant') {
+              return (
+                <div
+                  key={item.id}
+                  className="bg-surface-card border border-border-line rounded-xl shadow-[0px_1px_3px_rgba(0,0,0,0.08)] overflow-hidden transition-all"
+                >
+                  <div className="bg-surface-container-low px-4 py-2.5 border-b border-border-line flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-tertiary-container text-tertiary-fixed border border-tertiary">
+                        <span className="material-symbols-outlined text-[14px]">health_and_safety</span>
+                        Welfare Emergency Grant
+                      </span>
+                      <span className="text-xs text-text-muted">Non-Repayable</span>
+                    </div>
+                    <span className="text-xs text-text-muted flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">schedule</span>
+                      {item.timeText}
+                    </span>
+                  </div>
+
+                  <div className="p-4 space-y-3.5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-headline-sm text-primary">
+                            {item.memberName}
+                          </span>
+                          <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
+                            No. {item.memberNo}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-text-muted flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px] text-red-600">
+                            local_hospital
+                          </span>
+                          <span className="font-medium text-primary">{item.reason}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-text-muted block">Initiator</span>
+                        <span className="text-xs font-semibold text-primary">{item.initiator}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-surface p-3 rounded-lg border border-border-line flex items-center justify-between">
+                      <span className="text-xs text-text-muted">Approved Grant Sum</span>
+                      <span className="font-mono text-currency-lg text-primary font-bold">
+                        UGX {item.amount.toLocaleString('en-US')}
+                      </span>
+                    </div>
+
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-status-ok-tx text-[18px]">
+                          account_balance_wallet
+                        </span>
+                        <div className="text-xs">
+                          <span className="text-text-muted block">Welfare Box Available</span>
+                          <span className="font-mono font-bold text-status-ok-tx">
+                            UGX {(item.welfareAvailable || 640000).toLocaleString('en-US')}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold bg-status-ok-bg text-status-ok-tx px-2 py-0.5 rounded border border-emerald-300">
+                        Sufficient
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      <button
+                        onClick={() => handleAction(item.id, 'reject', item.memberName)}
+                        className="min-h-[48px] px-3 bg-status-bad-bg border border-status-bad-tx text-status-bad-tx text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                        <span>Reject</span>
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'approve', item.memberName)}
+                        className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">payments</span>
+                        <span>Approve (Cash Handover)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (item.type === 'savings_withdrawal') {
+              return (
+                <div
+                  key={item.id}
+                  className="bg-surface-card border border-border-line rounded-xl shadow-[0px_1px_3px_rgba(0,0,0,0.08)] overflow-hidden transition-all"
+                >
+                  <div className="bg-surface-container-low px-4 py-2.5 border-b border-border-line flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-surface-container-highest text-primary border border-border-strong">
+                        <span className="material-symbols-outlined text-[14px]">savings</span>
+                        Savings Withdrawal ({item.reqNumber})
+                      </span>
+                    </div>
+                    <span className="text-xs text-text-muted flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">schedule</span>
+                      {item.timeText}
+                    </span>
+                  </div>
+
+                  <div className="p-4 space-y-3.5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-headline-sm text-primary">
+                            {item.memberName}
+                          </span>
+                          <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
+                            No. {item.memberNo}
+                          </span>
+                        </div>
+                        {item.phone && (
+                          <div className="flex items-center gap-1.5 mt-1 text-xs text-text-muted">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-bold border border-red-300 text-[11px]">
+                              {item.provider} Money
+                            </span>
+                            <span className="font-mono text-on-surface">{item.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-text-muted block">Account Balance</span>
+                        <span className="font-mono text-xs font-bold text-primary">
+                          UGX {(item.accountBalance || 950000).toLocaleString('en-US')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-surface p-3 rounded-lg border border-border-line flex items-center justify-between">
+                      <span className="text-xs text-text-muted">Requested Payout</span>
+                      <div className="text-right">
+                        <span className="font-mono text-currency-lg text-primary font-bold">
+                          UGX {item.amount.toLocaleString('en-US')}
+                        </span>
+                        <span className="text-xs text-text-muted block">
+                          Post-balance: UGX {(item.postBalance || 750000).toLocaleString('en-US')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      <button
+                        onClick={() => handleAction(item.id, 'reject', item.memberName)}
+                        className="min-h-[48px] px-3 bg-status-bad-bg border border-status-bad-tx text-status-bad-tx text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                        <span>Reject</span>
+                      </button>
+                      <button
+                        onClick={() => handleAction(item.id, 'approve', item.memberName)}
+                        className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">send_to_mobile</span>
+                        <span>Approve & Disburse (Airtel)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })
+        )}
+      </div>
+
+      {/* PERSISTENT RECONCILIATION SUMMARY BOTTOM DOCK */}
+      <div className="p-3 bg-white border border-border-line rounded-lg text-center shadow-sm">
+        <p className="text-xs text-text-muted flex items-center justify-center gap-1.5">
+          <span className="material-symbols-outlined text-[16px] text-primary">
+            sync_saved_locally
+          </span>
+          Offline Sync Ready • Group Ledger Hash:{' '}
+          <span className="font-mono text-primary font-semibold">9B32-E01</span>
+        </p>
+      </div>
+    </main>
+  );
+};

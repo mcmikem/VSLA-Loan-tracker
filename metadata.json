@@ -1,0 +1,6 @@
+{
+  "name": "Bakwata Savings Group",
+  "description": "Ugandan Village Savings and Loan Association (VSLA) multi-tenant SaaS platform featuring digital passbooks, strongbox reconciliation, self-serve group onboarding, member invite codes, loan appraisal, and meeting management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
