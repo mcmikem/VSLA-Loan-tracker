@@ -352,6 +352,14 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
             </div>
 
             <div className="pt-1 flex flex-col gap-2">
+              {Math.floor((Date.now() - new Date(state.lastBackupDate).getTime()) / 86400000) >= 7 && (
+                <div className="p-2.5 bg-status-warn-bg border border-[#FDE68A] rounded-lg text-[11px] text-status-warn-tx font-semibold flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">schedule</span>
+                  <span>
+                    Last backup is over a week old. Download a fresh copy below after each meeting.
+                  </span>
+                </div>
+              )}
               <button
                 onClick={handleDownloadBackup}
                 className="w-full py-3 bg-secondary hover:bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow active:scale-[0.99] transition"

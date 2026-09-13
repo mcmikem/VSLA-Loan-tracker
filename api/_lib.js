@@ -97,3 +97,21 @@ export function validate(schema, data, res) {
   }
   return parsed.data;
 }
+
+// ---------- subscription plans (upgrade #25 scaffold) ----------
+// Free groups are capped; paid plans lift the cap. Limits enforced in
+// /api/groups/join. Paid activation arrives with MoMo billing keys.
+export const PLAN_LIMITS = {
+  free: { maxMembers: 30, label: 'Free' },
+  pro: { maxMembers: 500, label: 'Pro' },
+  sacco: { maxMembers: 5000, label: 'SACCO' },
+};
+
+export function planOf(group) {
+  const plan = group.groupProfile?.plan || group.plan || 'free';
+  return PLAN_LIMITS[plan] ? plan : 'free';
+}
+
+export function memberCap(group) {
+  return PLAN_LIMITS[planOf(group)].maxMembers;
+}

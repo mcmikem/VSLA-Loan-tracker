@@ -1,11 +1,15 @@
 import { resolveGroupId } from '../_seed.js';
+import { cors, rateLimit } from '../_lib.js';
+import { actorName, requireRole } from '../_auth.js';
+import { saveGroup } from '../_db.js';
 
-export default function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-group-id');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+export default async function handler(req, res) {
+  if (!cors(req, res, 'POST,OPTIONS')) return;
+  if (!rateLimit(req, res, { limit: 20, windowMs: 60000 })) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const session = requireRole(req, res, 'secretary');
+  if (session === undefined) return;
 
   const groupId = resolveGroupId(req);
   const payload = req.body || {};
@@ -14,15 +18,16 @@ export default function handler(req, res) {
     return res.status(400).json({ error: 'Invalid backup structure: missing members array' });
   }
   restoredData.groupId = groupId;
-  restoredData.lastBackupDate = new Date().toISOString();
+  const saved = await saveGroup(groupId, restoredData);
+  res.setHeader('x-vsla-actor', actorName(req, session));
   return res.status(200).json({
     success: true, groupId,
     restoredAt: new Date().toISOString(),
     stats: {
-      members: restoredData.members.length,
-      boxCash: restoredData.boxCashBalance,
-      approvals: restoredData.approvals?.length || 0,
+      members: saved.members.length,
+      boxCash: saved.boxCashBalance,
+      approvals: saved.approvals?.length || 0,
     },
-    state: restoredData,
+    state: saved,
   });
 }
