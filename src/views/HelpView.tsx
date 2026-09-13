@@ -56,7 +56,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' 
       </div>
 
       <a
-        href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent('Hello Bakwata VSLA support, I need help with my savings group.')}`}
+        href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent('Hello VSLA UG support, I need help with my savings group.')}`}
         target="_blank"
         rel="noreferrer"
         className="flex items-center gap-3 bg-[#006d30] text-white rounded-xl p-4 shadow-sm active:scale-[0.99]"

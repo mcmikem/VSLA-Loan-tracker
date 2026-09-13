@@ -1,6 +1,6 @@
 {
-  "name": "Bakwata VSLA — Village Savings & Loans",
-  "short_name": "Bakwata VSLA",
+  "name": "VSLA UG — Village Savings and Loaning Application",
+  "short_name": "VSLA UG",
   "description": "Digital passbooks, strongbox reconciliation, loans and welfare for Ugandan savings groups. Works offline.",
   "start_url": "/app",
   "scope": "/app",

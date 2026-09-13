@@ -41,7 +41,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="material-symbols-outlined text-lg">arrow_back</span>
         </button>
         <div>
-          <h1 className="font-bold text-primary">{str('About Bakwata VSLA', 'Ebikwata ku Bakwata', 'Kuhusu Bakwata')}</h1>
+          <h1 className="font-bold text-primary">{str('About VSLA UG', 'Ebikwata ku VSLA UG', 'Kuhusu VSLA UG')}</h1>
           <p className="text-xs text-text-muted">{groupName}</p>
         </div>
       </div>

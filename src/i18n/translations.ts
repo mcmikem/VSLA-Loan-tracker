@@ -45,8 +45,8 @@ export const translations = {
     },
     // Top App Bar & Multi-tenant
     topBar: {
-      appName: 'Bakwata VSLA',
-      tagline: 'Kalerwe District',
+      appName: 'VSLA UG',
+      tagline: 'Village Savings & Loans',
       inviteBtn: 'Invite',
       newGroupBtn: '+ New Group',
       activeAccount: 'Account',
@@ -269,8 +269,8 @@ export const translations = {
     },
     // Top App Bar & Multi-tenant (Oluganda)
     topBar: {
-      appName: 'Bakwata VSLA',
-      tagline: 'Ggombolola y\'e Kalerwe',
+      appName: 'VSLA UG',
+      tagline: 'Ensimbi z\'Abatuuze',
       inviteBtn: 'Yita',
       newGroupBtn: '+ Ekibiina Kipya',
       activeAccount: 'Omukiise',
@@ -493,8 +493,8 @@ export const translations = {
     },
     // Top App Bar & Multi-tenant (Kiswahili)
     topBar: {
-      appName: 'Bakwata VSLA',
-      tagline: 'Wilaya ya Kalerwe',
+      appName: 'VSLA UG',
+      tagline: 'Akiba za Kijamii',
       inviteBtn: 'Alika',
       newGroupBtn: '+ Kikundi Kipya',
       activeAccount: 'Akaunti',
