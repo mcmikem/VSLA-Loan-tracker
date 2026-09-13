@@ -32,6 +32,7 @@ import { AudioBroadcastView } from './views/AudioBroadcastView';
 import { ConstitutionFinesView } from './views/ConstitutionFinesView';
 import { BackupAuditView } from './views/BackupAuditView';
 import { LegalView } from './views/LegalView';
+import { MeetingWizardView } from './views/MeetingWizardView';
 import { ReportsView, LATE_FINE_AMOUNT } from './views/ReportsView';
 import { AboutView } from './views/AboutView';
 import { HelpView } from './views/HelpView';
@@ -348,7 +349,7 @@ export function App() {
   const handleNavigateScreen = (screen: ScreenId) => {
     setCurrentScreen(screen);
     if (screen === 'home') setActiveTab('home');
-    else if (screen === 'meeting_close' || screen === 'audio_broadcast') setActiveTab('meetings');
+    else if (screen === 'meeting_close' || screen === 'meeting_wizard' || screen === 'audio_broadcast') setActiveTab('meetings');
     else if (screen === 'member_passbook') setActiveTab('members');
     else if (screen === 'new_loan') setActiveTab('loans');
     else if (screen === 'approvals') setActiveTab('approvals');
@@ -803,9 +804,200 @@ export function App() {
     );
   };
 
+  // ---- Meeting wizard bulk commits (single state write each) ----
+  const wizardSharePrice = vslaState.groupProfile?.sharePrice || 10000;
+
+  const handleWizardShares = (items: { memberId: string; shares: number }[]) => {
+    const map = new Map(items.map((i) => [i.memberId, Math.min(5, Math.max(0, i.shares))]));
+    let total = 0;
+    const updatedMembers = vslaState.members.map((m) => {
+      const n = map.get(m.id) || 0;
+      if (!n) return m;
+      const cost = n * wizardSharePrice;
+      total += cost;
+      let stamped = false;
+      const newStamps = m.stamps.map((st) => {
+        if (!stamped && (st.status === 'current' || st.status === 'next')) {
+          stamped = true;
+          return { ...st, status: 'validated' as const, shares: st.shares + n };
+        }
+        return st;
+      });
+      return {
+        ...m,
+        sharesCount: m.sharesCount + n,
+        sharesTotal: m.sharesTotal + cost,
+        maxBorrowLimit: (m.sharesTotal + cost) * 3,
+        stamps: newStamps,
+        ledger: [
+          {
+            id: 'led-' + Date.now() + '-' + m.id,
+            title: `Meeting #${vslaState.recentMeetingsCount + 1}: Bought ${n} Share(s)`,
+            badge: 'SAVINGS',
+            subtitle: `Wizard-recorded. Total: ${m.sharesCount + n} shares`,
+            amountText: `+UGX ${cost.toLocaleString()}`,
+            isPositive: true,
+            date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          },
+          ...m.ledger,
+        ],
+      };
+    });
+    persistState(
+      withAudit(
+        { ...vslaState, members: updatedMembers, boxCashBalance: vslaState.boxCashBalance + total, loanFundBalance: vslaState.loanFundBalance + total },
+        currentUser.name,
+        `Wizard: recorded shares for ${items.length} member(s)`,
+        `Meeting #${vslaState.recentMeetingsCount + 1}`,
+        total
+      )
+    );
+  };
+
+  const handleWizardWelfare = (memberIds: string[], amount: number) => {
+    const set = new Set(memberIds);
+    const total = memberIds.length * amount;
+    const updatedMembers = vslaState.members.map((m) =>
+      set.has(m.id)
+        ? {
+            ...m,
+            welfareBalance: m.welfareBalance + amount,
+            ledger: [
+              {
+                id: 'led-' + Date.now() + '-' + m.id,
+                title: `Meeting #${vslaState.recentMeetingsCount + 1}: Welfare Contribution`,
+                badge: 'WELFARE',
+                subtitle: 'Wizard-recorded enkoba',
+                amountText: `+UGX ${amount.toLocaleString()}`,
+                isPositive: true,
+                date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+              },
+              ...m.ledger,
+            ],
+          }
+        : m
+    );
+    persistState(
+      withAudit(
+        { ...vslaState, members: updatedMembers, boxCashBalance: vslaState.boxCashBalance + total, welfareFundBalance: vslaState.welfareFundBalance + total },
+        currentUser.name,
+        `Wizard: welfare collected from ${memberIds.length} member(s)`,
+        `Meeting #${vslaState.recentMeetingsCount + 1}`,
+        total
+      )
+    );
+  };
+
+  const handleWizardRepayments = (items: { memberId: string; amount: number }[]) => {
+    const map = new Map(items.map((i) => [i.memberId, Math.max(0, Math.floor(i.amount))]));
+    let total = 0;
+    const updatedMembers = vslaState.members.map((m) => {
+      const amt = map.get(m.id) || 0;
+      if (!amt) return m;
+      const pay = Math.min(amt, m.loanBalance);
+      total += pay;
+      const newLoanBalance = m.loanBalance - pay;
+      return {
+        ...m,
+        loanBalance: newLoanBalance,
+        activeLoan: m.activeLoan
+          ? { ...m.activeLoan, repaid: m.activeLoan.repaid + pay, balance: Math.max(0, m.activeLoan.balance - pay) }
+          : undefined,
+        ledger: [
+          {
+            id: 'led-' + Date.now() + '-' + m.id,
+            title: `Meeting #${vslaState.recentMeetingsCount + 1}: Loan Repayment (Cash)`,
+            badge: 'CASH',
+            subtitle: `Wizard-recorded. Balance: UGX ${newLoanBalance.toLocaleString()}`,
+            amountText: `+UGX ${pay.toLocaleString()}`,
+            isPositive: true,
+            date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          },
+          ...m.ledger,
+        ],
+      };
+    });
+    persistState(
+      withAudit(
+        { ...vslaState, members: updatedMembers, boxCashBalance: vslaState.boxCashBalance + total, loanFundBalance: vslaState.loanFundBalance + total },
+        currentUser.name,
+        `Wizard: repayments from ${items.length} member(s)`,
+        `Meeting #${vslaState.recentMeetingsCount + 1}`,
+        total
+      )
+    );
+  };
+
+  const handleWizardFines = (items: { memberNo: string; memberName: string; reason: string; amount: number; paid: boolean }[]) => {
+    const now = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const newFines: PendingFine[] = items.map((f, i) => ({
+      id: 'fine-' + Date.now() + '-' + i,
+      memberNo: f.memberNo,
+      memberName: f.memberName,
+      reason: f.reason,
+      amount: f.amount,
+      timeNote: `Meeting #${vslaState.recentMeetingsCount + 1} · ${now}`,
+      meetingRef: `Meeting #${vslaState.recentMeetingsCount + 1}`,
+      status: f.paid ? ('collected' as const) : ('pending' as const),
+    }));
+    const paidTotal = items.filter((f) => f.paid).reduce((s, f) => s + f.amount, 0);
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          fines: [...newFines, ...vslaState.fines],
+          boxCashBalance: vslaState.boxCashBalance + paidTotal,
+          welfareFundBalance: vslaState.welfareFundBalance + paidTotal,
+        },
+        currentUser.name,
+        `Wizard: levied ${items.length} fine(s) (${items.filter((f) => f.paid).length} paid now)`,
+        `Meeting #${vslaState.recentMeetingsCount + 1}`,
+        paidTotal
+      )
+    );
+  };
+
+  const handleRequestWelfarePayout = (memberId: string, amount: number, reason: string) => {
+    const member = vslaState.members.find((m) => m.id === memberId) || vslaState.members[0];
+    const payout: ApprovalItem = {
+      id: 'app-' + Date.now(),
+      type: 'welfare_grant',
+      reqNumber: 'Req #WF-' + Math.floor(100 + Math.random() * 900),
+      timeText: 'Just now',
+      memberName: member.name,
+      memberNo: member.no,
+      initiator: `${currentUser.name} (wizard)`,
+      amount,
+      status: 'pending',
+      reason,
+      welfareAvailable: vslaState.welfareFundBalance,
+    };
+    persistState(
+      withAudit(
+        { ...vslaState, approvals: [payout, ...vslaState.approvals] },
+        currentUser.name,
+        `Wizard: welfare payout requested ${payout.reqNumber}`,
+        `${member.name} (#${member.no}) — ${reason}`,
+        amount
+      )
+    );
+  };
+
+  const handleCompleteWizardMeeting = (countedCash: number, minutes: string) => {
+    const meetingNo = vslaState.recentMeetingsCount + 1;
+    persistState(
+      withAudit(
+        { ...vslaState, recentMeetingsCount: meetingNo, boxCashBalance: countedCash },
+        currentUser.name,
+        `Wizard: sealed Meeting #${meetingNo} at UGX ${countedCash.toLocaleString()}`,
+        minutes || 'No minutes recorded',
+        countedCash
+      )
+    );
+  };
+
   // Arrears automation: propose a standard late fine for a debtor
-  const handleProposeArrearsFine = (member: Member) => {
-    handleLevyFine({
+  const handleProposeArrearsFine = (member: Member) => {    handleLevyFine({
       id: 'fine-' + Date.now(),
       memberNo: member.no,
       memberName: member.name,
@@ -907,6 +1099,27 @@ export function App() {
 
         {currentScreen === 'help' && (
           <HelpView onNavigate={handleNavigateScreen} language={language} />
+        )}
+
+        {currentScreen === 'meeting_wizard' && (
+          <MeetingWizardView
+            members={vslaState.members}
+            meetingNo={vslaState.recentMeetingsCount + 1}
+            sharePrice={vslaState.groupProfile?.sharePrice || 10000}
+            welfareAmount={vslaState.groupProfile?.welfareMonthly || 5000}
+            expectedCash={vslaState.boxCashBalance}
+            language={language}
+            onNavigate={handleNavigateScreen}
+            onExit={() => handleNavigateScreen('home')}
+            onRecordSharesBulk={handleWizardShares}
+            onCollectWelfareBulk={handleWizardWelfare}
+            onRequestWelfarePayout={handleRequestWelfarePayout}
+            onRecordRepaymentsBulk={handleWizardRepayments}
+            onSubmitLoan={handleSubmitNewLoan}
+            onRecordFinesBulk={handleWizardFines}
+            onCompleteMeeting={handleCompleteWizardMeeting}
+            onAdjustDiscrepancy={handleDiscrepancyAdjustment}
+          />
         )}
 
         {currentScreen === 'meeting_close' && (

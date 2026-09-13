@@ -1,0 +1,598 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Language, Member, ScreenId } from '../types';
+
+export interface WizardShareItem {
+  memberId: string;
+  shares: number;
+}
+
+export interface WizardRepayItem {
+  memberId: string;
+  amount: number;
+}
+
+export interface WizardFineItem {
+  memberNo: string;
+  memberName: string;
+  reason: string;
+  amount: number;
+  paid: boolean;
+}
+
+export interface WizardLoanForm {
+  memberId: string;
+  amount: string;
+  term: string;
+}
+
+interface MeetingWizardViewProps {
+  members: Member[];
+  meetingNo: number;
+  sharePrice: number;
+  welfareAmount: number;
+  expectedCash: number;
+  language?: Language;
+  onNavigate: (screen: ScreenId) => void;
+  onExit: () => void;
+  onRecordSharesBulk: (items: WizardShareItem[]) => void;
+  onCollectWelfareBulk: (memberIds: string[], amount: number) => void;
+  onRequestWelfarePayout: (memberId: string, amount: number, reason: string) => void;
+  onRecordRepaymentsBulk: (items: WizardRepayItem[]) => void;
+  onSubmitLoan: (loan: { memberName: string; memberNo: string; amount: number; term: string; serviceFee: number; phone: string; provider: 'MTN' | 'Airtel' }) => void;
+  onRecordFinesBulk: (items: WizardFineItem[]) => void;
+  onCompleteMeeting: (countedCash: number, minutes: string) => void;
+  onAdjustDiscrepancy: (amount: number, reason: string, method: string) => void;
+}
+
+type AttStatus = 'present' | 'late' | 'absent' | 'excused';
+
+interface Draft {
+  step: number;
+  attendance: Record<string, AttStatus>;
+  shares: Record<string, number>;
+  welfareDone: string[];
+  sharesRecorded: boolean;
+  welfareRecorded: boolean;
+  repaymentsRecorded: boolean;
+  loansRecorded: boolean;
+  finesRecorded: boolean;
+  counted: string;
+  minutes: string;
+  completed: boolean;
+}
+
+const DRAFT_KEY = 'vsla_meeting_draft_v1';
+const MAX_SHARES = 5;
+
+const blankDraft = (): Draft => ({
+  step: 0,
+  attendance: {},
+  shares: {},
+  welfareDone: [],
+  sharesRecorded: false,
+  welfareRecorded: false,
+  repaymentsRecorded: false,
+  loansRecorded: false,
+  finesRecorded: false,
+  counted: '',
+  minutes: '',
+  completed: false,
+});
+
+function loadDraft(): Draft {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (raw) return { ...blankDraft(), ...JSON.parse(raw) };
+  } catch {
+    /* fresh */
+  }
+  return blankDraft();
+}
+
+/**
+ * The core loop: guided weekly meeting —
+ * Attendance → Shares → Welfare → Repayments → Loans → Fines → Close & Seal.
+ * Action steps commit in bulk (one state write each) so figures never clobber.
+ */
+export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
+  members,
+  meetingNo,
+  sharePrice,
+  welfareAmount,
+  expectedCash,
+  language = 'EN',
+  onNavigate,
+  onExit,
+  onRecordSharesBulk,
+  onCollectWelfareBulk,
+  onRequestWelfarePayout,
+  onRecordRepaymentsBulk,
+  onSubmitLoan,
+  onRecordFinesBulk,
+  onCompleteMeeting,
+  onAdjustDiscrepancy,
+}) => {
+  const [draft, setDraft] = useState<Draft>(loadDraft);
+  const [repayInputs, setRepayInputs] = useState<Record<string, string>>({});
+  const [loanForm, setLoanForm] = useState<WizardLoanForm>({ memberId: members[0]?.id || '', amount: '', term: '3 months' });
+  const [fineMember, setFineMember] = useState(members[0]?.id || '');
+  const [fineReason, setFineReason] = useState('Late arrival');
+  const [fineAmount, setFineAmount] = useState('2000');
+  const [finePaid, setFinePaid] = useState(true);
+  const [stagedFines, setStagedFines] = useState<WizardFineItem[]>([]);
+  const [payoutMember, setPayoutMember] = useState(members[0]?.id || '');
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [payoutReason, setPayoutReason] = useState('');
+  const [discrepancyNote, setDiscrepancyNote] = useState('');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* offline */
+    }
+  }, [draft]);
+
+  const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
+
+  const str = (en: string, lu: string, sw: string) =>
+    language === 'LU' ? lu : language === 'SW' ? sw : en;
+
+  const steps = [
+    str('Attendance', 'Abakiise', 'Mahudhurio'),
+    str('Shares', 'Emigabo', 'Hisa'),
+    str('Welfare', 'Obuyambi', 'Jamii'),
+    str('Repayments', 'Okusasula', 'Malipo'),
+    str('New Loans', 'Ebyewolo', 'Mikopo'),
+    str('Fines', 'Engassi', 'Faini'),
+    str('Close & Seal', 'Ggala & Siba', 'Funga'),
+  ];
+
+  const attOf = (id: string): AttStatus => draft.attendance[id] || 'present';
+  const presentIds = useMemo(
+    () => members.filter((m) => attOf(m.id) === 'present' || attOf(m.id) === 'late').map((m) => m.id),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [members, draft.attendance]
+  );
+  const attendanceCount = presentIds.length;
+
+  const sharesTotal = Object.values(draft.shares).reduce((s, n) => s + (n || 0), 0);
+
+  const countedNum = Number(draft.counted) || 0;
+  const difference = draft.counted === '' ? 0 : countedNum - expectedCash;
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* noop */
+    }
+  };
+
+  const commitShares = () => {
+    const items = Object.entries(draft.shares)
+      .filter(([, n]) => (n || 0) > 0)
+      .map(([memberId, shares]) => ({ memberId, shares: Math.min(MAX_SHARES, shares || 0) }));
+    if (items.length === 0) return;
+    onRecordSharesBulk(items);
+    patch({ sharesRecorded: true });
+  };
+
+  const commitWelfare = () => {
+    const ids = presentIds.filter((id) => !draft.welfareDone.includes(id));
+    if (ids.length === 0) return;
+    onCollectWelfareBulk(ids, welfareAmount);
+    patch({ welfareRecorded: true, welfareDone: [...draft.welfareDone, ...ids] });
+  };
+
+  const commitRepayments = () => {
+    const items = Object.entries(repayInputs)
+      .map(([memberId, v]) => ({ memberId, amount: Math.floor(Number(v) || 0) }))
+      .filter((x) => x.amount > 0);
+    if (items.length === 0) return;
+    onRecordRepaymentsBulk(items);
+    setRepayInputs({});
+    patch({ repaymentsRecorded: true });
+  };
+
+  const debtors = members.filter((m) => (m.loanBalance || 0) > 0);
+  const loanMember = members.find((m) => m.id === loanForm.memberId) || members[0];
+  const loanAmt = Math.floor(Number(loanForm.amount) || 0);
+  const loanEligible = loanMember
+    ? loanAmt > 0 &&
+      loanAmt <= (loanMember.maxBorrowLimit || 0) &&
+      (loanMember.loanBalance || 0) === 0
+    : false;
+
+  const commitLoan = () => {
+    if (!loanMember || !loanEligible) return;
+    onSubmitLoan({
+      memberName: loanMember.name,
+      memberNo: loanMember.no,
+      amount: loanAmt,
+      term: loanForm.term,
+      serviceFee: Math.round(loanAmt * 0.1),
+      phone: loanMember.phone,
+      provider: loanMember.provider,
+    });
+    setLoanForm({ memberId: loanMember.id, amount: '', term: '3 months' });
+    patch({ loansRecorded: true });
+  };
+
+  const stageFine = () => {
+    const m = members.find((x) => x.id === fineMember);
+    if (!m) return;
+    const amt = Math.floor(Number(fineAmount) || 0);
+    if (amt <= 0) return;
+    setStagedFines((f) => [
+      ...f,
+      { memberNo: m.no, memberName: m.name, reason: fineReason, amount: amt, paid: finePaid },
+    ]);
+  };
+
+  const commitFines = () => {
+    if (stagedFines.length === 0) return;
+    onRecordFinesBulk(stagedFines);
+    setStagedFines([]);
+    patch({ finesRecorded: true });
+  };
+
+  const commitPayout = () => {
+    const amt = Math.floor(Number(payoutAmount) || 0);
+    if (!payoutMember || amt <= 0 || !payoutReason.trim()) return;
+    onRequestWelfarePayout(payoutMember, amt, payoutReason.trim());
+    setPayoutAmount('');
+    setPayoutReason('');
+  };
+
+  const finishMeeting = () => {
+    if (draft.counted === '') return;
+    if (difference !== 0 && !discrepancyNote.trim()) return;
+    if (difference !== 0) {
+      onAdjustDiscrepancy(
+        Math.abs(difference),
+        `Meeting #${meetingNo} count variance: ${discrepancyNote.trim()}`,
+        difference < 0 ? 'welfare' : 'topup'
+      );
+    }
+    onCompleteMeeting(countedNum, draft.minutes.trim());
+    clearDraft();
+    patch({ completed: true });
+  };
+
+  const stepBtn = (label: string, onClick: () => void, primary = true, disabled = false) => (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full min-h-[48px] rounded-lg font-bold text-sm active:scale-[0.99] transition disabled:opacity-40 ${
+        primary ? 'bg-[#006d30] text-white hover:bg-emerald-700' : 'bg-white border border-[#CBD5E1] text-[#00261b]'
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <main className="w-full max-w-lg mx-auto px-4 pt-4 pb-14 flex-1 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onExit}
+            className="w-9 h-9 rounded-lg bg-white border border-[#CBD5E1] flex items-center justify-center text-[#00261b] active:scale-95"
+            type="button"
+            aria-label="Exit wizard"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
+          <div>
+            <h1 className="font-bold text-[#00261b]">
+              {str(`Meeting #${meetingNo} Wizard`, `Olukuŋŋaana #${meetingNo}`, `Mkutano #${meetingNo}`)}
+            </h1>
+            <p className="text-xs text-[#4B5563]">{str('Complete in one sitting — draft auto-saves', 'Maliriza omulundi gumu', 'Kamilisha kwa mkupuo')}</p>
+          </div>
+        </div>
+        <span className="font-mono text-xs font-bold text-[#00261b] bg-white px-2 py-1 rounded border">
+          {draft.step + 1}/7
+        </span>
+      </div>
+
+      {/* Step rail */}
+      <div className="flex gap-1">
+        {steps.map((label, i) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => patch({ step: i })}
+            className={`flex-1 rounded-lg py-1.5 text-[9px] font-bold transition truncate px-0.5 ${
+              i === draft.step
+                ? 'bg-[#00261b] text-white'
+                : i < draft.step
+                ? 'bg-[#DCFCE7] text-[#166534]'
+                : 'bg-white text-[#4B5563] border border-[#E5E7EB]'
+            }`}
+          >
+            {i + 1}. {label}
+          </button>
+        ))}
+      </div>
+
+      {/* STEP 1: ATTENDANCE */}
+      {draft.step === 0 && (
+        <section className="space-y-2">
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[0]}</h3>
+              <p className="text-[11px] text-[#4B5563]">{attendanceCount}/{members.length} {str('present or late', 'beetabye', 'wamehudhuria')}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => patch({ attendance: {} })}
+              className="text-[11px] font-bold text-[#006d30] underline"
+            >
+              {str('Mark all present', 'Bonnna beetabye', 'Wote wamehudhuria')}
+            </button>
+          </div>
+          {members.map((m) => (
+            <div key={m.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                {(['present', 'late', 'absent', 'excused'] as AttStatus[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => patch({ attendance: { ...draft.attendance, [m.id]: s } })}
+                    className={`px-2 py-1.5 rounded-md text-[10px] font-bold capitalize ${
+                      attOf(m.id) === s ? 'bg-[#00261b] text-white' : 'bg-[#F6F7F6] text-[#4B5563] border border-[#E5E7EB]'
+                    }`}
+                  >
+                    {s[0].toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {stepBtn(str('Continue to Shares →', 'Weeyongereyo →', 'Endelea →'), () => patch({ step: 1 }))}
+        </section>
+      )}
+
+      {/* STEP 2: SHARES */}
+      {draft.step === 1 && (
+        <section className="space-y-2">
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[1]}</h3>
+            <p className="text-[11px] text-[#4B5563] mt-0.5">
+              UGX {sharePrice.toLocaleString()} {str('per share · max 5 · total staged:', 'bul i mugabo ·', 'kwa hisa ·')} <strong className="font-mono">{sharesTotal}</strong>
+            </p>
+          </div>
+          {presentIds.map((id) => {
+            const m = members.find((x) => x.id === id);
+            if (!m) return null;
+            const n = draft.shares[id] || 0;
+            return (
+              <div key={id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2">
+                <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button type="button" onClick={() => patch({ shares: { ...draft.shares, [id]: Math.max(0, n - 1) } })} className="w-9 h-9 rounded-lg bg-[#F6F7F6] border border-[#E5E7EB] font-bold">−</button>
+                  <span className="font-mono font-bold w-5 text-center">{n}</span>
+                  <button type="button" onClick={() => patch({ shares: { ...draft.shares, [id]: Math.min(MAX_SHARES, n + 1) } })} className="w-9 h-9 rounded-lg bg-[#00261b] text-white font-bold">+</button>
+                </div>
+              </div>
+            );
+          })}
+          {draft.sharesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded to passbooks', 'Kikoseddwa', 'Imerekodiwa')}</p>}
+          {stepBtn(
+            draft.sharesRecorded ? str('Continue to Welfare →', 'Weeyongereyo →', 'Endelea →') : `${str('Record', 'Kaza', 'Hifadhi')} ${sharesTotal} ${str('shares', 'emigabo', 'hisa')} (UGX ${(sharesTotal * sharePrice).toLocaleString()})`,
+            () => {
+              if (!draft.sharesRecorded) commitShares();
+              else patch({ step: 2 });
+            },
+            true,
+            sharesTotal === 0 && !draft.sharesRecorded
+          )}
+          {!draft.sharesRecorded && sharesTotal > 0 && (
+            <button type="button" onClick={() => patch({ step: 2 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka', 'Ruka')}</button>
+          )}
+        </section>
+      )}
+
+      {/* STEP 3: WELFARE */}
+      {draft.step === 2 && (
+        <section className="space-y-2">
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[2]}</h3>
+            <p className="text-[11px] text-[#4B5563] mt-0.5">
+              UGX {welfareAmount.toLocaleString()} {str('from each present member', 'bul i mukiise', 'kwa mwanachama')}
+            </p>
+          </div>
+          {stepBtn(
+            draft.welfareRecorded
+              ? str('Continue to Repayments →', 'Weeyongereyo →', 'Endelea →')
+              : `${str('Collect from', 'Kunganyiza okuva ku', 'Kusanya kutoka')} ${presentIds.filter((id) => !draft.welfareDone.includes(id)).length} ${str('members', 'bakiise', 'wanachama')} (UGX ${(presentIds.filter((id) => !draft.welfareDone.includes(id)).length * welfareAmount).toLocaleString()})`,
+            () => {
+              if (!draft.welfareRecorded) commitWelfare();
+              else patch({ step: 3 });
+            }
+          )}
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
+            <h4 className="text-xs font-bold text-[#00261b]">{str('Request emergency payout (goes to approvals)', 'Saba obuyambi (kugenda mu approvals)', 'Omba msaada (kwenda approvals)')}</h4>
+            <select value={payoutMember} onChange={(e) => setPayoutMember(e.target.value)} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white">
+              {members.map((m) => <option key={m.id} value={m.id}>{m.name} (#{m.no})</option>)}
+            </select>
+            <div className="flex gap-2">
+              <input value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
+              <input value={payoutReason} onChange={(e) => setPayoutReason(e.target.value)} placeholder={str('Reason (e.g. hospital)', 'Ensonga', 'Sababu')} className="flex-[2] min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+            </div>
+            {stepBtn(str('Send payout request', 'Weereza okusaba', 'Tuma ombi'), commitPayout, false, !(Math.floor(Number(payoutAmount) || 0) > 0 && payoutReason.trim()))}
+          </div>
+        </section>
+      )}
+
+      {/* STEP 4: REPAYMENTS */}
+      {draft.step === 3 && (
+        <section className="space-y-2">
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[3]}</h3>
+            <p className="text-[11px] text-[#4B5563] mt-0.5">{debtors.length} {str('members owe', 'beebbanja', 'wanadaiwa')}</p>
+          </div>
+          {debtors.length === 0 && <p className="text-xs font-bold text-[#166534] bg-[#DCFCE7] rounded-lg p-3">{str('No outstanding loans. All clean!', 'Tewali bbanja!', 'Hakuna deni!')}</p>}
+          {debtors.map((m) => (
+            <div key={m.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
+                <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja', 'Deni')} UGX {m.loanBalance.toLocaleString()}</p>
+              </div>
+              <input
+                value={repayInputs[m.id] || ''}
+                onChange={(e) => setRepayInputs({ ...repayInputs, [m.id]: e.target.value })}
+                inputMode="numeric"
+                placeholder="UGX"
+                className="w-28 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono text-right"
+              />
+            </div>
+          ))}
+          {draft.repaymentsRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa', 'Imerekodiwa')}</p>}
+          {stepBtn(
+            draft.repaymentsRecorded ? str('Continue to New Loans →', 'Weeyongereyo →', 'Endelea →') : str('Record repayments', 'Kaza okusasula', 'Hifadhi malipo'),
+            () => {
+              if (!draft.repaymentsRecorded) commitRepayments();
+              else patch({ step: 4 });
+            }
+          )}
+          {!draft.repaymentsRecorded && (
+            <button type="button" onClick={() => patch({ step: 4 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka', 'Ruka')}</button>
+          )}
+        </section>
+      )}
+
+      {/* STEP 5: NEW LOANS */}
+      {draft.step === 4 && (
+        <section className="space-y-2">
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[4]}</h3>
+            <select value={loanForm.memberId} onChange={(e) => setLoanForm({ ...loanForm, memberId: e.target.value })} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white">
+              {members.map((m) => <option key={m.id} value={m.id}>{m.name} (#{m.no})</option>)}
+            </select>
+            {loanMember && (
+              <p className="text-[11px] text-[#4B5563]">
+                {str('Saved', 'Enterekanya', 'Akiba')} UGX {loanMember.sharesTotal.toLocaleString()} · {str('Max', 'Ekkomo', 'Kiwango')} UGX {(loanMember.maxBorrowLimit || 0).toLocaleString()}
+                {(loanMember.loanBalance || 0) > 0 && <span className="text-[#B91C1C] font-bold"> · {str('has active loan — must clear first', 'alina bbanja', 'ana deni')}</span>}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <input value={loanForm.amount} onChange={(e) => setLoanForm({ ...loanForm, amount: e.target.value })} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
+              <select value={loanForm.term} onChange={(e) => setLoanForm({ ...loanForm, term: e.target.value })} className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white">
+                {['1 month', '2 months', '3 months'].map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            {loanAmt > 0 && !loanEligible && (
+              <p className="text-[11px] font-bold text-[#B91C1C]">{str('Blocked: exceeds limit or member has an active loan.', 'Kigaaniddwa: esukka ekkomo oba alina bbanja.', 'Imezuiwa.')}</p>
+            )}
+            {stepBtn(str('Submit for approval', 'Weereza', 'Tuma'), commitLoan, true, !loanEligible)}
+            {draft.loansRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Request queued for executives', 'Kisindikiddwa', 'Imetumwa')}</p>}
+          </div>
+          {stepBtn(str('Continue to Fines →', 'Weeyongereyo →', 'Endelea →'), () => patch({ step: 5 }), false)}
+        </section>
+      )}
+
+      {/* STEP 6: FINES */}
+      {draft.step === 5 && (
+        <section className="space-y-2">
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[5]}</h3>
+            <select value={fineMember} onChange={(e) => setFineMember(e.target.value)} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white">
+              {members.map((m) => <option key={m.id} value={m.id}>{m.name} (#{m.no})</option>)}
+            </select>
+            <div className="flex flex-wrap gap-1.5">
+              {['Late arrival', 'Absence', 'Phone disruption', 'No passbook'].map((r) => (
+                <button key={r} type="button" onClick={() => setFineReason(r)} className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold ${fineReason === r ? 'bg-[#00261b] text-white' : 'bg-[#F6F7F6] border border-[#E5E7EB]'}`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input value={fineAmount} onChange={(e) => setFineAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
+              <button type="button" onClick={() => setFinePaid(!finePaid)} className={`flex-1 min-h-[44px] rounded-lg text-xs font-bold border ${finePaid ? 'bg-[#DCFCE7] border-[#006d30] text-[#166534]' : 'bg-white border-[#E5E7EB] text-[#4B5563]'}`}>
+                {finePaid ? str('Paid now → welfare', 'Asasudde → obuyambi', 'Amelipa') : str('Pending', 'Kyakulinda', 'Inasubiri')}
+              </button>
+            </div>
+            {stepBtn(str('Add fine to list', 'Teekamu engassi', 'Weka faini'), stageFine, false)}
+          </div>
+          {stagedFines.map((f, i) => (
+            <div key={i} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2 text-xs">
+              <span className="font-semibold">{f.memberName} · {f.reason} · <span className="font-mono">UGX {f.amount.toLocaleString()}</span> · {f.paid ? str('paid', 'asasudde', 'amelipa') : str('pending', 'ekyakulinda', 'inasubiri')}</span>
+              <button type="button" onClick={() => setStagedFines(stagedFines.filter((_, j) => j !== i))} className="text-[#B91C1C] font-bold px-2">✕</button>
+            </div>
+          ))}
+          {draft.finesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa', 'Imerekodiwa')}</p>}
+          {stepBtn(
+            draft.finesRecorded ? str('Continue to Close →', 'Weeyongereyo →', 'Endelea →') : `${str('Record', 'Kaza', 'Hifadhi')} ${stagedFines.length} ${str('fine(s)', 'engassi', 'faini')}`,
+            () => {
+              if (!draft.finesRecorded) commitFines();
+              else patch({ step: 6 });
+            },
+            true,
+            stagedFines.length === 0 && !draft.finesRecorded
+          )}
+          {!draft.finesRecorded && stagedFines.length === 0 && (
+            <button type="button" onClick={() => patch({ step: 6 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No fines — go to Close', 'Tewali ngassi', 'Hakuna faini')}</button>
+          )}
+        </section>
+      )}
+
+      {/* STEP 7: CLOSE & SEAL */}
+      {draft.step === 6 && (
+        <section className="space-y-2">
+          <div className="bg-[#0b3d2e] text-white rounded-xl p-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#bcedd7]">{steps[6]}</h3>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-xs text-white/70">{str('Expected in box:', 'Ezisuubirwa:', 'Zinazotarajiwa:')}</span>
+              <span className="font-mono text-xl font-bold">UGX {expectedCash.toLocaleString()}</span>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
+            <label className="text-xs font-bold text-[#00261b] block">{str('Physical cash counted', 'Ssente ezibaliddwa', 'Fedha zilizohesabiwa')} (UGX)</label>
+            <input value={draft.counted} onChange={(e) => patch({ counted: e.target.value })} inputMode="numeric" placeholder="e.g. 1450000" className="w-full min-h-[52px] border-2 border-[#00261b] rounded-lg px-3 font-mono text-lg" />
+            {draft.counted !== '' && (
+              <div className={`p-3 rounded-lg text-xs font-bold ${difference === 0 ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
+                {difference === 0
+                  ? str('✓ Perfectly balanced. Ready to seal.', '✓ Birina bulungi.', '✓ Imesawazika.')
+                  : `${difference > 0 ? str('Surplus', 'Zisukkiridde', 'Ziada') : str('Shortage', 'Zibula', 'Upungufu')}: UGX ${Math.abs(difference).toLocaleString()}`}
+              </div>
+            )}
+            {draft.counted !== '' && difference !== 0 && (
+              <input value={discrepancyNote} onChange={(e) => setDiscrepancyNote(e.target.value)} placeholder={str('Explain the gap (required)', 'Nyonyola enjawulo', 'Eleza pengo')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+            )}
+            <textarea value={draft.minutes} onChange={(e) => patch({ minutes: e.target.value })} placeholder={str('Meeting minutes / resolutions (optional)', 'Ebiwandiiko by\'olukuŋŋaana', 'Muhtasari')} rows={2} className="w-full border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm" />
+          </div>
+          {draft.completed
+            ? (
+              <div className="bg-[#DCFCE7] border border-[#006d30] rounded-xl p-4 text-center space-y-2">
+                <p className="font-bold text-[#166534] text-sm">{str(`Meeting #${meetingNo} sealed!`, 'Olukuŋŋaana luggaddwa!', 'Mkutano umefungwa!')}</p>
+                {stepBtn(str('Back to Home', 'Ddayo awaka', 'Rudi mwanzo'), () => onNavigate('home'))}
+              </div>
+            )
+            : stepBtn(
+              str(`Seal Meeting #${meetingNo}`, `Siba Olukuŋŋaana #${meetingNo}`, `Funga Mkutano #${meetingNo}`),
+              finishMeeting,
+              true,
+              draft.counted === '' || (difference !== 0 && !discrepancyNote.trim())
+            )}
+        </section>
+      )}
+
+      {/* Footer nav */}
+      {draft.step > 0 && !draft.completed && (
+        <button type="button" onClick={() => patch({ step: draft.step - 1 })} className="w-full text-xs font-bold text-[#4B5563] underline">
+          ← {str('Back', 'Ddayo', 'Rudi')}
+        </button>
+      )}
+      <button type="button" onClick={() => onNavigate('member_passbook')} className="w-full text-xs font-bold text-[#4B5563] underline">
+        {str('View passbooks', 'Laba ppaasibuku', 'Tazama vitabu')}
+      </button>
+    </main>
+  );
+};

@@ -295,7 +295,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         <div className="grid grid-cols-2 gap-3">
           {/* Start Meeting: Primary Accent Action */}
           <button
-            onClick={() => onNavigate('meeting_close')}
+            onClick={() => onNavigate('meeting_wizard')}
             className="col-span-2 min-h-[56px] w-full flex items-center justify-between px-4 py-3 bg-[#15803D] hover:bg-primary text-white rounded-lg font-body-sm-bold text-body-sm-bold shadow-[0px_1px_3px_rgba(0,0,0,0.08)] active:scale-[0.99] transition-all"
             type="button"
           >

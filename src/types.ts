@@ -5,6 +5,7 @@ export type MainTab = 'home' | 'meetings' | 'members' | 'loans' | 'approvals' | 
 export type ScreenId =
   | 'home'
   | 'meeting_close'
+  | 'meeting_wizard'
   | 'approvals'
   | 'member_passbook'
   | 'momo_push'
