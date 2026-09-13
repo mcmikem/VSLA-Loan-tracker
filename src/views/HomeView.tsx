@@ -197,7 +197,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {/* Badge: Meeting in 2 days */}
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-card/15 border border-white/20 text-white font-label-sm text-xs">
             <span className="w-2 h-2 rounded-full bg-secondary-fixed animate-pulse" />
-            <span>{t.home.meetingInDays}</span>
+            <span>{t.home.meetingInDays(2)}</span>
           </div>
         </div>
 
@@ -431,7 +431,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-headline-sm font-headline-sm font-bold text-on-surface">
-                  {t.home.meetingNumber} 27
+                  {t.home.meetingNumber(27)}
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-label-sm font-semibold bg-status-ok-bg text-status-ok-tx text-xs">
                   {t.home.closedReconciled}
