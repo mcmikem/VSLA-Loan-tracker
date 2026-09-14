@@ -3,17 +3,23 @@ import { ApprovalItem } from '../types';
 
 interface ApprovalsQueueViewProps {
   approvals: ApprovalItem[];
-  onApprove: (id: string) => void;
+  onApprove: (id: string, payoutMethod?: string) => void;
   onReject: (id: string) => void;
+  dualAuth?: boolean;
 }
 
 export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
   approvals,
   onApprove,
   onReject,
+  dualAuth,
 }) => {
   const [filter, setFilter] = useState<'all' | 'vsla_loan' | 'savings_withdrawal' | 'welfare_grant'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [payoutMethods, setPayoutMethods] = useState<Record<string, string>>({});
+
+  const payoutFor = (item: ApprovalItem) =>
+    payoutMethods[item.id] || item.provider || (item.type === 'welfare_grant' ? 'Cash' : 'MTN');
 
   const filteredApprovals = approvals.filter((app) => {
     if (app.status !== 'pending') return false;
@@ -25,11 +31,19 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
   const loanCount = approvals.filter((a) => a.type === 'vsla_loan' && a.status === 'pending').length;
   const withdrawalCount = approvals.filter((a) => a.type === 'savings_withdrawal' && a.status === 'pending').length;
   const welfareCount = approvals.filter((a) => a.type === 'welfare_grant' && a.status === 'pending').length;
+  const sumBy = (t: ApprovalItem['type']) =>
+    approvals.filter((a) => a.type === t && a.status === 'pending').reduce((s, a) => s + a.amount, 0);
+  const loanTotal = sumBy('vsla_loan');
+  const withdrawalTotal = sumBy('savings_withdrawal');
+  const welfareTotal = sumBy('welfare_grant');
+  const queueTotal = loanTotal + withdrawalTotal + welfareTotal;
 
   const handleAction = (id: string, action: 'approve' | 'reject', name: string) => {
     if (action === 'approve') {
-      onApprove(id);
-      showToast(`Disbursement approved for ${name}. Ledger transaction signed.`);
+      const item = approvals.find((a) => a.id === id);
+      const method = item ? payoutFor(item) : 'Cash';
+      onApprove(id, method);
+      showToast(`Disbursement approved for ${name} via ${method}. Ledger transaction signed.`);
     } else {
       onReject(id);
       showToast(`Request for ${name} rejected.`);
@@ -65,11 +79,27 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
           </div>
           <div className="text-right">
             <span className="text-label-sm font-label-sm text-text-muted block text-xs">
-              Fund Disbursable
+              Queue Total
             </span>
             <span className="font-mono text-currency-sm font-bold text-primary">
-              UGX 4,850,000
+              UGX {queueTotal.toLocaleString('en-US')}
             </span>
+          </div>
+        </div>
+
+        {/* Grouped counts + totals by type */}
+        <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
+          <div className="bg-canvas-bg border border-border-line rounded-lg p-2">
+            <span className="block font-bold text-primary">Loans · {loanCount}</span>
+            <span className="font-mono text-text-muted">UGX {loanTotal.toLocaleString('en-US')}</span>
+          </div>
+          <div className="bg-canvas-bg border border-border-line rounded-lg p-2">
+            <span className="block font-bold text-primary">Withdrawals · {withdrawalCount}</span>
+            <span className="font-mono text-text-muted">UGX {withdrawalTotal.toLocaleString('en-US')}</span>
+          </div>
+          <div className="bg-canvas-bg border border-border-line rounded-lg p-2">
+            <span className="block font-bold text-primary">Welfare · {welfareCount}</span>
+            <span className="font-mono text-text-muted">UGX {welfareTotal.toLocaleString('en-US')}</span>
           </div>
         </div>
 
@@ -77,7 +107,9 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
         <div className="bg-surface-container-low border border-border-line rounded-lg p-2.5 flex items-center gap-2">
           <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
           <p className="text-label-sm font-label-sm text-text-muted leading-snug text-xs">
-            Dual-Authorization active. Executing approval initiates irreversible disbursement from the group bank pool.
+            {dualAuth
+              ? 'Sign-in enforced. Every approval is stamped with the officer’s name below.'
+              : 'Single-officer mode: approvals move money immediately and are stamped with the officer’s name below.'}
           </p>
         </div>
       </div>
@@ -249,6 +281,22 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </div>
                     </div>
 
+                    <div className="flex items-center justify-between gap-2 bg-canvas-bg border border-border-line rounded-lg p-2.5">
+                      <span className="text-[11px] font-bold text-primary uppercase">Payout method</span>
+                      <div className="flex gap-1.5">
+                        {(['MTN', 'Airtel', 'Cash'] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setPayoutMethods((p) => ({ ...p, [item.id]: m }))}
+                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border min-h-[36px] ${payoutFor(item) === m ? 'bg-primary text-white border-primary' : 'bg-white text-text-muted border-border-line'}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2.5 pt-1">
                       <button
                         onClick={() => handleAction(item.id, 'reject', item.memberName)}
@@ -262,7 +310,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                         className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
                         <span className="material-symbols-outlined text-[18px]">send_to_mobile</span>
-                        <span>Approve & Disburse (MoMo)</span>
+                        <span>Approve & Disburse ({payoutFor(item)})</span>
                       </button>
                     </div>
                   </div>
@@ -338,6 +386,22 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </span>
                     </div>
 
+                    <div className="flex items-center justify-between gap-2 bg-canvas-bg border border-border-line rounded-lg p-2.5">
+                      <span className="text-[11px] font-bold text-primary uppercase">Payout method</span>
+                      <div className="flex gap-1.5">
+                        {(['Cash', 'MTN', 'Airtel'] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setPayoutMethods((p) => ({ ...p, [item.id]: m }))}
+                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border min-h-[36px] ${payoutFor(item) === m ? 'bg-primary text-white border-primary' : 'bg-white text-text-muted border-border-line'}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2.5 pt-1">
                       <button
                         onClick={() => handleAction(item.id, 'reject', item.memberName)}
@@ -351,7 +415,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                         className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
                         <span className="material-symbols-outlined text-[18px]">payments</span>
-                        <span>Approve (Cash Handover)</span>
+                        <span>Approve ({payoutFor(item)})</span>
                       </button>
                     </div>
                   </div>
@@ -418,6 +482,22 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </div>
                     </div>
 
+                    <div className="flex items-center justify-between gap-2 bg-canvas-bg border border-border-line rounded-lg p-2.5">
+                      <span className="text-[11px] font-bold text-primary uppercase">Payout method</span>
+                      <div className="flex gap-1.5">
+                        {(['Airtel', 'MTN', 'Cash'] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setPayoutMethods((p) => ({ ...p, [item.id]: m }))}
+                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border min-h-[36px] ${payoutFor(item) === m ? 'bg-primary text-white border-primary' : 'bg-white text-text-muted border-border-line'}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2.5 pt-1">
                       <button
                         onClick={() => handleAction(item.id, 'reject', item.memberName)}
@@ -431,7 +511,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                         className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
                         <span className="material-symbols-outlined text-[18px]">send_to_mobile</span>
-                        <span>Approve & Disburse (Airtel)</span>
+                        <span>Approve & Disburse ({payoutFor(item)})</span>
                       </button>
                     </div>
                   </div>
@@ -443,6 +523,39 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
           })
         )}
       </div>
+
+      {/* DECIDED HISTORY — who approved/rejected, when, through which channel */}
+      {(() => {
+        const decided = approvals.filter((a) => a.status !== 'pending').slice(0, 10);
+        if (decided.length === 0) return null;
+        return (
+          <section className="bg-surface-card border border-border-line rounded-xl p-4 space-y-2">
+            <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
+              Recently decided ({decided.length})
+            </h3>
+            {decided.map((d) => (
+              <div key={d.id} className="flex items-center justify-between gap-2 p-2 bg-canvas-bg rounded-lg border border-border-line text-xs">
+                <div className="min-w-0">
+                  <span className="font-bold text-primary block truncate">
+                    {d.memberName} <span className="font-mono text-text-muted">#{d.memberNo}</span>
+                  </span>
+                  <span className="text-[11px] text-text-muted block truncate">
+                    {d.reqNumber} · {d.decidedBy ? `by ${d.decidedBy}` : 'by officer'}
+                    {d.decidedAt ? ` · ${new Date(d.decidedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                    {d.payoutMethod ? ` · via ${d.payoutMethod}` : ''}
+                  </span>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="font-mono font-bold text-primary block">UGX {d.amount.toLocaleString('en-US')}</span>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${d.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                    {d.status.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </section>
+        );
+      })()}
 
       {/* PERSISTENT RECONCILIATION SUMMARY BOTTOM DOCK */}
       <div className="p-3 bg-white border border-border-line rounded-lg text-center shadow-sm">

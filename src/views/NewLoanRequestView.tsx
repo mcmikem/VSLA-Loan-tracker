@@ -20,42 +20,68 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
   onNavigate,
   onSubmitLoan,
 }) => {
-  const initial = members[1] || members[0] || {
-    name: 'Joseph Mukasa',
-    no: '02',
-    sharesTotal: 280000,
-    maxBorrowLimit: 840000,
-    phone: '0772-123-456',
-    provider: 'MTN' as const,
-  };
+  const fallbackList: Member[] = [
+    { id: '1', name: 'Joseph Mukasa', no: '02', sharesTotal: 280000, maxBorrowLimit: 840000, phone: '0772-123-456', provider: 'MTN', initials: 'JM', zone: '', attendance: '', sharesCount: 0, loanBalance: 0, welfareBalance: 0, isKeyholder: false, stamps: [], ledger: [] } as Member,
+    { id: '2', name: 'Sarah Nabukalu', no: '01', sharesTotal: 450000, maxBorrowLimit: 1350000, phone: '0772-123-456', provider: 'MTN', initials: 'SN', zone: '', attendance: '', sharesCount: 0, loanBalance: 0, welfareBalance: 0, isKeyholder: false, stamps: [], ledger: [] } as Member,
+    { id: '3', name: 'Peter Ssemwogerere', no: '04', sharesTotal: 320000, maxBorrowLimit: 960000, phone: '0752-987-654', provider: 'Airtel', initials: 'PS', zone: '', attendance: '', sharesCount: 0, loanBalance: 0, welfareBalance: 0, isKeyholder: false, stamps: [], ledger: [] } as Member,
+  ];
+  const roster = members.length > 0 ? members : fallbackList;
 
-  const [selectedMember, setSelectedMember] = useState({
-    name: initial.name,
-    no: initial.no,
-    shares: initial.sharesTotal,
-    maxLimit: initial.maxBorrowLimit,
-    phone: initial.phone,
-    provider: (initial.provider === 'Airtel' ? 'Airtel' : 'MTN') as 'MTN' | 'Airtel',
-  });
+  const initialNo = roster[1]?.no || roster[0]?.no || '02';
+  const [selectedNo, setSelectedNo] = useState(initialNo);
+  const fullMember: Member =
+    roster.find((m) => m.no === selectedNo) || roster[1] || roster[0];
 
-  const [requestedAmount, setRequestedAmount] = useState(600000);
+  const shares = fullMember.sharesTotal || 0;
+  const maxLimit = fullMember.maxBorrowLimit || shares * 3;
+  const loanBalance = fullMember.loanBalance || 0;
+  const activeLoanBalance =
+    fullMember.activeLoan && typeof fullMember.activeLoan.balance === 'number'
+      ? fullMember.activeLoan.balance
+      : loanBalance;
+  const hasActiveLoan = activeLoanBalance > 0 || loanBalance > 0;
+
+  const [requestedAmount, setRequestedAmount] = useState(() =>
+    Math.min(600000, maxLimit || 600000)
+  );
   const [term, setTerm] = useState('3 months');
   const [purpose, setPurpose] = useState('Agricultural Seeds & Produce Buying');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const selectMember = (no: string) => {
+    setSelectedNo(no);
+    setIsSubmitted(false);
+    const m = roster.find((x) => x.no === no);
+    if (m) {
+      const newMax = m.maxBorrowLimit || (m.sharesTotal || 0) * 3;
+      setRequestedAmount((prev) => Math.min(prev, Math.max(newMax, 100000)));
+    }
+  };
+
   const interestFee = term === '1 month' ? requestedAmount * 0.05 : term === '2 months' ? requestedAmount * 0.08 : requestedAmount * 0.10;
   const totalRepayable = requestedAmount + interestFee;
+  const overLimit = requestedAmount > maxLimit;
+  const underMin = requestedAmount < 100000;
+  const eligible = !hasActiveLoan && !overLimit && !underMin;
+  const blockReason = hasActiveLoan
+    ? `Blocked: ${fullMember.name} has an active loan balance of UGX ${activeLoanBalance.toLocaleString('en-US')}. Repay it fully before a new loan.`
+    : overLimit
+      ? `Blocked: UGX ${requestedAmount.toLocaleString('en-US')} exceeds the 3× limit of UGX ${maxLimit.toLocaleString('en-US')}.`
+      : underMin
+        ? 'Blocked: minimum loan is UGX 100,000.'
+        : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!eligible) return;
     onSubmitLoan({
-      memberName: selectedMember.name,
-      memberNo: selectedMember.no,
+      memberName: fullMember.name,
+      memberNo: fullMember.no,
       amount: requestedAmount,
       term,
       serviceFee: interestFee,
-      phone: selectedMember.phone,
-      provider: selectedMember.provider,
+      phone: fullMember.phone,
+      provider: (fullMember.provider === 'Airtel' ? 'Airtel' : 'MTN') as 'MTN' | 'Airtel',
     });
     setIsSubmitted(true);
   };
@@ -115,26 +141,13 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
                 Applying Member
               </span>
               <div className="flex gap-1 overflow-x-auto max-w-[200px] no-scrollbar">
-                {(members.length > 0 ? members : [
-                  { id: '1', name: 'Joseph Mukasa', no: '02', sharesTotal: 280000, maxBorrowLimit: 840000, phone: '0772-123-456', provider: 'MTN' },
-                  { id: '2', name: 'Sarah Nabukalu', no: '01', sharesTotal: 450000, maxBorrowLimit: 1350000, phone: '0772-123-456', provider: 'MTN' },
-                  { id: '3', name: 'Peter Ssemwogerere', no: '04', sharesTotal: 320000, maxBorrowLimit: 960000, phone: '0752-987-654', provider: 'Airtel' },
-                ]).map((m) => (
+                {roster.map((m) => (
                   <button
                     key={m.no}
                     type="button"
-                    onClick={() =>
-                      setSelectedMember({
-                        name: m.name,
-                        no: m.no,
-                        shares: m.sharesTotal,
-                        maxLimit: m.maxBorrowLimit,
-                        phone: m.phone,
-                        provider: (m.provider === 'Airtel' ? 'Airtel' : 'MTN') as 'MTN' | 'Airtel',
-                      })
-                    }
+                    onClick={() => selectMember(m.no)}
                     className={`px-2 py-0.5 rounded text-xs font-bold shrink-0 ${
-                      selectedMember.no === m.no
+                      selectedNo === m.no
                         ? 'bg-primary-container text-white'
                         : 'bg-canvas-bg text-text-muted border'
                     }`}
@@ -148,19 +161,19 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
             <div className="flex items-center justify-between p-3 bg-canvas-bg rounded-lg border border-border-line">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-full bg-primary-container text-white flex items-center justify-center font-bold">
-                  {selectedMember.name.split(' ').map((n) => n[0]).join('')}
+                  {fullMember.name.split(' ').map((n) => n[0]).join('')}
                 </div>
                 <div>
-                  <span className="font-bold text-sm text-primary block">{selectedMember.name}</span>
+                  <span className="font-bold text-sm text-primary block">{fullMember.name}</span>
                   <span className="text-xs text-text-muted">
-                    No. {selectedMember.no} · {selectedMember.provider} {selectedMember.phone}
+                    No. {fullMember.no} · {fullMember.provider} {fullMember.phone}
                   </span>
                 </div>
               </div>
               <div className="text-right">
                 <span className="text-[11px] text-text-muted block">Shares Saved</span>
                 <span className="font-mono text-xs font-bold text-primary">
-                  UGX {selectedMember.shares.toLocaleString('en-US')}
+                  UGX {shares.toLocaleString('en-US')}
                 </span>
               </div>
             </div>
@@ -172,8 +185,41 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
                 <span>Max Allowed (3x Shares):</span>
               </div>
               <span className="font-mono font-bold text-secondary text-sm">
-                UGX {selectedMember.maxLimit.toLocaleString('en-US')}
+                UGX {maxLimit.toLocaleString('en-US')}
               </span>
+            </div>
+
+            {/* Eligibility display: 3x rule + one-active-loan, evaluated before submit */}
+            <div className={`rounded-lg border p-3 space-y-2 text-xs ${eligible ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+              <p className="font-bold text-primary uppercase tracking-wider text-[11px] flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">fact_check</span>
+                Eligibility check (before submit)
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-text-muted">1. 3× shares rule: UGX {shares.toLocaleString('en-US')} × 3 = UGX {maxLimit.toLocaleString('en-US')}</span>
+                <span className={`px-2 py-0.5 rounded font-bold ${overLimit ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                  {overLimit ? 'FAIL' : 'PASS'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-text-muted">
+                  2. One active loan: {hasActiveLoan ? `has UGX ${activeLoanBalance.toLocaleString('en-US')} outstanding` : 'no active loan'}
+                </span>
+                <span className={`px-2 py-0.5 rounded font-bold ${hasActiveLoan ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                  {hasActiveLoan ? 'BLOCKED' : 'CLEAR'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-text-muted">3. Amount within limit: UGX {requestedAmount.toLocaleString('en-US')}</span>
+                <span className={`px-2 py-0.5 rounded font-bold ${eligible ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                  {eligible ? 'ELIGIBLE' : 'NOT ELIGIBLE'}
+                </span>
+              </div>
+              {blockReason && (
+                <p className="text-[11px] font-bold text-red-800 bg-white/70 border border-red-200 rounded p-2">
+                  {blockReason}
+                </p>
+              )}
             </div>
           </section>
 
@@ -193,15 +239,15 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
               <input
                 type="range"
                 min="100000"
-                max={selectedMember.maxLimit}
+                max={Math.max(maxLimit, 100000)}
                 step="50000"
-                value={requestedAmount}
+                value={Math.min(requestedAmount, Math.max(maxLimit, 100000))}
                 onChange={(e) => setRequestedAmount(Number(e.target.value))}
                 className="w-full h-2 bg-canvas-bg rounded-lg appearance-none cursor-pointer accent-secondary"
               />
               <div className="flex justify-between text-[11px] text-text-muted font-mono mt-1">
                 <span>UGX 100,000</span>
-                <span>Max: UGX {selectedMember.maxLimit.toLocaleString('en-US')}</span>
+                <span>Max: UGX {maxLimit.toLocaleString('en-US')}</span>
               </div>
             </div>
 
@@ -296,10 +342,12 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
           {/* Submit CTA */}
           <button
             type="submit"
-            className="w-full min-h-[52px] bg-[#15803D] hover:bg-[#0B3D2E] text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 text-sm active:scale-[0.99] transition"
+            disabled={!eligible}
+            title={blockReason || 'Submit loan request'}
+            className={`w-full min-h-[52px] font-bold rounded-xl shadow-md flex items-center justify-center gap-2 text-sm active:scale-[0.99] transition ${eligible ? 'bg-[#15803D] hover:bg-[#0B3D2E] text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
           >
             <span className="material-symbols-outlined text-xl">send</span>
-            <span>Submit Loan Request to Executive Queue</span>
+            <span>{eligible ? 'Submit Loan Request to Executive Queue' : 'Blocked — see eligibility above'}</span>
           </button>
         </form>
       )}

@@ -10,6 +10,7 @@ interface MemberPassbookViewProps {
   onNavigate: (screen: ScreenId) => void;
   onRecordRepayment: (amount: number, memberId: string) => void;
   onBuyShares: (sharesCount: number, memberId: string) => void;
+  onAddMember?: () => void;
   language?: Language;
   groupName?: string;
   boxIdentifier?: string;
@@ -23,6 +24,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   onNavigate,
   onRecordRepayment,
   onBuyShares,
+  onAddMember,
   language = 'EN',
   groupName = 'Bakwata Savings Group',
   boxIdentifier = 'BOX-KLA-042',
@@ -167,9 +169,21 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
 
       {/* Member Selection Scrollable Strip */}
       <div className="px-4 pt-3 pb-1">
-        <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-1">
-          {t.passbook.selectMember}
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[11px] font-bold text-text-muted uppercase tracking-wider block">
+            {t.passbook.selectMember} ({members.length})
+          </label>
+          {onAddMember && (
+            <button
+              type="button"
+              onClick={onAddMember}
+              className="px-2.5 py-1.5 bg-[#006d30] text-white rounded-lg text-[11px] font-bold flex items-center gap-1 active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[14px]">person_add</span>
+              {language === 'LU' ? 'Wandiisa' : language === 'SW' ? 'Sajili' : 'Register'}
+            </button>
+          )}
+        </div>
         <div className="relative mb-2">
           <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">
             search
@@ -254,18 +268,30 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                 </span>
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-headline-md font-headline-md text-white font-bold leading-none">
                     {member.name}
                   </h3>
                   <span className="bg-secondary text-white text-[11px] font-bold px-1.5 py-0.5 rounded">
                     #{member.no}
                   </span>
+                  {member.memNumber && (
+                    <span className="bg-white/20 text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-white/30">
+                      {member.memNumber}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-primary-fixed flex items-center gap-1 mt-1">
                   <span className="material-symbols-outlined text-[14px]">location_on</span>
                   {member.zone}
                 </p>
+                {(member.kinName || member.guarantorName) && (
+                  <p className="text-[11px] text-white/80 mt-1">
+                    {member.kinName ? `Kin: ${member.kinName}${member.kinPhone ? ` (${member.kinPhone})` : ''}` : ''}
+                    {member.kinName && member.guarantorName ? ' · ' : ''}
+                    {member.guarantorName ? `Guarantor: ${member.guarantorName}${member.guarantorPhone ? ` (${member.guarantorPhone})` : ''}` : ''}
+                  </p>
+                )}
               </div>
             </div>
 

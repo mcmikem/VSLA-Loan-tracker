@@ -9,7 +9,7 @@
  *              Vercel → Project → Settings → Environment Variables.
  *
  * Table (created automatically on first use):
- *   vsla_groups(group_id TEXT PRIMARY KEY, state JSONB, updated_at TIMESTAMPTZ)
+ *   vsla_app_state(group_id TEXT PRIMARY KEY, state JSONB, updated_at TIMESTAMPTZ)
  */
 import { getSeedForGroup } from './_seed.js';
 
@@ -36,7 +36,7 @@ async function ensureTable() {
   if (tableEnsured) return;
   const p = await getPool();
   await p.query(`
-    CREATE TABLE IF NOT EXISTS vsla_groups (
+    CREATE TABLE IF NOT EXISTS vsla_app_state (
       group_id TEXT PRIMARY KEY,
       state JSONB NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -54,11 +54,11 @@ export async function loadGroup(groupId) {
   }
   await ensureTable();
   const p = await getPool();
-  const { rows } = await p.query('SELECT state FROM vsla_groups WHERE group_id = $1', [groupId]);
+  const { rows } = await p.query('SELECT state FROM vsla_app_state WHERE group_id = $1', [groupId]);
   if (rows.length > 0) return rows[0].state;
   const seed = getSeedForGroup(groupId);
   await p.query(
-    'INSERT INTO vsla_groups (group_id, state) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+    'INSERT INTO vsla_app_state (group_id, state) VALUES ($1, $2) ON CONFLICT DO NOTHING',
     [groupId, JSON.stringify(seed)]
   );
   return seed;
@@ -75,7 +75,7 @@ export async function saveGroup(groupId, state) {
   await ensureTable();
   const p = await getPool();
   await p.query(
-    `INSERT INTO vsla_groups (group_id, state, updated_at)
+    `INSERT INTO vsla_app_state (group_id, state, updated_at)
      VALUES ($1, $2, NOW())
      ON CONFLICT (group_id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()`,
     [groupId, JSON.stringify(state)]

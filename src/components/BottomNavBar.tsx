@@ -266,6 +266,40 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                   </span>
                 </div>
               </button>
+
+              <button
+                onClick={() => handleSelectMoreOption('users', 'more')}
+                className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
+              >
+                <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">group</span>
+                </div>
+                <div>
+                  <span className="font-bold text-sm block text-primary">
+                    {language === 'LU' ? 'Abakozesa' : language === 'SW' ? 'Watumiaji' : 'Users & Roles'}
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {language === 'LU' ? 'Buli akkozesa n\'obuyinza' : language === 'SW' ? 'Kila mtumiaji na ruhusa' : 'Logins & permissions'}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleSelectMoreOption('group_settings', 'more')}
+                className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
+              >
+                <div className="w-9 h-9 rounded-lg bg-slate-200 text-slate-800 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">settings</span>
+                </div>
+                <div>
+                  <span className="font-bold text-sm block text-primary">
+                    {language === 'LU' ? 'Enteekateeka y\'Ekibiina' : language === 'SW' ? 'Mipangilio ya Kikundi' : 'Group Settings'}
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {language === 'LU' ? 'Erinya, emigabo, enkoba' : language === 'SW' ? 'Jina, hisa, michango' : 'Name, shares, welfare'}
+                  </span>
+                </div>
+              </button>
             </div>
           </div>
         </div>

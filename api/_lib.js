@@ -34,7 +34,7 @@ export function rateLimit(req, res, { limit = 60, windowMs = 60000 } = {}) {
 export function cors(req, res, methods = 'GET,POST,OPTIONS') {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', methods);
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-group-id');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-group-id, Authorization');
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return false;

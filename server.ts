@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 
 const app = express();
@@ -1222,8 +1223,108 @@ app.post('/api/accounts/switch', (req, res) => {
   });
 });
 
-// 3c. Switch Test Scenario Presets for Specified Group
+// --- PIN + session auth (mirrors api/_auth.js; local-dev file store) ---
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const sessionSecret = () => process.env.SESSION_SECRET || 'dev-only-insecure-secret';
+const authEnforced = () => !!process.env.SESSION_SECRET;
+
+function verifyPinLocal(pin: string, stored: string): boolean {
+  try {
+    if (stored && stored.startsWith('hash:')) {
+      const [, salt, expected] = stored.split(':');
+      const actual = crypto.scryptSync(String(pin), salt, 32).toString('hex');
+      const a = Buffer.from(actual, 'hex');
+      const b = Buffer.from(expected, 'hex');
+      return a.length === b.length && crypto.timingSafeEqual(a, b);
+    }
+    const a = Buffer.from(String(pin));
+    const b = Buffer.from(String(stored || ''));
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function hashPinLocal(pin: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(pin), salt, 32).toString('hex');
+  return `hash:${salt}:${hash}`;
+}
+
+function issueSessionLocal(payload: Record<string, any>): string {
+  const b64 = (o: any) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const header = b64({ alg: 'HS256', typ: 'VSLA' });
+  const body = b64({ ...payload, iat: Date.now(), exp: Date.now() + SESSION_TTL_MS });
+  const sig = crypto.createHmac('sha256', sessionSecret()).update(`${header}.${body}`).digest('hex');
+  return `${header}.${body}.${sig}`;
+}
+
+function readSessionLocal(req: express.Request): any | null {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [header, body, sig] = parts;
+  const expected = crypto.createHmac('sha256', sessionSecret()).update(`${header}.${body}`).digest('hex');
+  try {
+    const a = Buffer.from(sig, 'hex');
+    const b = Buffer.from(expected, 'hex');
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!payload.exp || payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/** Returns true when the request may proceed (sends 401 otherwise). */
+function requireSecretaryLocal(req: express.Request, res: express.Response): boolean {
+  if (!authEnforced()) return true; // open-dev mode for pilots
+  const session = readSessionLocal(req);
+  const rank: Record<string, number> = { member: 1, keyholder: 2, chairperson: 3, treasurer: 3, secretary: 4 };
+  if (!session || (rank[session.role] || 0) < 3) {
+    res.status(session ? 403 : 401).json({ error: 'Sign-in required (secretary role or above).' });
+    return false;
+  }
+  return true;
+}
+
+// 3b-ii. PIN login — verifies account PIN, migrates legacy PINs to scrypt hash
+app.post('/api/auth/login', (req, res) => {
+  const groupId = resolveGroupId(req);
+  const { accountId, pin } = req.body || {};
+  if (!accountId || !/^\d{4,8}$/.test(String(pin || ''))) {
+    return res.status(400).json({ error: 'Account and 4–8 digit PIN are required.' });
+  }
+  const current = readDatabase(groupId);
+  const pool = current.availableAccounts || SEED_ACCOUNTS;
+  const account = pool.find((a: any) => a.id === accountId);
+  if (!account || !verifyPinLocal(String(pin), account.pin)) {
+    return res.status(401).json({ error: 'Wrong account or PIN.' });
+  }
+  if (!String(account.pin || '').startsWith('hash:')) {
+    account.pin = hashPinLocal(String(pin));
+    writeDatabase(current, groupId);
+  }
+  const token = issueSessionLocal({ sub: account.id, groupId, role: account.role, name: account.name });
+  const { pin: _omit, ...safeAccount } = account;
+  res.json({ success: true, token, expiresInHours: 24, account: safeAccount });
+});
+
+// 3b-iii. Public status probe — login gate + storage honesty for the app shell
+app.get('/api/auth/status', (req, res) => {
+  res.json({
+    success: true,
+    authEnforced: authEnforced(),
+    storage: { driver: 'file', durable: true, shared: false },
+  });
+});
+
+// 3c. Switch Test Scenario Presets for Specified Group (gated: destructive)
 app.post('/api/seed/preset', (req, res) => {
+  if (!requireSecretaryLocal(req, res)) return;
   const groupId = resolveGroupId(req);
   const { presetId } = req.body;
   const current = readDatabase(groupId);
@@ -1339,8 +1440,9 @@ app.post('/api/backup/restore', (req, res) => {
   }
 });
 
-// 6. Reset to Clean Default Baseline
+// 6. Reset to Clean Default Baseline (gated: destructive)
 app.post('/api/backup/reset', (req, res) => {
+  if (!requireSecretaryLocal(req, res)) return;
   const groupId = resolveGroupId(req);
   const seed = getInitialSeedData();
   seed.groupId = groupId;
@@ -1372,18 +1474,54 @@ app.post('/api/backup/snapshot', (req, res) => {
   res.json({ success: true, groupId, snapshot, snapshots: current.snapshots });
 });
 
-// 8. Mobile Money USSD Push Simulation
+// 8. Mobile Money USSD Push — sandbox simulation until live keys are configured.
+// Provide MTN_MOMO_* / AIRTEL_* env vars + MOMO_LIVE=1 to switch to LIVE mode.
+// The frontend calls GET /api/momo/config to decide which badge to show.
+app.get('/api/momo/config', (req, res) => {
+  const mtnConfigured = Boolean(
+    process.env.MTN_MOMO_SUBSCRIPTION_KEY && process.env.MTN_MOMO_API_KEY
+  );
+  const airtelConfigured = Boolean(
+    process.env.AIRTEL_CLIENT_ID && process.env.AIRTEL_CLIENT_SECRET
+  );
+  const live = process.env.MOMO_LIVE === '1' && (mtnConfigured || airtelConfigured);
+  res.json({
+    success: true,
+    mode: live ? 'live' : 'sandbox',
+    mtnConfigured,
+    airtelConfigured,
+    missing: [
+      ...(!process.env.MTN_MOMO_SUBSCRIPTION_KEY || !process.env.MTN_MOMO_API_KEY ? ['MTN_MOMO_SUBSCRIPTION_KEY', 'MTN_MOMO_API_KEY'] : []),
+      ...(!process.env.AIRTEL_CLIENT_ID || !process.env.AIRTEL_CLIENT_SECRET ? ['AIRTEL_CLIENT_ID', 'AIRTEL_CLIENT_SECRET'] : []),
+    ],
+    hint: live
+      ? 'Live MoMo collections enabled.'
+      : 'Set MTN_MOMO_SUBSCRIPTION_KEY + MTN_MOMO_API_KEY (and/or AIRTEL_CLIENT_ID + AIRTEL_CLIENT_SECRET) with MOMO_LIVE=1 to go live. Until then pushes are simulated.',
+  });
+});
+
 app.post('/api/momo/push', (req, res) => {
   const { network, phone, amount, memberName, purpose } = req.body;
   const prefix = network === 'Airtel' ? 'AIRTEL-UG-' : 'MTN-UG-';
   const transId = prefix + Math.floor(100000 + Math.random() * 900000);
+  const mtnConfigured = Boolean(
+    process.env.MTN_MOMO_SUBSCRIPTION_KEY && process.env.MTN_MOMO_API_KEY
+  );
+  const airtelConfigured = Boolean(
+    process.env.AIRTEL_CLIENT_ID && process.env.AIRTEL_CLIENT_SECRET
+  );
+  const live = process.env.MOMO_LIVE === '1' && (network === 'Airtel' ? airtelConfigured : mtnConfigured);
 
   // Return simulated instant response
+  // TODO(live-momo): when `live` is true, exchange the provider token and call
+  // MTN Collection POST /collection/v1_0/requesttopay (X-Reference-Id) or the
+  // Airtel standard transaction API here instead of this timeout stub.
   setTimeout(() => {
     res.json({
       success: true,
       transactionId: transId,
       status: 'confirmed',
+      mode: live ? 'live' : 'sandbox',
       network,
       phone,
       amount,

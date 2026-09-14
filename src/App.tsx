@@ -34,6 +34,9 @@ import { BackupAuditView } from './views/BackupAuditView';
 import { LegalView } from './views/LegalView';
 import { MeetingWizardView } from './views/MeetingWizardView';
 import { ShopView, NewProductInput, SaleInput } from './views/ShopView';
+import { UsersView } from './views/UsersView';
+import { GroupSettingsView, GroupSettingsPatch } from './views/GroupSettingsView';
+import { AddMemberModal, NewMemberInput } from './components/AddMemberModal';
 import { ReportsView, LATE_FINE_AMOUNT } from './views/ReportsView';
 import { AboutView } from './views/AboutView';
 import { HelpView } from './views/HelpView';
@@ -42,6 +45,8 @@ import { WhatsNewModal } from './components/WhatsNewModal';
 import { APP_VERSION } from './data/changelog';
 import { withAudit } from './utils/audit';
 import { ShareOutResult } from './utils/shareout';
+import { LoginView } from './views/LoginView';
+import { apiFetch, fetchAuthStatus, getSessionToken, setSessionToken } from './utils/api';
 
 export function App() {
   const [language, setLanguage] = useState<Language>('EN');
@@ -53,6 +58,13 @@ export function App() {
   const [isServerConnected, setIsServerConnected] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  // Session auth: token (24h) + server-advertised enforcement + storage honesty
+  const [sessionToken, setSessionTokenState] = useState<string | null>(() => getSessionToken());
+  const [authEnforced, setAuthEnforced] = useState(false);
+  const [storageDriver, setStorageDriver] = useState<string | null>(null);
+  const [storageShared, setStorageShared] = useState<boolean | null>(null);
+  const [loginPreselectId, setLoginPreselectId] = useState<string | undefined>(undefined);
 
   // Multi-Tenant SaaS State
   const [currentGroupId, setCurrentGroupId] = useState<string>(() => {
@@ -114,7 +126,7 @@ export function App() {
   // Fetch groups list from SaaS registry
   const fetchGroupsList = useCallback(async () => {
     try {
-      const res = await fetch('/api/groups');
+      const res = await apiFetch('/api/groups');
       if (res.ok) {
         const data = await res.json();
         if (data.groups && Array.isArray(data.groups)) {
@@ -131,7 +143,7 @@ export function App() {
     const gid = targetGroupId || currentGroupId || 'bakwata-01';
     try {
       setIsSyncing(true);
-      const res = await fetch(`/api/state?groupId=${gid}`, {
+      const res = await apiFetch(`/api/state?groupId=${gid}`, {
         headers: { 'x-group-id': gid },
       });
       if (res.ok) {
@@ -167,7 +179,7 @@ export function App() {
 
     try {
       setIsSyncing(true);
-      const res = await fetch(`/api/state?groupId=${currentGroupId}`, {
+      const res = await apiFetch(`/api/state?groupId=${currentGroupId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -199,7 +211,7 @@ export function App() {
 
   const handleCreateGroup = async (payload: CreateGroupPayload) => {
     try {
-      const res = await fetch('/api/groups/create', {
+      const res = await apiFetch('/api/groups/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -227,7 +239,7 @@ export function App() {
 
   const handleJoinGroup = async (payload: JoinGroupPayload) => {
     try {
-      const res = await fetch('/api/groups/join', {
+      const res = await apiFetch('/api/groups/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -254,6 +266,15 @@ export function App() {
   };
 
   const handleSwitchAccount = async (account: UserAccount) => {
+    // When the server enforces auth, in-app switching would bypass the PIN —
+    // send the user to the PIN gate pre-selected on that account instead.
+    if (authEnforced) {
+      setSessionToken(null);
+      setSessionTokenState(null);
+      setLoginPreselectId(account.id);
+      setIsAccountModalOpen(false);
+      return;
+    }
     const updatedState: VSLAState = {
       ...vslaState,
       currentUser: account,
@@ -263,7 +284,7 @@ export function App() {
     }
     await persistState(updatedState);
     try {
-      await fetch(`/api/accounts/switch?groupId=${currentGroupId}`, {
+      await apiFetch(`/api/accounts/switch?groupId=${currentGroupId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -276,10 +297,48 @@ export function App() {
     }
   };
 
+  const handleLogin = async (account: UserAccount) => {
+    setSessionTokenState(getSessionToken());
+    setLoginPreselectId(undefined);
+    if (account.memberId) {
+      setSelectedMemberId(account.memberId);
+    }
+    await persistState({ ...vslaState, currentUser: account });
+    setCurrentScreen('home');
+    setActiveTab('home');
+  };
+
+  const handleLogout = () => {
+    setSessionToken(null);
+    setSessionTokenState(null);
+    setLoginPreselectId(undefined);
+    setIsAccountModalOpen(false);
+  };
+
+  // ---- Change sign-in PIN (stored plaintext until next login migrates it to scrypt) ----
+  const handleChangePin = (newPin: string) => {
+    const updated: UserAccount = { ...currentUser, pin: newPin };
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          currentUser: updated,
+          availableAccounts: (vslaState.availableAccounts || []).map((a) =>
+            a.id === updated.id ? updated : a
+          ),
+        },
+        currentUser.name,
+        'Changed sign-in PIN',
+        `${currentUser.name} (#${currentUser.memberNo || 'EXEC'})`,
+        undefined
+      )
+    );
+  };
+
   const handleSelectPreset = async (presetId: string) => {
     try {
       setIsSyncing(true);
-      const res = await fetch(`/api/seed/preset?groupId=${currentGroupId}`, {
+      const res = await apiFetch(`/api/seed/preset?groupId=${currentGroupId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -339,6 +398,14 @@ export function App() {
     document.title = 'Bakwata VSLA — Group App';
     fetchGroupsList();
     fetchStateFromServer(currentGroupId);
+    fetchAuthStatus().then((s) => {
+      if (!s) return;
+      setAuthEnforced(s.authEnforced);
+      setStorageDriver(s.storage.driver);
+      // Local dev file store is durable on one machine; Vercel memory is not
+      // shared. Warn unless we have a truly shared store.
+      setStorageShared(s.storage.driver === 'postgres' ? true : (s.storage.shared ?? false));
+    });
   }, [fetchGroupsList, fetchStateFromServer, currentGroupId]);
 
   const pendingApprovalsCount = vslaState.approvals.filter((a) => a.status === 'pending').length;
@@ -358,10 +425,11 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Approval Handlers
-  const handleApproveItem = (id: string) => {
+  // Approval Handlers (payout method recorded per approval)
+  const handleApproveItem = (id: string, payoutMethod?: string) => {
     const targetItem = vslaState.approvals.find((a) => a.id === id);
     if (!targetItem) return;
+    const method = payoutMethod || targetItem.provider || 'Cash';
 
     let boxCash = vslaState.boxCashBalance;
     let loanFund = vslaState.loanFundBalance;
@@ -377,8 +445,18 @@ export function App() {
       boxCash = Math.max(0, boxCash - targetItem.amount);
     }
 
+    const decidedAt = new Date().toISOString();
     const updatedApprovals = vslaState.approvals.map((item) =>
-      item.id === id ? { ...item, status: 'approved' as const } : item
+      item.id === id
+        ? {
+            ...item,
+            status: 'approved' as const,
+            provider: (method === 'MTN' || method === 'Airtel' ? method : item.provider) as 'MTN' | 'Airtel' | 'Cash',
+            decidedBy: currentUser.name,
+            decidedAt,
+            payoutMethod: method,
+          }
+        : item
     );
 
     persistState(
@@ -391,8 +469,8 @@ export function App() {
           approvals: updatedApprovals,
         },
         currentUser.name,
-        `Approved ${targetItem.type.replace(/_/g, ' ')} ${targetItem.reqNumber}`,
-        `${targetItem.memberName} (#${targetItem.memberNo})`,
+        `Approved ${targetItem.type.replace(/_/g, ' ')} ${targetItem.reqNumber} via ${method}`,
+        `${targetItem.memberName} (#${targetItem.memberNo}) · payout ${method}`,
         targetItem.amount
       )
     );
@@ -401,7 +479,9 @@ export function App() {
   const handleRejectItem = (id: string) => {
     const targetItem = vslaState.approvals.find((a) => a.id === id);
     const updatedApprovals = vslaState.approvals.map((item) =>
-      item.id === id ? { ...item, status: 'rejected' as const } : item
+      item.id === id
+        ? { ...item, status: 'rejected' as const, decidedBy: currentUser.name, decidedAt: new Date().toISOString() }
+        : item
     );
     persistState(
       withAudit(
@@ -686,7 +766,7 @@ export function App() {
   // Backup & Restore Handlers
   const handleRestoreState = async (newState: VSLAState): Promise<boolean> => {
     try {
-      const res = await fetch('/api/backup/restore', {
+      const res = await apiFetch('/api/backup/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state: newState }),
@@ -708,7 +788,7 @@ export function App() {
 
   const handleCreateSnapshot = async (label: string) => {
     try {
-      const res = await fetch('/api/backup/snapshot', {
+      const res = await apiFetch('/api/backup/snapshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label }),
@@ -742,7 +822,7 @@ export function App() {
 
   const handleResetToBaseline = async () => {
     try {
-      const res = await fetch('/api/backup/reset', { method: 'POST' });
+      const res = await apiFetch('/api/backup/reset', { method: 'POST' });
       if (res.ok) {
         const json = await res.json();
         if (json.state) {
@@ -1152,11 +1232,167 @@ export function App() {
     );
   };
 
+  // ---- Member registration (MEM numbers, kin, account) ----
+  const handleRegisterMember = (input: NewMemberInput): string | null => {
+    const first = input.firstName.trim();
+    const last = input.lastName.trim();
+    if (!first || !last) return 'First and last name are required.';
+    const digits = input.phone.replace(/\D/g, '');
+    if (digits.length < 9) return 'Enter a valid phone number.';
+    const name = `${first} ${last}`;
+    if (vslaState.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
+      return 'A member with this name already exists.';
+    }
+    const nextNo = vslaState.members.length + 1;
+    const no = nextNo < 10 ? `0${nextNo}` : `${nextNo}`;
+    const memNumber = `MEM-${String(nextNo).padStart(4, '0')}`;
+    const memberId = `m-${Date.now().toString(36)}`;
+    const initials = (first[0] + (last[0] || '')).toUpperCase();
+    const newMember: Member = {
+      id: memberId,
+      no,
+      memNumber,
+      name,
+      initials,
+      zone: input.village.trim() || 'General',
+      phone: input.phone.trim(),
+      provider: input.provider,
+      nationalId: input.nationalId.trim() || undefined,
+      business: input.business.trim() || undefined,
+      kinName: input.kinName.trim() || undefined,
+      kinPhone: input.kinPhone.trim() || undefined,
+      guarantorName: input.guarantorName.trim() || undefined,
+      guarantorPhone: input.guarantorPhone.trim() || undefined,
+      attendance: '1/1',
+      sharesCount: 0,
+      sharesTotal: 0,
+      maxBorrowLimit: 0,
+      loanBalance: 0,
+      welfareBalance: 0,
+      isKeyholder: false,
+      stamps: [{ week: vslaState.recentMeetingsCount + 1, shares: 0, status: 'next' }],
+      ledger: [
+        {
+          id: 'led-reg-' + Date.now().toString(36),
+          meetingNo: vslaState.recentMeetingsCount + 1,
+          meetingCode: 'REG',
+          title: `Registered as ${memNumber}`,
+          badge: 'MEMBER',
+          subtitle: `Kin: ${input.kinName.trim() || '-'} (${input.kinPhone.trim() || '-'}) · Guarantor: ${input.guarantorName.trim() || '-'} (${input.guarantorPhone.trim() || '-'})${input.business.trim() ? ` · ${input.business.trim()}` : ''}${input.nationalId.trim() ? ` · ID ${input.nationalId.trim()}` : ''}`,
+          amountText: 'UGX 0',
+          isPositive: true,
+          extraText: '',
+          date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        },
+      ],
+    };
+    const newAccount: UserAccount = {
+      id: `acc-${Date.now().toString(36)}`,
+      memberId,
+      memberNo: no,
+      name,
+      phone: input.phone.trim(),
+      provider: input.provider,
+      role: 'member',
+      roleTitle: `Member #${no}`,
+      zone: input.village.trim() || 'General Member',
+      pin: '1234',
+      avatarInitials: initials,
+      avatarBg: 'bg-teal-700',
+      nationalId: input.nationalId.trim(),
+      permissions: { canLockBox: false, canApproveLoans: false, canDisburseWelfare: false, canRecordShares: false, canRequestLoan: true, canManageBackups: false },
+    };
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          members: [...vslaState.members, newMember],
+          availableAccounts: [...(vslaState.availableAccounts || []), newAccount],
+        },
+        currentUser.name,
+        `Registered member ${memNumber}`,
+        `${name} (#${no}) · default PIN 1234 — ask them to change it`,
+        undefined
+      )
+    );
+    setSelectedMemberId(memberId);
+    return null;
+  };
+
+  // ---- Group settings (name, box, share price, welfare, cycle) ----
+  const handleUpdateGroupSettings = (patch: GroupSettingsPatch) => {
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          groupName: patch.groupName,
+          boxIdentifier: patch.boxIdentifier,
+          totalCycleMonths: patch.totalCycleMonths,
+          groupProfile: {
+            ...(vslaState.groupProfile || {
+              id: currentGroupId,
+              name: patch.groupName,
+              boxIdentifier: patch.boxIdentifier,
+              inviteCode: vslaState.inviteCode || 'BAK-4290',
+              plan: 'pro' as const,
+              createdAt: new Date().toISOString(),
+              adminName: currentUser.name,
+              adminPhone: currentUser.phone,
+            }),
+            name: patch.groupName,
+            boxIdentifier: patch.boxIdentifier,
+            location: patch.location,
+            meetingDay: patch.meetingDay,
+            sharePrice: patch.sharePrice,
+            welfareMonthly: patch.welfareMonthly,
+          },
+        },
+        currentUser.name,
+        'Updated group settings',
+        `${patch.groupName} · ${patch.boxIdentifier} · share UGX ${patch.sharePrice.toLocaleString()}`,
+        undefined
+      )
+    );
+    setSelectedBox(`${patch.groupName} • ${patch.boxIdentifier}`);
+  };
+
   const selectedMember =
     vslaState.members.find((m) => m.id === selectedMemberId) || vslaState.members[0];
 
+  // PIN gate: when the server enforces auth, no app content without a session.
+  if (authEnforced && !sessionToken) {
+    return (
+      <div className="min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans">
+        <LoginView
+          key={loginPreselectId || 'login'}
+          accounts={vslaState.availableAccounts || SEED_ACCOUNTS}
+          groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
+          boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}
+          groupId={currentGroupId}
+          initialAccountId={loginPreselectId}
+          onLogin={handleLogin}
+        />
+      </div>
+    );
+  }
+
+  const showLocalOnlyBanner = storageDriver !== null && storageShared === false;
+
   return (
     <div className="min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans selection:bg-secondary/20">
+      {showLocalOnlyBanner && (
+        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-[11px] font-bold px-4 py-1.5 text-center">
+          Records stay on this phone only — connect the shared database (DATABASE_URL) so all officers see the same ledger.
+        </div>
+      )}
+      {currentUser.pin === '1234' && (
+        <div className="bg-red-50 border-b border-red-200 text-red-800 text-[11px] font-bold px-4 py-1.5 text-center">
+          You use the default PIN 1234.{' '}
+          <button type="button" onClick={() => setIsAccountModalOpen(true)} className="underline">
+            Change it now
+          </button>
+        </div>
+      )}
       {/* Universal Top App Bar */}
       <TopAppBar
         language={language}
@@ -1256,6 +1492,33 @@ export function App() {
           />
         )}
 
+        {currentScreen === 'users' && (
+          <UsersView
+            accounts={vslaState.availableAccounts || SEED_ACCOUNTS}
+            currentUserId={currentUser.id}
+            authEnforced={authEnforced}
+            onSwitchAccount={handleSwitchAccount}
+            onLogout={handleLogout}
+            onNavigate={handleNavigateScreen}
+          />
+        )}
+
+        {currentScreen === 'group_settings' && (
+          <GroupSettingsView
+            groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
+            boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}
+            location={vslaState.groupProfile?.location || 'Kalerwe Market, Kawempe'}
+            meetingDay={vslaState.groupProfile?.meetingDay || 'Every Friday 4:00 PM'}
+            sharePrice={vslaState.groupProfile?.sharePrice || 10000}
+            welfareMonthly={vslaState.groupProfile?.welfareMonthly || 5000}
+            totalCycleMonths={vslaState.totalCycleMonths || 10}
+            inviteCode={vslaState.inviteCode || vslaState.groupProfile?.inviteCode || 'BAK-4290'}
+            membersCount={vslaState.members.length}
+            onSave={handleUpdateGroupSettings}
+            onNavigate={handleNavigateScreen}
+          />
+        )}
+
         {currentScreen === 'meeting_wizard' && (
           <MeetingWizardView
             members={vslaState.members}
@@ -1300,6 +1563,7 @@ export function App() {
             approvals={vslaState.approvals}
             onApprove={handleApproveItem}
             onReject={handleRejectItem}
+            dualAuth={authEnforced}
           />
         )}
 
@@ -1311,6 +1575,7 @@ export function App() {
             onNavigate={handleNavigateScreen}
             onRecordRepayment={handleRecordRepaymentInPassbook}
             onBuyShares={handleBuyShares}
+            onAddMember={() => setIsAddMemberOpen(true)}
             language={language}
             groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
             boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}
@@ -1391,7 +1656,11 @@ export function App() {
         currentUser={currentUser}
         availableAccounts={vslaState.availableAccounts || SEED_ACCOUNTS}
         members={vslaState.members}
+        groupId={currentGroupId}
+        authEnforced={authEnforced}
         onSwitchAccount={handleSwitchAccount}
+        onLogout={handleLogout}
+        onChangePin={handleChangePin}
         onSelectPreset={handleSelectPreset}
         onResetToBaseline={handleResetToBaseline}
         onNavigate={handleNavigateScreen}
@@ -1421,6 +1690,16 @@ export function App() {
         boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}
         inviteCode={vslaState.inviteCode || vslaState.groupProfile?.inviteCode || 'BAK-4290'}
         location={vslaState.groupProfile?.location || 'Kalerwe Market, Kawempe'}
+      />
+
+      {/* Member Registration Modal (MEM numbers, kin/guarantor) */}
+      <AddMemberModal
+        isOpen={isAddMemberOpen}
+        onClose={() => setIsAddMemberOpen(false)}
+        onRegister={handleRegisterMember}
+        language={language}
+        nextMemNumber={`MEM-${String(vslaState.members.length + 1).padStart(4, '0')}`}
+        nextMemberNo={vslaState.members.length + 1 < 10 ? `0${vslaState.members.length + 1}` : `${vslaState.members.length + 1}`}
       />
 
       {/* First-run tour + What's-new sheet */}

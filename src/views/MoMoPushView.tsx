@@ -17,6 +17,28 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
   const [amount, setAmount] = useState('50,000');
   const [status, setStatus] = useState<'idle' | 'pushing' | 'waiting_pin' | 'confirmed' | 'failed'>('idle');
   const [timerSeconds, setTimerSeconds] = useState(60);
+  const [momoMode, setMomoMode] = useState<'sandbox' | 'live'>('sandbox');
+  const [momoHint, setMomoHint] = useState<string | null>(null);
+  const [txnId, setTxnId] = useState('MM-98421034');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/momo/config');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.mode === 'live') setMomoMode('live');
+        if (data.hint) setMomoHint(data.hint);
+      } catch {
+        // Offline: stay in sandbox simulation mode.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -48,8 +70,23 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
   }, [status, amount, purpose, memberName, onSuccessTransaction]);
 
   const handleSendPush = () => {
-    setStatus('waiting_pin');
-    setTimerSeconds(60);
+    setStatus('pushing');
+    const numericAmt = parseInt(amount.replace(/,/g, ''), 10) || 50000;
+    fetch('/api/momo/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ network, phone: phoneNumber, amount: numericAmt, memberName, purpose }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.transactionId) setTxnId(data.transactionId);
+        if (data?.mode === 'live') setMomoMode('live');
+      })
+      .catch(() => {})
+      .finally(() => {
+        setStatus('waiting_pin');
+        setTimerSeconds(60);
+      });
   };
 
   const handleReset = () => {
@@ -76,10 +113,15 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
             <p className="text-xs text-text-muted">Send Mobile Money Collection Prompt</p>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded bg-status-ok-bg text-status-ok-tx text-xs font-bold font-mono">
-          API: LIVE
+        <span className={`px-2 py-0.5 rounded text-xs font-bold font-mono ${momoMode === 'live' ? 'bg-status-ok-bg text-status-ok-tx' : 'bg-amber-100 text-amber-900 border border-amber-300'}`}>
+          {momoMode === 'live' ? 'API: LIVE' : 'API: SANDBOX'}
         </span>
       </div>
+      {momoMode === 'sandbox' && (
+        <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+          {momoHint || 'Sandbox simulation — no real money moves. Add your MTN/Airtel keys (.env: MTN_MOMO_SUBSCRIPTION_KEY, MTN_MOMO_API_KEY, AIRTEL_CLIENT_ID, AIRTEL_CLIENT_SECRET, MOMO_LIVE=1) to go live.'}
+        </p>
+      )}
 
       {/* Network & Recipient Selector Card */}
       <section className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] space-y-3">
@@ -269,8 +311,8 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
             </div>
           </div>
           <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200 text-xs font-mono flex justify-between">
-            <span>Txn ID: MM-98421034</span>
-            <span className="text-secondary font-bold">STATUS: SUCCESS</span>
+            <span>Txn ID: {txnId}</span>
+            <span className="text-secondary font-bold">STATUS: SUCCESS{momoMode === 'sandbox' ? ' · SANDBOX' : ''}</span>
           </div>
           <div className="flex gap-2">
             <button
@@ -290,14 +332,15 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
       )}
 
       {/* Primary Action Button */}
-      {status === 'idle' && (
+      {(status === 'idle' || status === 'pushing') && (
         <button
           onClick={handleSendPush}
-          className="w-full min-h-[52px] bg-primary-container hover:bg-[#06241a] text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 text-sm active:scale-[0.99] transition"
+          disabled={status === 'pushing'}
+          className="w-full min-h-[52px] bg-primary-container hover:bg-[#06241a] text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 text-sm active:scale-[0.99] transition disabled:opacity-60"
           type="button"
         >
           <span className="material-symbols-outlined text-xl">send_to_mobile</span>
-          <span>Send MoMo Push Prompt ({network === 'MTN' ? '*165#' : '*185#'})</span>
+          <span>{status === 'pushing' ? 'Contacting MoMo…' : `Send MoMo Push Prompt (${network === 'MTN' ? '*165#' : '*185#'})`}</span>
         </button>
       )}
 

@@ -8,11 +8,25 @@ interface AccountProfileModalProps {
   currentUser: UserAccount;
   availableAccounts: UserAccount[];
   members: Member[];
+  groupId?: string;
+  authEnforced?: boolean;
   onSwitchAccount: (account: UserAccount) => void;
+  onLogout?: () => void;
+  onChangePin?: (newPin: string) => void;
   onSelectPreset: (presetId: string) => void;
   onResetToBaseline: () => void;
   onNavigate: (screen: ScreenId) => void;
   onSelectMember: (memberId: string) => void;
+}
+
+/** Dev tools (seed presets, full reset) never ship in production builds. */
+function devToolsEnabled(): boolean {
+  if (import.meta.env.DEV) return true;
+  try {
+    return localStorage.getItem('bakwata_dev_tools') === '1';
+  } catch {
+    return false;
+  }
 }
 
 export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
@@ -21,14 +35,24 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
   currentUser,
   availableAccounts = SEED_ACCOUNTS,
   members,
+  groupId,
+  authEnforced,
   onSwitchAccount,
+  onLogout,
+  onChangePin,
   onSelectPreset,
   onResetToBaseline,
   onNavigate,
   onSelectMember,
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'switcher' | 'presets'>('profile');
-  const [pinRevealed, setPinRevealed] = useState(false);
+  const showDevTools = devToolsEnabled();
+  const isDefaultPin = currentUser.pin === '1234';
+  const [currentPinInput, setCurrentPinInput] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinMsg, setPinMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pinBusy, setPinBusy] = useState(false);
 
   if (!isOpen) return null;
 
@@ -45,6 +69,50 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
       onSelectMember(linkedMember.id);
       onNavigate('member_passbook');
       onClose();
+    }
+  };
+
+  const submitPinChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinBusy || !onChangePin) return;
+    if (!/^\d{4}$/.test(newPin)) {
+      setPinMsg({ ok: false, text: 'New PIN must be exactly 4 digits.' });
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setPinMsg({ ok: false, text: 'New PIN and confirmation do not match.' });
+      return;
+    }
+    setPinBusy(true);
+    setPinMsg(null);
+    try {
+      const stored = currentUser.pin || '';
+      if (stored.startsWith('hash:')) {
+        // Hashed PIN: verify the current one against the server (rate-limited).
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId: currentUser.id, pin: currentPinInput, groupId }),
+        });
+        if (!res.ok) {
+          setPinMsg({ ok: false, text: 'Current PIN is wrong.' });
+          return;
+        }
+      } else if (currentPinInput !== stored) {
+        setPinMsg({ ok: false, text: 'Current PIN is wrong.' });
+        return;
+      }
+      if (newPin === currentPinInput && !stored.startsWith('hash:')) {
+        setPinMsg({ ok: false, text: 'Pick a PIN different from the current one.' });
+        return;
+      }
+      onChangePin(newPin);
+      setCurrentPinInput('');
+      setNewPin('');
+      setConfirmPin('');
+      setPinMsg({ ok: true, text: 'PIN changed. Use the new PIN next sign-in.' });
+    } finally {
+      setPinBusy(false);
     }
   };
 
@@ -101,6 +169,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
             <span className="material-symbols-outlined text-sm">switch_account</span>
             Switch Account ({availableAccounts.length})
           </button>
+          {showDevTools && (
           <button
             onClick={() => setActiveTab('presets')}
             className={`pb-2 px-3 border-b-2 transition flex items-center gap-1.5 ${
@@ -113,6 +182,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
             <span className="material-symbols-outlined text-sm">tune</span>
             Seed Presets
           </button>
+          )}
         </div>
 
         {/* Modal Body */}
@@ -283,22 +353,58 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                 </div>
               </div>
 
-              {/* PIN Security Check */}
-              <div className="bg-surface-container rounded-xl p-3 border border-border-line flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-primary block text-xs">Security PIN</span>
-                  <span className="text-[11px] text-text-muted">
-                    Used for authorizing padlock keys and large withdrawals
-                  </span>
+              {/* PIN Security: warning + change form (PIN is never displayed) */}
+              {isDefaultPin && (
+                <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-xs font-bold text-red-800 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">warning</span>
+                  <span>You still use the default PIN 1234. Anyone who knows it can sign in as you — change it below.</span>
                 </div>
+              )}
+              <form onSubmit={submitPinChange} className="bg-surface-container rounded-xl p-3 border border-border-line space-y-2">
+                <span className="font-bold text-primary block text-xs">Change sign-in PIN</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={8}
+                    value={currentPinInput}
+                    onChange={(e) => setCurrentPinInput(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Current"
+                    aria-label="Current PIN"
+                    className="min-h-[44px] bg-white border border-border-strong rounded-lg px-2 text-center font-mono font-bold text-primary"
+                  />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="New 4-digit"
+                    aria-label="New PIN"
+                    className="min-h-[44px] bg-white border border-border-strong rounded-lg px-2 text-center font-mono font-bold text-primary"
+                  />
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Confirm"
+                    aria-label="Confirm new PIN"
+                    className="min-h-[44px] bg-white border border-border-strong rounded-lg px-2 text-center font-mono font-bold text-primary"
+                  />
+                </div>
+                {pinMsg && (
+                  <p className={`text-[11px] font-bold ${pinMsg.ok ? 'text-emerald-800' : 'text-red-800'}`}>{pinMsg.text}</p>
+                )}
                 <button
-                  type="button"
-                  onClick={() => setPinRevealed(!pinRevealed)}
-                  className="px-2.5 py-1 bg-white border border-border-strong rounded font-mono font-bold text-xs text-primary hover:bg-surface-container"
+                  type="submit"
+                  disabled={pinBusy || !onChangePin}
+                  className="w-full py-2.5 bg-primary text-white rounded-lg font-bold text-xs disabled:opacity-60"
                 >
-                  {pinRevealed ? currentUser.pin : '•••• (Show)'}
+                  {pinBusy ? 'Checking…' : 'Change PIN'}
                 </button>
-              </div>
+              </form>
 
               {/* Switch Account Quick Action Button */}
               <button
@@ -315,7 +421,9 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
           {activeTab === 'switcher' && (
             <div className="space-y-3">
               <p className="text-text-muted text-[11px]">
-                Select any seeded account below to test real app permissions and user views:
+                {authEnforced
+                  ? 'Pick an account, then enter its PIN on the sign-in screen:'
+                  : 'Select any seeded account below to test real app permissions and user views:'}
               </p>
 
               <div className="space-y-2">
@@ -375,7 +483,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
             </div>
           )}
 
-          {activeTab === 'presets' && (
+          {activeTab === 'presets' && showDevTools && (
             <div className="space-y-3">
               <p className="text-text-muted text-[11px]">
                 Load structured test scenarios to instantly evaluate specific VSLA workflows:
@@ -429,18 +537,29 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3 bg-surface-container-low border-t border-border-line flex items-center justify-between">
+        <div className="p-3 bg-surface-container-low border-t border-border-line flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
             <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-            <span>Actual Account Mode Active</span>
+            <span>{authEnforced ? 'Signed-in session (24h)' : 'Actual Account Mode Active'}</span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="py-1.5 px-4 bg-surface-card border border-border-strong font-bold text-xs text-primary rounded-lg hover:bg-surface-container"
-          >
-            Done
-          </button>
+          <div className="flex items-center gap-2">
+            {authEnforced && onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="py-1.5 px-3 bg-white border border-red-300 font-bold text-xs text-status-bad-tx rounded-lg"
+              >
+                Sign out
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="py-1.5 px-4 bg-surface-card border border-border-strong font-bold text-xs text-primary rounded-lg hover:bg-surface-container"
+            >
+              Done
+            </button>
+          </div>
         </div>
       </div>
     </div>

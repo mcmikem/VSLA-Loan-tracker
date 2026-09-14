@@ -19,7 +19,9 @@ export type ScreenId =
   | 'reports'
   | 'about'
   | 'help'
-  | 'shop';
+  | 'shop'
+  | 'users'
+  | 'group_settings';
 
 export interface ApprovalItem {
   id: string;
@@ -41,6 +43,10 @@ export interface ApprovalItem {
   welfareAvailable?: number;
   accountBalance?: number;
   postBalance?: number;
+  /** Audit stamp: who decided, when, and through which payout channel. */
+  decidedBy?: string;
+  decidedAt?: string;
+  payoutMethod?: string;
 }
 
 export interface StampItem {
@@ -65,11 +71,18 @@ export interface LedgerEntry {
 export interface Member {
   id: string;
   no: string;
+  memNumber?: string;
   name: string;
   initials: string;
   zone: string;
   phone: string;
   provider: 'MTN' | 'Airtel';
+  nationalId?: string;
+  business?: string;
+  kinName?: string;
+  kinPhone?: string;
+  guarantorName?: string;
+  guarantorPhone?: string;
   attendance: string;
   sharesCount: number;
   sharesTotal: number;
