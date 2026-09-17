@@ -47,6 +47,11 @@ export interface ApprovalItem {
   decidedBy?: string;
   decidedAt?: string;
   payoutMethod?: string;
+  /** Two-key rule: first officer key turn. Money moves only on distinct second key. */
+  firstApprovedBy?: string;
+  firstApprovedAt?: string;
+  secondApprovedBy?: string;
+  secondApprovedAt?: string;
 }
 
 export interface StampItem {

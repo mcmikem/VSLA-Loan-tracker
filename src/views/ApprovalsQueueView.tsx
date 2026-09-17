@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { ApprovalItem } from '../types';
+import { describeKeys, isSameOfficer } from '../utils/dualApproval';
+import { feeNotice } from '../utils/momoFees';
 
 interface ApprovalsQueueViewProps {
   approvals: ApprovalItem[];
   onApprove: (id: string, payoutMethod?: string) => void;
   onReject: (id: string) => void;
   dualAuth?: boolean;
+  currentUserName?: string;
 }
 
 export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
@@ -13,6 +16,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
   onApprove,
   onReject,
   dualAuth,
+  currentUserName = '',
 }) => {
   const [filter, setFilter] = useState<'all' | 'vsla_loan' | 'savings_withdrawal' | 'welfare_grant'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -107,9 +111,10 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
         <div className="bg-surface-container-low border border-border-line rounded-lg p-2.5 flex items-center gap-2">
           <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
           <p className="text-label-sm font-label-sm text-text-muted leading-snug text-xs">
+            Two-key rule: 2 DIFFERENT officers must approve. Key 1/2 moves no money. Key 2/2 releases cash.
             {dualAuth
-              ? 'Sign-in enforced. Every approval is stamped with the officer’s name below.'
-              : 'Single-officer mode: approvals move money immediately and are stamped with the officer’s name below.'}
+              ? ' Sign-in enforced. Every key is stamped with the officer’s name below.'
+              : ' Single-device mode: switch account between key 1 and key 2.'}
           </p>
         </div>
       </div>
@@ -281,6 +286,22 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </div>
                     </div>
 
+                    <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-300 rounded-lg p-2.5 text-xs">
+                      <span className="font-bold text-amber-900 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[16px]">key</span>
+                        {item.firstApprovedBy ? `Key 1/2: ${item.firstApprovedBy}` : 'Key 0/2'}
+                      </span>
+                      <span className="text-amber-800">{describeKeys(item)}</span>
+                    </div>
+                    {currentUserName && item.firstApprovedBy && isSameOfficer(item, currentUserName) && (
+                      <p className="text-[11px] text-status-bad-tx bg-status-bad-bg border border-red-200 rounded-lg p-2">
+                        You turned key 1/2. A DIFFERENT officer must turn key 2/2 — switching account is required.
+                      </p>
+                    )}
+                    <p className="text-[11px] text-text-muted bg-canvas-bg border border-border-line rounded-lg p-2">
+                      {feeNotice(item.amount, (payoutFor(item) as 'MTN' | 'Airtel' | 'Cash') || 'Cash')}
+                    </p>
+
                     <div className="flex items-center justify-between gap-2 bg-canvas-bg border border-border-line rounded-lg p-2.5">
                       <span className="text-[11px] font-bold text-primary uppercase">Payout method</span>
                       <div className="flex gap-1.5">
@@ -309,8 +330,8 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                         onClick={() => handleAction(item.id, 'approve', item.memberName)}
                         className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
-                        <span className="material-symbols-outlined text-[18px]">send_to_mobile</span>
-                        <span>Approve & Disburse ({payoutFor(item)})</span>
+                        <span className="material-symbols-outlined text-[18px]">key</span>
+                        <span>{item.firstApprovedBy ? 'Turn key 2/2 — release' : 'Turn key 1/2'} ({payoutFor(item)})</span>
                       </button>
                     </div>
                   </div>
@@ -386,6 +407,14 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </span>
                     </div>
 
+                    <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-300 rounded-lg p-2.5 text-xs">
+                      <span className="font-bold text-amber-900">Key {item.firstApprovedBy ? '1/2' : '0/2'}</span>
+                      <span className="text-amber-800">{describeKeys(item)}</span>
+                    </div>
+                    <p className="text-[11px] text-text-muted bg-canvas-bg border border-border-line rounded-lg p-2">
+                      {feeNotice(item.amount, (payoutFor(item) as 'MTN' | 'Airtel' | 'Cash') || 'Cash')}
+                    </p>
+
                     <div className="flex items-center justify-between gap-2 bg-canvas-bg border border-border-line rounded-lg p-2.5">
                       <span className="text-[11px] font-bold text-primary uppercase">Payout method</span>
                       <div className="flex gap-1.5">
@@ -414,8 +443,8 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                         onClick={() => handleAction(item.id, 'approve', item.memberName)}
                         className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
-                        <span className="material-symbols-outlined text-[18px]">payments</span>
-                        <span>Approve ({payoutFor(item)})</span>
+                        <span className="material-symbols-outlined text-[18px]">key</span>
+                        <span>{item.firstApprovedBy ? 'Key 2/2 — release' : 'Key 1/2'} ({payoutFor(item)})</span>
                       </button>
                     </div>
                   </div>
@@ -498,6 +527,11 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </div>
                     </div>
 
+                    <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-300 rounded-lg p-2.5 text-xs">
+                      <span className="font-bold text-amber-900">Key {item.firstApprovedBy ? '1/2' : '0/2'}</span>
+                      <span className="text-amber-800">{describeKeys(item)}</span>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2.5 pt-1">
                       <button
                         onClick={() => handleAction(item.id, 'reject', item.memberName)}
@@ -510,8 +544,8 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                         onClick={() => handleAction(item.id, 'approve', item.memberName)}
                         className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
-                        <span className="material-symbols-outlined text-[18px]">send_to_mobile</span>
-                        <span>Approve & Disburse ({payoutFor(item)})</span>
+                        <span className="material-symbols-outlined text-[18px]">key</span>
+                        <span>{item.firstApprovedBy ? 'Key 2/2 — release' : 'Key 1/2'} ({payoutFor(item)})</span>
                       </button>
                     </div>
                   </div>

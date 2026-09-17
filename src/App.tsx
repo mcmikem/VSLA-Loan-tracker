@@ -45,6 +45,9 @@ import { WhatsNewModal } from './components/WhatsNewModal';
 import { APP_VERSION } from './data/changelog';
 import { withAudit } from './utils/audit';
 import { ShareOutResult } from './utils/shareout';
+import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
+import { isDefaultPin } from './utils/pin';
+import { PublicDisplayModal } from './components/PublicDisplayModal';
 import { LoginView } from './views/LoginView';
 import { apiFetch, fetchAuthStatus, getSessionToken, setSessionToken } from './utils/api';
 
@@ -65,6 +68,22 @@ export function App() {
   const [storageDriver, setStorageDriver] = useState<string | null>(null);
   const [storageShared, setStorageShared] = useState<boolean | null>(null);
   const [loginPreselectId, setLoginPreselectId] = useState<string | undefined>(undefined);
+  // Accessibility for village reality: elder big-text + sunlight contrast (persisted)
+  const [elderMode, setElderMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('vsla_elder_mode') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [sunlightMode, setSunlightMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('vsla_sunlight_mode') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [isPublicDisplayOpen, setIsPublicDisplayOpen] = useState(false);
 
   // Multi-Tenant SaaS State
   const [currentGroupId, setCurrentGroupId] = useState<string>(() => {
@@ -425,12 +444,44 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Approval Handlers (payout method recorded per approval)
+  // Approval Handlers — TWO-KEY RULE: money moves only on 2nd DISTINCT officer key.
+  // Blocks default PIN 1234 from authorizing money (fix #16, #20, #48).
   const handleApproveItem = (id: string, payoutMethod?: string) => {
     const targetItem = vslaState.approvals.find((a) => a.id === id);
     if (!targetItem) return;
+    if (targetItem.status !== 'pending') return;
+    if (isDefaultPin(currentUser.pin)) {
+      alert('Change your default PIN 1234 first (Account → Change PIN). Money cannot move on a default PIN.');
+      setIsAccountModalOpen(true);
+      return;
+    }
     const method = payoutMethod || targetItem.provider || 'Cash';
+    const nowIso = new Date().toISOString();
 
+    // Key 1/2: record first officer, move NO money.
+    if (!targetItem.firstApprovedBy) {
+      const updatedApprovals = vslaState.approvals.map((item) =>
+        item.id === id ? firstKeyUpdate(item, currentUser.name, nowIso) : item
+      );
+      persistState(
+        withAudit(
+          { ...vslaState, approvals: updatedApprovals },
+          currentUser.name,
+          `First key (1/2) for ${targetItem.type.replace(/_/g, ' ')} ${targetItem.reqNumber} via ${method}`,
+          `${targetItem.memberName} (#${targetItem.memberNo}) · needs a DIFFERENT officer for key 2/2 · no money moved`,
+          targetItem.amount
+        )
+      );
+      return;
+    }
+
+    // Same officer cannot turn both keys.
+    if (isSameOfficer(targetItem, currentUser.name)) {
+      alert(`${currentUser.name} already turned key 1/2. A DIFFERENT officer must turn key 2/2.`);
+      return;
+    }
+
+    // Key 2/2 by a different officer: move money now.
     let boxCash = vslaState.boxCashBalance;
     let loanFund = vslaState.loanFundBalance;
     let welfareFund = vslaState.welfareFundBalance;
@@ -445,15 +496,16 @@ export function App() {
       boxCash = Math.max(0, boxCash - targetItem.amount);
     }
 
-    const decidedAt = new Date().toISOString();
     const updatedApprovals = vslaState.approvals.map((item) =>
       item.id === id
         ? {
             ...item,
             status: 'approved' as const,
             provider: (method === 'MTN' || method === 'Airtel' ? method : item.provider) as 'MTN' | 'Airtel' | 'Cash',
-            decidedBy: currentUser.name,
-            decidedAt,
+            decidedBy: `${targetItem.firstApprovedBy} + ${currentUser.name}`,
+            decidedAt: nowIso,
+            secondApprovedBy: currentUser.name,
+            secondApprovedAt: nowIso,
             payoutMethod: method,
           }
         : item
@@ -469,8 +521,8 @@ export function App() {
           approvals: updatedApprovals,
         },
         currentUser.name,
-        `Approved ${targetItem.type.replace(/_/g, ' ')} ${targetItem.reqNumber} via ${method}`,
-        `${targetItem.memberName} (#${targetItem.memberNo}) · payout ${method}`,
+        `Second key (2/2) APPROVED ${targetItem.type.replace(/_/g, ' ')} ${targetItem.reqNumber} via ${method}`,
+        `${targetItem.memberName} (#${targetItem.memberNo}) · keys: ${targetItem.firstApprovedBy} + ${currentUser.name} · payout ${method}`,
         targetItem.amount
       )
     );
@@ -690,8 +742,13 @@ export function App() {
     );
   };
 
-  // Disburse Welfare Grant
+  // Disburse Welfare Grant — blocked on default PIN like approvals
   const handleDisburseWelfareGrant = (grant: WelfareGrant) => {
+    if (isDefaultPin(currentUser.pin)) {
+      alert('Change your default PIN 1234 first. Welfare money cannot move on a default PIN.');
+      setIsAccountModalOpen(true);
+      return;
+    }
     persistState(
       withAudit(
         {
@@ -840,6 +897,11 @@ export function App() {
 
   // Execute Cycle Share-Out: post payouts to ledgers, clear debts, start new cycle
   const handleExecuteShareOut = (result: ShareOutResult) => {
+    if (isDefaultPin(currentUser.pin)) {
+      alert('Change your default PIN 1234 first. Share-out cannot run on a default PIN.');
+      setIsAccountModalOpen(true);
+      return;
+    }
     const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     const updatedMembers = vslaState.members.map((m) => {
       const p = result.payouts.find((x) => x.memberId === m.id);
@@ -1379,7 +1441,46 @@ export function App() {
   const showLocalOnlyBanner = storageDriver !== null && storageShared === false;
 
   return (
-    <div className="min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans selection:bg-secondary/20">
+    <div className={`min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans selection:bg-secondary/20 ${elderMode ? 'elder-mode' : ''} ${sunlightMode ? 'sunlight-mode' : ''}`}>
+      {/* Village accessibility bar: big-text + sunlight + public display (fixes #13, #21, #39) */}
+      <div className="bg-primary text-white text-[11px] font-bold px-3 py-1.5 flex items-center justify-center gap-2 no-print">
+        <button
+          type="button"
+          onClick={() => {
+            const next = !elderMode;
+            setElderMode(next);
+            try {
+              localStorage.setItem('vsla_elder_mode', next ? '1' : '0');
+            } catch {}
+          }}
+          className={`px-2 py-1 rounded border ${elderMode ? 'bg-[#EAB308] text-[#00261b] border-[#EAB308]' : 'border-white/40'}`}
+          title="Big text for elders"
+        >
+          {elderMode ? '✓ Big text ON' : 'Big text'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const next = !sunlightMode;
+            setSunlightMode(next);
+            try {
+              localStorage.setItem('vsla_sunlight_mode', next ? '1' : '0');
+            } catch {}
+          }}
+          className={`px-2 py-1 rounded border ${sunlightMode ? 'bg-white text-black border-white' : 'border-white/40'}`}
+          title="High contrast for sunlight under tree"
+        >
+          {sunlightMode ? '✓ Sunlight ON' : 'Sunlight'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsPublicDisplayOpen(true)}
+          className="px-2 py-1 rounded border border-[#EAB308] text-[#EAB308]"
+          title="Show big public figures for all 30 members to see"
+        >
+          Public display
+        </button>
+      </div>
       {showLocalOnlyBanner && (
         <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-[11px] font-bold px-4 py-1.5 text-center">
           Records stay on this phone only — connect the shared database (DATABASE_URL) so all officers see the same ledger.
@@ -1564,6 +1665,7 @@ export function App() {
             onApprove={handleApproveItem}
             onReject={handleRejectItem}
             dualAuth={authEnforced}
+            currentUserName={currentUser.name}
           />
         )}
 
@@ -1705,6 +1807,12 @@ export function App() {
       {/* First-run tour + What's-new sheet */}
       {showTour && <OnboardingTour language={language} onDone={dismissTour} />}
       {!showTour && showWhatsNew && <WhatsNewModal onClose={dismissWhatsNew} />}
+
+      <PublicDisplayModal
+        isOpen={isPublicDisplayOpen}
+        onClose={() => setIsPublicDisplayOpen(false)}
+        state={vslaState}
+      />
 
       {/* Universal Sticky Bottom Navigation Bar */}
       <BottomNavBar

@@ -78,6 +78,25 @@
   scrollbar-width: none;
 }
 
+/* Elder + sunlight modes for village reality: old eyes, sun glare, small phones */
+.elder-mode {
+  font-size: 112.5%;
+}
+.elder-mode button {
+  min-height: 44px;
+}
+.sunlight-mode {
+  --color-canvas-bg: #ffffff;
+  --color-surface-card: #ffffff;
+  --color-text-muted: #111827;
+  --color-on-surface: #000000;
+  --color-border-line: #6b7280;
+  --color-border-strong: #111827;
+}
+.sunlight-mode .bg-canvas-bg {
+  background-color: #ffffff !important;
+}
+
 /* Receipt printing: isolate the receipt on paper */
 @media print {
   body * {

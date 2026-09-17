@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenId } from '../types';
+import { feeNotice } from '../utils/momoFees';
 
 interface MoMoPushViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -250,6 +251,9 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
               className="w-full py-2.5 px-3 text-headline-md font-mono font-bold text-primary border-0 focus:ring-0"
             />
           </div>
+          <p className="text-[11px] text-text-muted bg-canvas-bg border border-border-line rounded-lg p-2 mt-2">
+            {feeNotice(parseInt(amount.replace(/,/g, ''), 10) || 0, network)} Prefer cash under UGX 500,000 — zero fee.
+          </p>
         </div>
       </section>
 
