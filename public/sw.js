@@ -1,6 +1,6 @@
 /* VSLA UG offline service worker — cache app shell, never cache /api/* */
 const CACHE = 'vsla-ug-v1';
-const SHELL = ['/app', '/manifest.webmanifest', '/icon.svg'];
+const SHELL = ['/app', '/manifest.webmanifest', '/icon.svg', '/fonts/material-symbols.woff2'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
