@@ -1439,6 +1439,7 @@ export function App() {
       zone: input.village.trim() || 'General',
       phone: phone || '—',
       provider: input.provider,
+      photoUrl: input.photoUrl || undefined,
       nationalId: input.nationalId.trim() || undefined,
       business: input.business.trim() || undefined,
       kinName: input.kinName.trim() || undefined,

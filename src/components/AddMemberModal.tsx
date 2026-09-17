@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Language } from '../types';
+import { fileToAvatarDataUrl } from '../utils/photo';
+import { MemberAvatar } from './MemberAvatar';
 
 export interface NewMemberInput {
   firstName: string;
@@ -13,6 +15,8 @@ export interface NewMemberInput {
   guarantorName: string;
   guarantorPhone: string;
   business: string;
+  /** Compressed face photo data URL (optional). */
+  photoUrl: string;
 }
 
 interface AddMemberModalProps {
@@ -28,9 +32,11 @@ interface AddMemberModalProps {
 export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose, onRegister, language = 'EN', nextMemNumber, nextMemberNo }) => {
   const [form, setForm] = useState<NewMemberInput>({
     firstName: '', lastName: '', phone: '', provider: 'MTN',
-    nationalId: '', village: '', kinName: '', kinPhone: '', guarantorName: '', guarantorPhone: '', business: '',
+    nationalId: '', village: '', kinName: '', kinPhone: '', guarantorName: '', guarantorPhone: '', business: '', photoUrl: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -46,8 +52,22 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
       return;
     }
     setError(null);
-    setForm({ firstName: '', lastName: '', phone: '', provider: 'MTN', nationalId: '', village: '', kinName: '', kinPhone: '', guarantorName: '', guarantorPhone: '', business: '' });
+    setForm({ firstName: '', lastName: '', phone: '', provider: 'MTN', nationalId: '', village: '', kinName: '', kinPhone: '', guarantorName: '', guarantorPhone: '', business: '', photoUrl: '' });
     onClose();
+  };
+
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const url = await fileToAvatarDataUrl(file);
+      setForm({ ...form, photoUrl: url });
+    } catch (e: any) {
+      setError(e.message || 'Photo failed.');
+    } finally {
+      setPhotoBusy(false);
+    }
   };
 
   return (
@@ -60,6 +80,35 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
               {nextMemNumber || ''}{nextMemberNo ? ` · #${nextMemberNo}` : ''}
             </span>
           )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={photoBusy}
+            className="flex items-center gap-2.5 min-h-[52px] px-3 rounded-xl border-2 border-dashed border-[#CBD5E1] text-[#00261b] active:scale-95 disabled:opacity-50"
+          >
+            <MemberAvatar
+              name={`${form.firstName} ${form.lastName}`.trim() || '?'}
+              photoUrl={form.photoUrl || undefined}
+              sizeClass="w-10 h-10 text-sm"
+            />
+            <span className="text-xs font-bold text-left">
+              {photoBusy
+                ? '…'
+                : form.photoUrl
+                ? str('Face saved ✓ (tap to retake)', 'Ekifaananyi kikoseddwa ✓')
+                : str('Tap: take face photo', 'Nyiga: kubya ekifaananyi')}
+            </span>
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            className="hidden"
+            onChange={(e) => pickPhoto(e.target.files?.[0])}
+          />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder={str('First name', 'Erinya')} className={inputCls} />

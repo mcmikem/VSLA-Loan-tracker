@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Language, Member, ScreenId } from '../types';
 import { getTranslations } from '../i18n/translations';
 import { ReceiptData, ReceiptModal } from '../components/ReceiptModal';
+import { MemberAvatar } from '../components/MemberAvatar';
 
 interface MemberPassbookViewProps {
   members: Member[];
@@ -198,13 +199,14 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
               <button
                 key={m.id}
                 onClick={() => onSelectMember(m.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 flex items-center gap-1.5 transition ${
+                className={`pl-1 pr-3 py-1 rounded-full text-xs font-bold shrink-0 flex items-center gap-1.5 transition min-h-[40px] ${
                   isSelected
                     ? 'bg-primary-container text-white shadow'
                     : 'bg-surface-card border border-border-line text-on-surface hover:border-primary'
                 }`}
                 type="button"
               >
+                <MemberAvatar name={m.name} initials={m.initials} photoUrl={m.photoUrl} sizeClass="w-8 h-8 text-[11px]" />
                 <span className="font-mono opacity-80">#{m.no}</span>
                 <span>{m.name.split(' ')[0]}</span>
               </button>
@@ -256,11 +258,19 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
           {/* Top Member Badge Row */}
           <div className="flex items-start justify-between relative z-10">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-surface-card text-primary font-bold flex items-center justify-center border-2 border-primary-fixed shadow-sm">
-                <span className="text-headline-md font-headline-md font-bold">
-                  {member.initials}
-                </span>
-              </div>
+              {member.photoUrl ? (
+                <img
+                  src={member.photoUrl}
+                  alt={member.name}
+                  className="w-12 h-12 rounded-xl object-cover border-2 border-primary-fixed shadow-sm"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-surface-card text-primary font-bold flex items-center justify-center border-2 border-primary-fixed shadow-sm">
+                  <span className="text-headline-md font-headline-md font-bold">
+                    {member.initials}
+                  </span>
+                </div>
+              )}
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-headline-md font-headline-md text-white font-bold leading-none">

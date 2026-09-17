@@ -84,6 +84,8 @@ export interface Member {
   provider: 'MTN' | 'Airtel';
   nationalId?: string;
   business?: string;
+  /** Small compressed face photo (data URL) — tap-face selection for low-literacy users. */
+  photoUrl?: string;
   kinName?: string;
   kinPhone?: string;
   guarantorName?: string;

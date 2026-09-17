@@ -10,6 +10,7 @@ import {
 } from '../src/utils/policy';
 import { buildLocalGroup } from '../src/utils/offlineGroup';
 import { backupFileName, buildBackupPayload } from '../src/utils/backupFile';
+import { estimateDataUrlBytes } from '../src/utils/photo';
 
 describe('village money policy', () => {
   it('changeDue hands back overpayments, never negative', () => {
@@ -78,5 +79,11 @@ describe('offline group builder', () => {
     expect(p.schemaVersion).toBe('2.0-VSLA-OFFLINE');
     expect(p.data.members).toHaveLength(1);
     expect(backupFileName(state.groupId)).toContain(state.groupId!);
+  });
+
+  it('estimates avatar data URL bytes without decoding', () => {
+    // 4 base64 chars ≈ 3 bytes
+    expect(estimateDataUrlBytes('data:image/jpeg;base64,QUJD')).toBe(3);
+    expect(estimateDataUrlBytes('data:image/jpeg;base64,' + 'QUJD'.repeat(10000))).toBe(30000);
   });
 });

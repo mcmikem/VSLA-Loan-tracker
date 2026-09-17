@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Language, Member, ScreenId, ShopProduct, VSLAState } from '../types';
 import { changeDue, displayFineReason, gapNeedsSecondKey, GAP_TWO_KEY_THRESHOLD, STANDARD_FINE_REASONS } from '../utils/policy';
+import { MemberAvatar } from '../components/MemberAvatar';
+import { MemberFaceGrid } from '../components/MemberFaceGrid';
 
 export interface WizardShareItem {
   memberId: string;
@@ -396,7 +398,8 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </div>
           {members.map((m) => (
             <div key={m.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2">
-              <div className="min-w-0">
+              <div className="min-w-0 flex items-center gap-2">
+                <MemberAvatar name={m.name} initials={m.initials} photoUrl={m.photoUrl} sizeClass="w-9 h-9 text-xs" />
                 <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
               </div>
               <div className="flex gap-1 shrink-0">
@@ -479,9 +482,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           )}
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
             <h4 className="text-xs font-bold text-[#00261b]">{str('Request emergency payout (goes to approvals)', 'Saba obuyambi (kugenda mu approvals)')}</h4>
-            <select value={payoutMember} onChange={(e) => setPayoutMember(e.target.value)} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white">
-              {members.map((m) => <option key={m.id} value={m.id}>{m.name} (#{m.no})</option>)}
-            </select>
+            <MemberFaceGrid members={members} value={payoutMember} onChange={setPayoutMember} layout="row" />
             <div className="flex gap-2">
               <input value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
               <input value={payoutReason} onChange={(e) => setPayoutReason(e.target.value)} placeholder={str('Reason (e.g. hospital)', 'Ensonga')} className="flex-[2] min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
@@ -502,9 +503,12 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           {debtors.map((m) => (
             <div key={m.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
-                  <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja')} UGX {m.loanBalance.toLocaleString()}</p>
+                <div className="min-w-0 flex items-center gap-2">
+                  <MemberAvatar name={m.name} initials={m.initials} photoUrl={m.photoUrl} sizeClass="w-9 h-9 text-xs" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
+                    <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja')} UGX {m.loanBalance.toLocaleString()}</p>
+                  </div>
                 </div>
                 <input
                   value={repayInputs[m.id] || ''}
@@ -540,9 +544,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[4]}</h3>
-            <select value={loanForm.memberId} onChange={(e) => setLoanForm({ ...loanForm, memberId: e.target.value })} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white">
-              {members.map((m) => <option key={m.id} value={m.id}>{m.name} (#{m.no})</option>)}
-            </select>
+            <MemberFaceGrid members={members} value={loanForm.memberId} onChange={(memberId) => setLoanForm({ ...loanForm, memberId })} layout="row" />
             {loanMember && (
               <p className="text-[11px] text-[#4B5563]">
                 {str('Saved', 'Enterekanya')} UGX {loanMember.sharesTotal.toLocaleString()} · {str('Max', 'Ekkomo')} UGX {(loanMember.maxBorrowLimit || 0).toLocaleString()}
@@ -570,9 +572,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[5]}</h3>
-            <select value={fineMember} onChange={(e) => setFineMember(e.target.value)} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white">
-              {members.map((m) => <option key={m.id} value={m.id}>{m.name} (#{m.no})</option>)}
-            </select>
+            <MemberFaceGrid members={members} value={fineMember} onChange={setFineMember} layout="row" />
             <div className="flex flex-wrap gap-1.5">
               {STANDARD_FINE_REASONS.slice(0, 4).map((r) => (
                 <button key={r.en} type="button" onClick={() => setFineReason(r.en)} className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold ${fineReason === r.en ? 'bg-[#00261b] text-white' : 'bg-[#F6F7F6] border border-[#E5E7EB]'}`}>
