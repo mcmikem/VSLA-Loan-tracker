@@ -10,7 +10,7 @@ import {
 } from '../src/utils/policy';
 import { buildLocalGroup } from '../src/utils/offlineGroup';
 import { backupFileName, buildBackupPayload } from '../src/utils/backupFile';
-import { estimateDataUrlBytes } from '../src/utils/photo';
+import { estimateDataUrlBytes, findMemberPhoto } from '../src/utils/photo';
 
 describe('village money policy', () => {
   it('changeDue hands back overpayments, never negative', () => {
@@ -85,5 +85,17 @@ describe('offline group builder', () => {
     // 4 base64 chars ≈ 3 bytes
     expect(estimateDataUrlBytes('data:image/jpeg;base64,QUJD')).toBe(3);
     expect(estimateDataUrlBytes('data:image/jpeg;base64,' + 'QUJD'.repeat(10000))).toBe(30000);
+  });
+
+  it('finds member photos by number first, then name', () => {
+    const members = [
+      { no: '01', name: 'Sarah Nabukalu', photoUrl: 'data:face1' },
+      { no: '02', name: 'Joseph Mukasa' },
+    ];
+    expect(findMemberPhoto(members, '01', 'Nobody')).toBe('data:face1');
+    expect(findMemberPhoto(members, '02', 'Nobody')).toBeUndefined();
+    expect(findMemberPhoto(members, '', 'joseph mukasa')).toBeUndefined();
+    expect(findMemberPhoto(members, '99', 'Sarah Nabukalu')).toBe('data:face1');
+    expect(findMemberPhoto(members, '99', 'Ghost Member')).toBeUndefined();
   });
 });

@@ -3,12 +3,12 @@
  * Photos are downscaled on-device so 30 members fit easily in localStorage
  * (target ≤ ~28KB each → under 1MB for a full group).
  */
+import type { Member } from '../types';
 
 const MAX_BYTES = 28 * 1024;
 
 /** Approximate decoded bytes of a base64 data URL (no decoding needed). */
-export function estimateDataUrlBytes(dataUrl: string): number {
-  const comma = dataUrl.indexOf(',');
+export function estimateDataUrlBytes(dataUrl: string): number {  const comma = dataUrl.indexOf(',');
   const b64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
   const len = b64.replace(/\s/g, '').length;
   return Math.floor((len * 3) / 4);
@@ -44,12 +44,36 @@ function renderSquare(img: HTMLImageElement, px: number, quality: number): strin
 }
 
 /** Compress an uploaded photo to a tiny square data URL. Rejects on failure. */
-export async function fileToAvatarDataUrl(file: File): Promise<string> {
-  if (!file.type.startsWith('image/')) throw new Error('Pick a photo file.');
+export async function fileToAvatarDataUrl(file: File): Promise<string> {  if (!file.type.startsWith('image/')) throw new Error('Pick a photo file.');
   const img = await loadImage(file);
   for (const [px, q] of [[128, 0.7], [96, 0.6]] as const) {
     const url = renderSquare(img, px, q);
     if (estimateDataUrlBytes(url) <= MAX_BYTES) return url;
   }
   return renderSquare(img, 96, 0.6);
+}
+
+/**
+ * Shared member→photo lookup for approvals, fines and account lists, which
+ * only carry memberNo/memberName (not the full Member). Prefers exact
+ * memberNo match, falls back to case-insensitive name. Returns undefined
+ * when nothing matches so callers render initials.
+ */
+export function findMemberPhoto(
+  members: Pick<Member, 'no' | 'name' | 'photoUrl'>[],
+  memberNo?: string,
+  memberName?: string
+): string | undefined {
+  const no = (memberNo || '').trim();
+  if (no) {
+    const byNo = members.find((m) => m.no === no);
+    if (byNo?.photoUrl) return byNo.photoUrl;
+    if (byNo) return undefined;
+  }
+  const nm = (memberName || '').trim().toLowerCase();
+  if (nm) {
+    const byName = members.find((m) => m.name.trim().toLowerCase() === nm);
+    if (byName?.photoUrl) return byName.photoUrl;
+  }
+  return undefined;
 }

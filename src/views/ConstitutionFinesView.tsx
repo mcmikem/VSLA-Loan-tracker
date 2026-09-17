@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Language, PendingFine, ScreenId } from '../types';
+import { Language, Member, PendingFine, ScreenId } from '../types';
 import { displayFineReason } from '../utils/policy';
+import { findMemberPhoto } from '../utils/photo';
+import { MemberAvatar } from '../components/MemberAvatar';
 
 interface ConstitutionFinesViewProps {
   fines: PendingFine[];
@@ -9,6 +11,8 @@ interface ConstitutionFinesViewProps {
   onLevyFine: (fine: PendingFine) => void;
   onNavigate: (screen: ScreenId) => void;
   language?: Language;
+  /** Member directory for face photos (low-literacy verification). */
+  members?: Member[];
 }
 
 const INFRACTIONS = [
@@ -25,6 +29,7 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
   onLevyFine,
   onNavigate,
   language = 'EN',
+  members = [],
 }) => {
   const [selectedMember, setSelectedMember] = useState('Kato Moses');
   const [selectedMemberNo, setSelectedMemberNo] = useState('12');
@@ -100,11 +105,18 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
                   className="p-3 bg-canvas-bg rounded-lg border border-border-line space-y-2"
                 >
                   <div className="flex items-start justify-between">
-                    <div>
-                      <span className="font-bold text-primary block">
-                        {fine.memberName} (#{fine.memberNo})
-                      </span>
-                      <p className="text-[11px] text-text-muted">{displayFineReason(fine.reason, language)}</p>
+                    <div className="flex items-center gap-2">
+                      <MemberAvatar
+                        name={fine.memberName}
+                        photoUrl={findMemberPhoto(members, fine.memberNo, fine.memberName)}
+                        sizeClass="w-9 h-9 text-xs"
+                      />
+                      <div>
+                        <span className="font-bold text-primary block">
+                          {fine.memberName} (#{fine.memberNo})
+                        </span>
+                        <p className="text-[11px] text-text-muted">{displayFineReason(fine.reason, language)}</p>
+                      </div>
                     </div>
                     <span className="font-mono font-bold text-status-bad-tx text-sm">
                       UGX {fine.amount.toLocaleString('en-US')}

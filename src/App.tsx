@@ -1502,6 +1502,26 @@ export function App() {
     return null;
   };
 
+  // ---- Member photo update (retake on passbook) ----
+  const handleUpdatePhoto = (memberId: string, photoUrl: string) => {
+    const target = vslaState.members.find((m) => m.id === memberId);
+    if (!target) return;
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          members: vslaState.members.map((m) =>
+            m.id === memberId ? { ...m, photoUrl } : m
+          ),
+        },
+        currentUser.name,
+        'Updated member photo',
+        `${target.name} (#${target.no})`,
+        undefined
+      )
+    );
+  };
+
   // ---- Group settings (name, box, share price, welfare, cycle) ----
   const handleUpdateGroupSettings = (patch: GroupSettingsPatch) => {
     persistState(
@@ -1757,6 +1777,7 @@ export function App() {
             onSwitchAccount={handleSwitchAccount}
             onLogout={handleLogout}
             onNavigate={handleNavigateScreen}
+            directory={vslaState.members}
           />
         )}
 
@@ -1824,6 +1845,7 @@ export function App() {
             onReject={handleRejectItem}
             dualAuth={authEnforced}
             currentUserName={currentUser.name}
+            members={vslaState.members}
           />
         )}
 
@@ -1836,6 +1858,7 @@ export function App() {
             onRecordRepayment={handleRecordRepaymentInPassbook}
             onBuyShares={handleBuyShares}
             onAddMember={() => setIsAddMemberOpen(true)}
+            onUpdatePhoto={handleUpdatePhoto}
             language={language}
             groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
             boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}
@@ -1899,6 +1922,7 @@ export function App() {
             onLevyFine={handleLevyFine}
             onNavigate={handleNavigateScreen}
             language={language}
+            members={vslaState.members}
           />
         )}
       </div>

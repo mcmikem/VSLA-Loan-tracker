@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
-import { ApprovalItem } from '../types';
+import { ApprovalItem, Member } from '../types';
 import { describeKeys, isSameOfficer } from '../utils/dualApproval';
 import { feeNotice } from '../utils/momoFees';
+import { findMemberPhoto } from '../utils/photo';
+import { MemberAvatar } from '../components/MemberAvatar';
+
+interface ApprovalsQueueViewProps {
+  approvals: ApprovalItem[];
+  onApprove: (id: string, payoutMethod?: string) => void;
+  onReject: (id: string) => void;
+  dualAuth?: boolean;
+  currentUserName?: string;
+  /** Member directory for face photos (low-literacy verification). */
+  members?: Member[];
+}
 
 interface ApprovalsQueueViewProps {
   approvals: ApprovalItem[];
@@ -17,6 +29,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
   onReject,
   dualAuth,
   currentUserName = '',
+  members = [],
 }) => {
   const [filter, setFilter] = useState<'all' | 'vsla_loan' | 'savings_withdrawal' | 'welfare_grant'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -24,6 +37,8 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
 
   const payoutFor = (item: ApprovalItem) =>
     payoutMethods[item.id] || item.provider || (item.type === 'welfare_grant' ? 'Cash' : 'MTN');
+
+  const photoFor = (item: ApprovalItem) => findMemberPhoto(members, item.memberNo, item.memberName);
 
   const filteredApprovals = approvals.filter((app) => {
     if (app.status !== 'pending') return false;
@@ -206,23 +221,26 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
 
                   <div className="p-4 space-y-3.5">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-headline-sm text-primary">
-                            {item.memberName}
-                          </span>
-                          <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
-                            No. {item.memberNo}
-                          </span>
-                        </div>
-                        {item.phone && (
-                          <div className="flex items-center gap-1.5 mt-1 text-xs text-text-muted">
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-900 font-bold border border-yellow-300 text-[11px]">
-                              {item.provider} MoMo
+                      <div className="flex items-center gap-2.5">
+                        <MemberAvatar name={item.memberName} photoUrl={photoFor(item)} sizeClass="w-11 h-11 text-sm" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-headline-sm text-primary">
+                              {item.memberName}
                             </span>
-                            <span className="font-mono text-on-surface">{item.phone}</span>
+                            <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
+                              No. {item.memberNo}
+                            </span>
                           </div>
-                        )}
+                          {item.phone && (
+                            <div className="flex items-center gap-1.5 mt-1 text-xs text-text-muted">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-900 font-bold border border-yellow-300 text-[11px]">
+                                {item.provider} MoMo
+                              </span>
+                              <span className="font-mono text-on-surface">{item.phone}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="text-right">
                         <span className="text-xs text-text-muted block">Initiator</span>
@@ -361,20 +379,23 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
 
                   <div className="p-4 space-y-3.5">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-headline-sm text-primary">
-                            {item.memberName}
-                          </span>
-                          <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
-                            No. {item.memberNo}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-xs text-text-muted flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[16px] text-red-600">
-                            local_hospital
-                          </span>
-                          <span className="font-medium text-primary">{item.reason}</span>
+                      <div className="flex items-center gap-2.5">
+                        <MemberAvatar name={item.memberName} photoUrl={photoFor(item)} sizeClass="w-11 h-11 text-sm" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-headline-sm text-primary">
+                              {item.memberName}
+                            </span>
+                            <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
+                              No. {item.memberNo}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-xs text-text-muted flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[16px] text-red-600">
+                              local_hospital
+                            </span>
+                            <span className="font-medium text-primary">{item.reason}</span>
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -473,23 +494,26 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
 
                   <div className="p-4 space-y-3.5">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-headline-sm text-primary">
-                            {item.memberName}
-                          </span>
-                          <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
-                            No. {item.memberNo}
-                          </span>
-                        </div>
-                        {item.phone && (
-                          <div className="flex items-center gap-1.5 mt-1 text-xs text-text-muted">
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-bold border border-red-300 text-[11px]">
-                              {item.provider} Money
+                      <div className="flex items-center gap-2.5">
+                        <MemberAvatar name={item.memberName} photoUrl={photoFor(item)} sizeClass="w-11 h-11 text-sm" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-headline-sm text-primary">
+                              {item.memberName}
                             </span>
-                            <span className="font-mono text-on-surface">{item.phone}</span>
+                            <span className="text-xs bg-border-line text-text-muted font-bold px-1.5 py-0.5 rounded">
+                              No. {item.memberNo}
+                            </span>
                           </div>
-                        )}
+                          {item.phone && (
+                            <div className="flex items-center gap-1.5 mt-1 text-xs text-text-muted">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100 text-red-900 font-bold border border-red-300 text-[11px]">
+                                {item.provider} Money
+                              </span>
+                              <span className="font-mono text-on-surface">{item.phone}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="text-right">
                         <span className="text-xs text-text-muted block">Account Balance</span>
@@ -569,15 +593,18 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
             </h3>
             {decided.map((d) => (
               <div key={d.id} className="flex items-center justify-between gap-2 p-2 bg-canvas-bg rounded-lg border border-border-line text-xs">
-                <div className="min-w-0">
-                  <span className="font-bold text-primary block truncate">
-                    {d.memberName} <span className="font-mono text-text-muted">#{d.memberNo}</span>
-                  </span>
-                  <span className="text-[11px] text-text-muted block truncate">
-                    {d.reqNumber} · {d.decidedBy ? `by ${d.decidedBy}` : 'by officer'}
-                    {d.decidedAt ? ` · ${new Date(d.decidedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
-                    {d.payoutMethod ? ` · via ${d.payoutMethod}` : ''}
-                  </span>
+                <div className="min-w-0 flex items-center gap-2">
+                  <MemberAvatar name={d.memberName} photoUrl={photoFor(d)} sizeClass="w-8 h-8 text-[11px]" />
+                  <div className="min-w-0">
+                    <span className="font-bold text-primary block truncate">
+                      {d.memberName} <span className="font-mono text-text-muted">#{d.memberNo}</span>
+                    </span>
+                    <span className="text-[11px] text-text-muted block truncate">
+                      {d.reqNumber} · {d.decidedBy ? `by ${d.decidedBy}` : 'by officer'}
+                      {d.decidedAt ? ` · ${new Date(d.decidedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
+                      {d.payoutMethod ? ` · via ${d.payoutMethod}` : ''}
+                    </span>
+                  </div>
                 </div>
                 <div className="text-right shrink-0">
                   <span className="font-mono font-bold text-primary block">UGX {d.amount.toLocaleString('en-US')}</span>

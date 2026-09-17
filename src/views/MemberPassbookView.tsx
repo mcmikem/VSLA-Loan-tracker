@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Language, Member, ScreenId } from '../types';
 import { getTranslations } from '../i18n/translations';
 import { ReceiptData, ReceiptModal } from '../components/ReceiptModal';
 import { MemberAvatar } from '../components/MemberAvatar';
+import { fileToAvatarDataUrl } from '../utils/photo';
 
 interface MemberPassbookViewProps {
   members: Member[];
@@ -12,6 +13,8 @@ interface MemberPassbookViewProps {
   onRecordRepayment: (amount: number, memberId: string) => void;
   onBuyShares: (sharesCount: number, memberId: string) => void;
   onAddMember?: () => void;
+  /** Retake an existing member's face photo (compressed on-device). */
+  onUpdatePhoto?: (memberId: string, photoUrl: string) => void;
   language?: Language;
   groupName?: string;
   boxIdentifier?: string;
@@ -26,6 +29,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   onRecordRepayment,
   onBuyShares,
   onAddMember,
+  onUpdatePhoto,
   language = 'EN',
   groupName = 'Bakwata Savings Group',
   boxIdentifier = 'BOX-KLA-042',
@@ -38,9 +42,25 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [memberQuery, setMemberQuery] = useState('');
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
 
   const t = getTranslations(language);
   const member = selectedMember || members[0];
+
+  const retakePhoto = async (file: File | undefined) => {
+    if (!file || !member || !onUpdatePhoto) return;
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try {
+      onUpdatePhoto(member.id, await fileToAvatarDataUrl(file));
+    } catch (e: any) {
+      setPhotoError(e.message || 'Photo failed.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
 
   const todayStr = () =>
     new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -271,6 +291,29 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                   </span>
                 </div>
               )}
+              {onUpdatePhoto && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => photoRef.current?.click()}
+                    disabled={photoBusy}
+                    title={language === 'LU' ? 'Kubya ekifaananyi' : 'Retake face photo'}
+                    className="w-9 h-9 rounded-full bg-white/15 border border-white/40 text-white flex items-center justify-center active:scale-95 disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {photoBusy ? 'progress_activity' : 'photo_camera'}
+                    </span>
+                  </button>
+                  <input
+                    ref={photoRef}
+                    type="file"
+                    accept="image/*"
+                    capture="user"
+                    className="hidden"
+                    onChange={(e) => retakePhoto(e.target.files?.[0])}
+                  />
+                </>
+              )}
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-headline-md font-headline-md text-white font-bold leading-none">
@@ -304,6 +347,9 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                 <span className="material-symbols-outlined text-[14px]">key</span>
                 {member.keyholderTitle || (language === 'LU' ? 'Mukwasi w\'Ebisumuluzo' : 'Keyholder')}
               </span>
+            )}
+            {photoError && (
+              <p className="text-[11px] font-bold text-amber-200 mt-1">{photoError}</p>
             )}
           </div>
 

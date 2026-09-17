@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ScreenId, UserAccount } from '../types';
+import { Member, ScreenId, UserAccount } from '../types';
+import { findMemberPhoto } from '../utils/photo';
+import { MemberAvatar } from '../components/MemberAvatar';
 
 interface UsersViewProps {
   accounts: UserAccount[];
@@ -8,6 +10,8 @@ interface UsersViewProps {
   onSwitchAccount: (account: UserAccount) => void;
   onLogout?: () => void;
   onNavigate: (screen: ScreenId) => void;
+  /** Member directory — shows face photos where accounts link via memberId. */
+  directory?: Member[];
 }
 
 const ROLE_LABEL: Record<string, string> = {
@@ -26,6 +30,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
   onSwitchAccount,
   onLogout,
   onNavigate,
+  directory = [],
 }) => {
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
@@ -77,15 +82,21 @@ export const UsersView: React.FC<UsersViewProps> = ({
       <div className="space-y-2">
         {visible.map((a) => {
           const isCurrent = a.id === currentUserId;
+          const linked = a.memberId ? directory.find((m) => m.id === a.memberId) : undefined;
+          const face = linked?.photoUrl || findMemberPhoto(directory, a.memberNo, a.name);
           return (
             <div
               key={a.id}
               className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${isCurrent ? 'bg-emerald-50 border-emerald-300' : 'bg-surface-card border-border-line'}`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-10 h-10 rounded-full ${a.avatarBg || 'bg-emerald-700'} text-white flex items-center justify-center font-bold text-sm shrink-0`}>
-                  {a.avatarInitials}
-                </div>
+                <MemberAvatar
+                  name={a.name}
+                  initials={a.avatarInitials}
+                  photoUrl={face}
+                  avatarBg={a.avatarBg}
+                  sizeClass="w-10 h-10 text-sm"
+                />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-bold text-primary text-sm truncate">{a.name}</span>
