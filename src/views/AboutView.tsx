@@ -18,16 +18,16 @@ export const AboutView: React.FC<AboutViewProps> = ({
   language = 'EN',
   groupName = 'Bakwata Savings Group',
 }) => {
-  const str = (en: string, lu: string, sw: string) =>
-    language === 'LU' ? lu : language === 'SW' ? sw : en;
+  const str = (en: string, lu: string) =>
+    language === 'LU' ? lu  : en;
 
   const features = [
-    { icon: 'menu_book', t: str('Digital passbooks for every saver', 'Ppaasibuku ya buli mukiise', 'Vitabu vya kila mwanachama') },
-    { icon: 'lock', t: str('3-key strongbox reconciliation', 'Okusiba sanduuko n\'ebisumuluzo 3', 'Kufunga sanduku kwa funguo 3') },
-    { icon: 'payments', t: str('Loans, welfare grants & fines', 'Ebyewolo, obuyambi n\'engassi', 'Mikopo, jamii na faini') },
-    { icon: 'cloud_sync', t: str('Offline-first with safe backups', 'Ekola awatali yintaneeti', 'Inafanya kazi bila mtandao') },
-    { icon: 'receipt_long', t: str('Receipts, reports & full audit trail', 'Risiti, lipoota n\'okukebera', 'Risiti, ripoti na ukaguzi') },
-    { icon: 'translate', t: str('English, Luganda & Swahili', 'Oluzungu, Oluganda', 'Kiingereza, Kiswahili') },
+    { icon: 'menu_book', t: str('Digital passbooks for every saver', 'Ppaasibuku ya buli mukiise') },
+    { icon: 'lock', t: str('3-key strongbox reconciliation', 'Okusiba sanduuko n\'ebisumuluzo 3') },
+    { icon: 'payments', t: str('Loans, welfare grants & fines', 'Ebyewolo, obuyambi n\'engassi') },
+    { icon: 'cloud_sync', t: str('Offline-first with safe backups', 'Ekola awatali yintaneeti') },
+    { icon: 'receipt_long', t: str('Receipts, reports & full audit trail', 'Risiti, lipoota n\'okukebera') },
+    { icon: 'translate', t: str('English & Luganda', 'Oluzungu n\'Oluganda') },
   ];
 
   return (
@@ -41,7 +41,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="material-symbols-outlined text-lg">arrow_back</span>
         </button>
         <div>
-          <h1 className="font-bold text-primary">{str('About VSLA UG', 'Ebikwata ku VSLA UG', 'Kuhusu VSLA UG')}</h1>
+          <h1 className="font-bold text-primary">{str('About VSLA UG', 'Ebikwata ku VSLA UG')}</h1>
           <p className="text-xs text-text-muted">{groupName}</p>
         </div>
       </div>
@@ -51,14 +51,10 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="material-symbols-outlined text-[140px]">account_balance</span>
         </div>
         <p className="text-xs uppercase tracking-wider text-primary-fixed font-bold">
-          {str('The digital strongbox for village savings', 'Sanduuko ya digito', 'Sanduku la kidijitali')}
+          {str('The digital strongbox for village savings', 'Sanduuko ya digito')}
         </p>
         <p className="text-sm mt-1.5 leading-relaxed text-white/90">
-          {str(
-            'Built with Kampala savings groups: stamp shares, approve loans, seal the box with 3 keys — all from one phone, even offline.',
-            'Kyakolebwa n\'ebibiina by\'e Kampala: teeka sitampu, kiriza ebyewolo, siba sanduuko n\'ebisumuluzo 3 — byonna ku ssimu emu.',
-            'Imejengwa na vikundi vya Kampala: weka stempu, idhinisha mikopo, funga sanduku — yote kwenye simu moja.'
-          )}
+          {str('Built with Kampala savings groups: stamp shares, approve loans, seal the box with 3 keys — all from one phone, even offline.', 'Kyakolebwa n\'ebibiina by\'e Kampala: teeka sitampu, kiriza ebyewolo, siba sanduuko n\'ebisumuluzo 3 — byonna ku ssimu emu.')}
         </p>
       </section>
 
@@ -75,21 +71,17 @@ export const AboutView: React.FC<AboutViewProps> = ({
 
       <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm space-y-2">
         <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
-          {str('Install on your phone', 'Teeka ku ssimu yo', 'Sakinisha kwenye simu')}
+          {str('Install on your phone', 'Teeka ku ssimu yo')}
         </h3>
         <p className="text-xs text-text-muted leading-relaxed">
-          {str(
-            'Android (Chrome): menu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen. It then opens full-screen and works offline.',
-            'Android (Chrome): menu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen.',
-            'Android (Chrome): menyu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen.'
-          )}
+          {str('Android (Chrome): menu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen. It then opens full-screen and works offline.', 'Android (Chrome): menu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen.')}
         </p>
         <button
           type="button"
           onClick={() => onNavigate('legal')}
           className="w-full min-h-[44px] text-xs font-bold text-primary underline"
         >
-          {str('Read Terms, Privacy & Constitution', 'Soma amateeka', 'Soma masharti')}
+          {str('Read Terms, Privacy & Constitution', 'Soma amateeka')}
         </button>
       </section>
 

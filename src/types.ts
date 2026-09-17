@@ -1,4 +1,4 @@
-export type Language = 'EN' | 'LU' | 'SW';
+export type Language = 'EN' | 'LU';
 
 export type MainTab = 'home' | 'meetings' | 'members' | 'loans' | 'approvals' | 'more';
 

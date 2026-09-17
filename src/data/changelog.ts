@@ -37,7 +37,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: 'Sep 2026',
     highlights: [
       'Multi-group support with invite codes',
-      'Luganda, Swahili and English',
+      'Luganda and English',
       'Offline-first: works without internet',
     ],
   },

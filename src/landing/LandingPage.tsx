@@ -32,7 +32,7 @@ export const LandingPage: React.FC = () => {
     { q: 'Ssente zaffe ziba wa? Where does our money stay?', a: 'In your physical strongbox — always. VSLA UG only keeps the books: who saved, who borrowed, what is in the box. We never touch your cash.' },
     { q: 'Does it work without internet?', a: 'Yes. It is offline-first — records live on the phone and sync when you are back online. Download a backup after every meeting.' },
     { q: 'How much does it cost?', a: 'Free during the pilot for groups up to 30 members. Pro (500 members, shared cloud database, mobile-money collection) is coming — join the waitlist on WhatsApp.' },
-    { q: 'Which phones work?', a: 'Any Android with Chrome or iPhone with Safari. Tap “Add to Home Screen” and it opens like a normal app. English, Luganda and Swahili inside.' },
+    { q: 'Which phones work?', a: 'Any Android with Chrome or iPhone with Safari. Tap “Add to Home Screen” and it opens like a normal app. English and Luganda inside.' },
     { q: 'What if the secretary’s phone is lost?', a: 'Download the JSON backup after every meeting (Backup & Audit). Any officer restores it on a new phone in one minute.' },
   ];
 
@@ -97,7 +97,7 @@ export const LandingPage: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-1 mt-6 text-xs text-white/70">
               <span><strong className="text-white font-mono">UGX 0</strong> to start</span>
-              <span><strong className="text-white font-mono">3</strong> languages</span>
+              <span><strong className="text-white font-mono">2</strong> languages</span>
               <span><strong className="text-white font-mono">0</strong> internet needed</span>
             </div>
           </div>

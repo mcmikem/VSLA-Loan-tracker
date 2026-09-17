@@ -143,18 +143,18 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
 
   const patch = (p: Partial<Draft>) => setDraft((d) => ({ ...d, ...p }));
 
-  const str = (en: string, lu: string, sw: string) =>
-    language === 'LU' ? lu : language === 'SW' ? sw : en;
+  const str = (en: string, lu: string) =>
+    language === 'LU' ? lu  : en;
 
   const steps = [
-    str('Attendance', 'Abakiise', 'Mahudhurio'),
-    str('Shares', 'Emigabo', 'Hisa'),
-    str('Welfare', 'Obuyambi', 'Jamii'),
-    str('Repayments', 'Okusasula', 'Malipo'),
-    str('New Loans', 'Ebyewolo', 'Mikopo'),
-    str('Fines', 'Engassi', 'Faini'),
-    str('Sales', 'Okutunda', 'Mauzo'),
-    str('Close & Seal', 'Ggala & Siba', 'Funga'),
+    str('Attendance', 'Abakiise'),
+    str('Shares', 'Emigabo'),
+    str('Welfare', 'Obuyambi'),
+    str('Repayments', 'Okusasula'),
+    str('New Loans', 'Ebyewolo'),
+    str('Fines', 'Engassi'),
+    str('Sales', 'Okutunda'),
+    str('Close & Seal', 'Ggala & Siba'),
   ];
 
   const attOf = (id: string): AttStatus => draft.attendance[id] || 'present';
@@ -310,9 +310,9 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </button>
           <div>
             <h1 className="font-bold text-[#00261b]">
-              {str(`Meeting #${meetingNo} Wizard`, `Olukuŋŋaana #${meetingNo}`, `Mkutano #${meetingNo}`)}
+              {str(`Meeting #${meetingNo} Wizard`, `Olukuŋŋaana #${meetingNo}`)}
             </h1>
-            <p className="text-xs text-[#4B5563]">{str('Complete in one sitting — draft auto-saves', 'Maliriza omulundi gumu', 'Kamilisha kwa mkupuo')}</p>
+            <p className="text-xs text-[#4B5563]">{str('Complete in one sitting — draft auto-saves', 'Maliriza omulundi gumu')}</p>
           </div>
         </div>
         <span className="font-mono text-xs font-bold text-[#00261b] bg-white px-2 py-1 rounded border">
@@ -346,14 +346,14 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 flex items-center justify-between">
             <div>
               <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[0]}</h3>
-              <p className="text-[11px] text-[#4B5563]">{attendanceCount}/{members.length} {str('present or late', 'beetabye', 'wamehudhuria')}</p>
+              <p className="text-[11px] text-[#4B5563]">{attendanceCount}/{members.length} {str('present or late', 'beetabye')}</p>
             </div>
             <button
               type="button"
               onClick={() => patch({ attendance: {} })}
               className="text-[11px] font-bold text-[#006d30] underline"
             >
-              {str('Mark all present', 'Bonnna beetabye', 'Wote wamehudhuria')}
+              {str('Mark all present', 'Bonnna beetabye')}
             </button>
           </div>
           {members.map((m) => (
@@ -377,7 +377,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               </div>
             </div>
           ))}
-          {stepBtn(str('Continue to Shares →', 'Weeyongereyo →', 'Endelea →'), () => patch({ step: 1 }))}
+          {stepBtn(str('Continue to Shares →', 'Weeyongereyo →'), () => patch({ step: 1 }))}
         </section>
       )}
 
@@ -387,7 +387,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[1]}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">
-              UGX {sharePrice.toLocaleString()} {str('per share · max 5 · total staged:', 'bul i mugabo ·', 'kwa hisa ·')} <strong className="font-mono">{sharesTotal}</strong>
+              UGX {sharePrice.toLocaleString()} {str('per share · max 5 · total staged:', 'bul i mugabo ·')} <strong className="font-mono">{sharesTotal}</strong>
             </p>
           </div>
           {presentIds.map((id) => {
@@ -405,9 +405,9 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               </div>
             );
           })}
-          {draft.sharesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded to passbooks', 'Kikoseddwa', 'Imerekodiwa')}</p>}
+          {draft.sharesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded to passbooks', 'Kikoseddwa')}</p>}
           {stepBtn(
-            draft.sharesRecorded ? str('Continue to Welfare →', 'Weeyongereyo →', 'Endelea →') : `${str('Record', 'Kaza', 'Hifadhi')} ${sharesTotal} ${str('shares', 'emigabo', 'hisa')} (UGX ${(sharesTotal * sharePrice).toLocaleString()})`,
+            draft.sharesRecorded ? str('Continue to Welfare →', 'Weeyongereyo →') : `${str('Record', 'Kaza')} ${sharesTotal} ${str('shares', 'emigabo')} (UGX ${(sharesTotal * sharePrice).toLocaleString()})`,
             () => {
               if (!draft.sharesRecorded) commitShares();
               else patch({ step: 2 });
@@ -416,7 +416,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             sharesTotal === 0 && !draft.sharesRecorded
           )}
           {!draft.sharesRecorded && sharesTotal > 0 && (
-            <button type="button" onClick={() => patch({ step: 2 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka', 'Ruka')}</button>
+            <button type="button" onClick={() => patch({ step: 2 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka')}</button>
           )}
         </section>
       )}
@@ -427,28 +427,28 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[2]}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">
-              UGX {welfareAmount.toLocaleString()} {str('from each present member', 'bul i mukiise', 'kwa mwanachama')}
+              UGX {welfareAmount.toLocaleString()} {str('from each present member', 'bul i mukiise')}
             </p>
           </div>
           {stepBtn(
             draft.welfareRecorded
-              ? str('Continue to Repayments →', 'Weeyongereyo →', 'Endelea →')
-              : `${str('Collect from', 'Kunganyiza okuva ku', 'Kusanya kutoka')} ${presentIds.filter((id) => !draft.welfareDone.includes(id)).length} ${str('members', 'bakiise', 'wanachama')} (UGX ${(presentIds.filter((id) => !draft.welfareDone.includes(id)).length * welfareAmount).toLocaleString()})`,
+              ? str('Continue to Repayments →', 'Weeyongereyo →')
+              : `${str('Collect from', 'Kunganyiza okuva ku')} ${presentIds.filter((id) => !draft.welfareDone.includes(id)).length} ${str('members', 'bakiise')} (UGX ${(presentIds.filter((id) => !draft.welfareDone.includes(id)).length * welfareAmount).toLocaleString()})`,
             () => {
               if (!draft.welfareRecorded) commitWelfare();
               else patch({ step: 3 });
             }
           )}
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
-            <h4 className="text-xs font-bold text-[#00261b]">{str('Request emergency payout (goes to approvals)', 'Saba obuyambi (kugenda mu approvals)', 'Omba msaada (kwenda approvals)')}</h4>
+            <h4 className="text-xs font-bold text-[#00261b]">{str('Request emergency payout (goes to approvals)', 'Saba obuyambi (kugenda mu approvals)')}</h4>
             <select value={payoutMember} onChange={(e) => setPayoutMember(e.target.value)} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white">
               {members.map((m) => <option key={m.id} value={m.id}>{m.name} (#{m.no})</option>)}
             </select>
             <div className="flex gap-2">
               <input value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
-              <input value={payoutReason} onChange={(e) => setPayoutReason(e.target.value)} placeholder={str('Reason (e.g. hospital)', 'Ensonga', 'Sababu')} className="flex-[2] min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+              <input value={payoutReason} onChange={(e) => setPayoutReason(e.target.value)} placeholder={str('Reason (e.g. hospital)', 'Ensonga')} className="flex-[2] min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
             </div>
-            {stepBtn(str('Send payout request', 'Weereza okusaba', 'Tuma ombi'), commitPayout, false, !(Math.floor(Number(payoutAmount) || 0) > 0 && payoutReason.trim()))}
+            {stepBtn(str('Send payout request', 'Weereza okusaba'), commitPayout, false, !(Math.floor(Number(payoutAmount) || 0) > 0 && payoutReason.trim()))}
           </div>
         </section>
       )}
@@ -458,14 +458,14 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[3]}</h3>
-            <p className="text-[11px] text-[#4B5563] mt-0.5">{debtors.length} {str('members owe', 'beebbanja', 'wanadaiwa')}</p>
+            <p className="text-[11px] text-[#4B5563] mt-0.5">{debtors.length} {str('members owe', 'beebbanja')}</p>
           </div>
-          {debtors.length === 0 && <p className="text-xs font-bold text-[#166534] bg-[#DCFCE7] rounded-lg p-3">{str('No outstanding loans. All clean!', 'Tewali bbanja!', 'Hakuna deni!')}</p>}
+          {debtors.length === 0 && <p className="text-xs font-bold text-[#166534] bg-[#DCFCE7] rounded-lg p-3">{str('No outstanding loans. All clean!', 'Tewali bbanja!')}</p>}
           {debtors.map((m) => (
             <div key={m.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
-                <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja', 'Deni')} UGX {m.loanBalance.toLocaleString()}</p>
+                <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja')} UGX {m.loanBalance.toLocaleString()}</p>
               </div>
               <input
                 value={repayInputs[m.id] || ''}
@@ -476,16 +476,16 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               />
             </div>
           ))}
-          {draft.repaymentsRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa', 'Imerekodiwa')}</p>}
+          {draft.repaymentsRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa')}</p>}
           {stepBtn(
-            draft.repaymentsRecorded ? str('Continue to New Loans →', 'Weeyongereyo →', 'Endelea →') : str('Record repayments', 'Kaza okusasula', 'Hifadhi malipo'),
+            draft.repaymentsRecorded ? str('Continue to New Loans →', 'Weeyongereyo →') : str('Record repayments', 'Kaza okusasula'),
             () => {
               if (!draft.repaymentsRecorded) commitRepayments();
               else patch({ step: 4 });
             }
           )}
           {!draft.repaymentsRecorded && (
-            <button type="button" onClick={() => patch({ step: 4 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka', 'Ruka')}</button>
+            <button type="button" onClick={() => patch({ step: 4 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka')}</button>
           )}
         </section>
       )}
@@ -500,8 +500,8 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             </select>
             {loanMember && (
               <p className="text-[11px] text-[#4B5563]">
-                {str('Saved', 'Enterekanya', 'Akiba')} UGX {loanMember.sharesTotal.toLocaleString()} · {str('Max', 'Ekkomo', 'Kiwango')} UGX {(loanMember.maxBorrowLimit || 0).toLocaleString()}
-                {(loanMember.loanBalance || 0) > 0 && <span className="text-[#B91C1C] font-bold"> · {str('has active loan — must clear first', 'alina bbanja', 'ana deni')}</span>}
+                {str('Saved', 'Enterekanya')} UGX {loanMember.sharesTotal.toLocaleString()} · {str('Max', 'Ekkomo')} UGX {(loanMember.maxBorrowLimit || 0).toLocaleString()}
+                {(loanMember.loanBalance || 0) > 0 && <span className="text-[#B91C1C] font-bold"> · {str('has active loan — must clear first', 'alina bbanja')}</span>}
               </p>
             )}
             <div className="flex gap-2">
@@ -511,12 +511,12 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               </select>
             </div>
             {loanAmt > 0 && !loanEligible && (
-              <p className="text-[11px] font-bold text-[#B91C1C]">{str('Blocked: exceeds limit or member has an active loan.', 'Kigaaniddwa: esukka ekkomo oba alina bbanja.', 'Imezuiwa.')}</p>
+              <p className="text-[11px] font-bold text-[#B91C1C]">{str('Blocked: exceeds limit or member has an active loan.', 'Kigaaniddwa: esukka ekkomo oba alina bbanja.')}</p>
             )}
-            {stepBtn(str('Submit for approval', 'Weereza', 'Tuma'), commitLoan, true, !loanEligible)}
-            {draft.loansRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Request queued for executives', 'Kisindikiddwa', 'Imetumwa')}</p>}
+            {stepBtn(str('Submit for approval', 'Weereza'), commitLoan, true, !loanEligible)}
+            {draft.loansRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Request queued for executives', 'Kisindikiddwa')}</p>}
           </div>
-          {stepBtn(str('Continue to Fines →', 'Weeyongereyo →', 'Endelea →'), () => patch({ step: 5 }), false)}
+          {stepBtn(str('Continue to Fines →', 'Weeyongereyo →'), () => patch({ step: 5 }), false)}
         </section>
       )}
 
@@ -538,20 +538,20 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             <div className="flex gap-2">
               <input value={fineAmount} onChange={(e) => setFineAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
               <button type="button" onClick={() => setFinePaid(!finePaid)} className={`flex-1 min-h-[44px] rounded-lg text-xs font-bold border ${finePaid ? 'bg-[#DCFCE7] border-[#006d30] text-[#166534]' : 'bg-white border-[#E5E7EB] text-[#4B5563]'}`}>
-                {finePaid ? str('Paid now → welfare', 'Asasudde → obuyambi', 'Amelipa') : str('Pending', 'Kyakulinda', 'Inasubiri')}
+                {finePaid ? str('Paid now → welfare', 'Asasudde → obuyambi') : str('Pending', 'Kyakulinda')}
               </button>
             </div>
-            {stepBtn(str('Add fine to list', 'Teekamu engassi', 'Weka faini'), stageFine, false)}
+            {stepBtn(str('Add fine to list', 'Teekamu engassi'), stageFine, false)}
           </div>
           {stagedFines.map((f, i) => (
             <div key={i} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2 text-xs">
-              <span className="font-semibold">{f.memberName} · {f.reason} · <span className="font-mono">UGX {f.amount.toLocaleString()}</span> · {f.paid ? str('paid', 'asasudde', 'amelipa') : str('pending', 'ekyakulinda', 'inasubiri')}</span>
+              <span className="font-semibold">{f.memberName} · {f.reason} · <span className="font-mono">UGX {f.amount.toLocaleString()}</span> · {f.paid ? str('paid', 'asasudde') : str('pending', 'ekyakulinda')}</span>
               <button type="button" onClick={() => setStagedFines(stagedFines.filter((_, j) => j !== i))} className="text-[#B91C1C] font-bold px-2">✕</button>
             </div>
           ))}
-          {draft.finesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa', 'Imerekodiwa')}</p>}
+          {draft.finesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa')}</p>}
           {stepBtn(
-            draft.finesRecorded ? str('Continue to Sales →', 'Weeyongereyo →', 'Endelea →') : `${str('Record', 'Kaza', 'Hifadhi')} ${stagedFines.length} ${str('fine(s)', 'engassi', 'faini')}`,
+            draft.finesRecorded ? str('Continue to Sales →', 'Weeyongereyo →') : `${str('Record', 'Kaza')} ${stagedFines.length} ${str('fine(s)', 'engassi')}`,
             () => {
               if (!draft.finesRecorded) commitFines();
               else patch({ step: 6 });
@@ -560,7 +560,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             stagedFines.length === 0 && !draft.finesRecorded
           )}
           {!draft.finesRecorded && stagedFines.length === 0 && (
-            <button type="button" onClick={() => patch({ step: 6 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No fines — go to Sales', 'Tewali ngassi', 'Hakuna faini')}</button>
+            <button type="button" onClick={() => patch({ step: 6 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No fines — go to Sales', 'Tewali ngassi')}</button>
           )}
         </section>
       )}
@@ -570,11 +570,11 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[6]}</h3>
-            <p className="text-[11px] text-[#4B5563] mt-0.5">{str('Group stock only · profit returns to the loan fund', 'Ebyamaguzi byekibiina byokka', 'Bidhaa za kikundi tu')}</p>
+            <p className="text-[11px] text-[#4B5563] mt-0.5">{str('Group stock only · profit returns to the loan fund', 'Ebyamaguzi byekibiina byokka')}</p>
           </div>
           {groupProducts.length === 0 && (
             <p className="text-xs text-[#4B5563] bg-white border border-[#E5E7EB] rounded-xl p-4 text-center">
-              {str('No group stock. Add products in Shop first.', 'Tewali bintu. Yongera mu Shop.', 'Hakuna bidhaa. Weka dukani.')}
+              {str('No group stock. Add products in Shop first.', 'Tewali bintu. Yongera mu Shop.')}
             </p>
           )}
           {groupProducts.map((p) => {
@@ -583,7 +583,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               <div key={p.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-xs font-bold truncate">{p.name}</p>
-                  <p className="text-[11px] font-mono text-[#4B5563]">{str('Stock:', 'Zisigadde:', 'Zipo:')} {p.stockQty} · UGX {p.salePrice.toLocaleString()}/{p.unit}</p>
+                  <p className="text-[11px] font-mono text-[#4B5563]">{str('Stock:', 'Zisigadde:')} {p.stockQty} · UGX {p.salePrice.toLocaleString()}/{p.unit}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button type="button" onClick={() => setSaleQty({ ...saleQty, [p.id]: Math.max(0, q - 1) })} className="w-9 h-9 rounded-lg bg-[#F6F7F6] border border-[#E5E7EB] font-bold">−</button>
@@ -594,11 +594,11 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             );
           })}
           {groupProducts.length > 0 && (
-            <input value={saleBuyer} onChange={(e) => setSaleBuyer(e.target.value)} placeholder={str('Buyer / note (optional)', 'Aguzze', 'Mnunuzi')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white" />
+            <input value={saleBuyer} onChange={(e) => setSaleBuyer(e.target.value)} placeholder={str('Buyer / note (optional)', 'Aguzze')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm bg-white" />
           )}
-          {draft.salesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa', 'Imerekodiwa')}</p>}
+          {draft.salesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa')}</p>}
           {stepBtn(
-            draft.salesRecorded ? str('Continue to Close →', 'Weeyongereyo →', 'Endelea →') : str('Record sales', 'Kaza okutunda', 'Hifadhi mauzo'),
+            draft.salesRecorded ? str('Continue to Close →', 'Weeyongereyo →') : str('Record sales', 'Kaza okutunda'),
             () => {
               if (!draft.salesRecorded) commitSales();
               else patch({ step: 7 });
@@ -607,7 +607,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             Object.values(saleQty).every((q) => !(q > 0)) && !draft.salesRecorded
           )}
           {!draft.salesRecorded && (
-            <button type="button" onClick={() => patch({ step: 7 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No sales — go to Close', 'Tewali kutunda', 'Hakuna mauzo')}</button>
+            <button type="button" onClick={() => patch({ step: 7 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No sales — go to Close', 'Tewali kutunda')}</button>
           )}
         </section>
       )}
@@ -618,34 +618,34 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-[#0b3d2e] text-white rounded-xl p-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#bcedd7]">{steps[6]}</h3>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-xs text-white/70">{str('Expected in box:', 'Ezisuubirwa:', 'Zinazotarajiwa:')}</span>
+              <span className="text-xs text-white/70">{str('Expected in box:', 'Ezisuubirwa:')}</span>
               <span className="font-mono text-xl font-bold">UGX {expectedCash.toLocaleString()}</span>
             </div>
           </div>
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
-            <label className="text-xs font-bold text-[#00261b] block">{str('Physical cash counted', 'Ssente ezibaliddwa', 'Fedha zilizohesabiwa')} (UGX)</label>
+            <label className="text-xs font-bold text-[#00261b] block">{str('Physical cash counted', 'Ssente ezibaliddwa')} (UGX)</label>
             <input value={draft.counted} onChange={(e) => patch({ counted: e.target.value })} inputMode="numeric" placeholder="e.g. 1450000" className="w-full min-h-[52px] border-2 border-[#00261b] rounded-lg px-3 font-mono text-lg" />
             {draft.counted !== '' && (
               <div className={`p-3 rounded-lg text-xs font-bold ${difference === 0 ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
                 {difference === 0
-                  ? str('✓ Perfectly balanced. Ready to seal.', '✓ Birina bulungi.', '✓ Imesawazika.')
-                  : `${difference > 0 ? str('Surplus', 'Zisukkiridde', 'Ziada') : str('Shortage', 'Zibula', 'Upungufu')}: UGX ${Math.abs(difference).toLocaleString()}`}
+                  ? str('✓ Perfectly balanced. Ready to seal.', '✓ Birina bulungi.')
+                  : `${difference > 0 ? str('Surplus', 'Zisukkiridde') : str('Shortage', 'Zibula')}: UGX ${Math.abs(difference).toLocaleString()}`}
               </div>
             )}
             {draft.counted !== '' && difference !== 0 && (
-              <input value={discrepancyNote} onChange={(e) => setDiscrepancyNote(e.target.value)} placeholder={str('Explain the gap (required)', 'Nyonyola enjawulo', 'Eleza pengo')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+              <input value={discrepancyNote} onChange={(e) => setDiscrepancyNote(e.target.value)} placeholder={str('Explain the gap (required)', 'Nyonyola enjawulo')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
             )}
-            <textarea value={draft.minutes} onChange={(e) => patch({ minutes: e.target.value })} placeholder={str('Meeting minutes / resolutions (optional)', 'Ebiwandiiko by\'olukuŋŋaana', 'Muhtasari')} rows={2} className="w-full border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm" />
+            <textarea value={draft.minutes} onChange={(e) => patch({ minutes: e.target.value })} placeholder={str('Meeting minutes / resolutions (optional)', 'Ebiwandiiko by\'olukuŋŋaana')} rows={2} className="w-full border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm" />
           </div>
           {draft.completed
             ? (
               <div className="bg-[#DCFCE7] border border-[#006d30] rounded-xl p-4 text-center space-y-2">
-                <p className="font-bold text-[#166534] text-sm">{str(`Meeting #${meetingNo} sealed!`, 'Olukuŋŋaana luggaddwa!', 'Mkutano umefungwa!')}</p>
-                {stepBtn(str('Back to Home', 'Ddayo awaka', 'Rudi mwanzo'), () => onNavigate('home'))}
+                <p className="font-bold text-[#166534] text-sm">{str(`Meeting #${meetingNo} sealed!`, 'Olukuŋŋaana luggaddwa!')}</p>
+                {stepBtn(str('Back to Home', 'Ddayo awaka'), () => onNavigate('home'))}
               </div>
             )
             : stepBtn(
-              str(`Seal Meeting #${meetingNo}`, `Siba Olukuŋŋaana #${meetingNo}`, `Funga Mkutano #${meetingNo}`),
+              str(`Seal Meeting #${meetingNo}`, `Siba Olukuŋŋaana #${meetingNo}`),
               finishMeeting,
               true,
               draft.counted === '' || (difference !== 0 && !discrepancyNote.trim())
@@ -656,11 +656,11 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
       {/* Footer nav */}
       {draft.step > 0 && !draft.completed && (
         <button type="button" onClick={() => patch({ step: draft.step - 1 })} className="w-full text-xs font-bold text-[#4B5563] underline">
-          ← {str('Back', 'Ddayo', 'Rudi')}
+          ← {str('Back', 'Ddayo')}
         </button>
       )}
       <button type="button" onClick={() => onNavigate('member_passbook')} className="w-full text-xs font-bold text-[#4B5563] underline">
-        {str('View passbooks', 'Laba ppaasibuku', 'Tazama vitabu')}
+        {str('View passbooks', 'Laba ppaasibuku')}
       </button>
     </main>
   );

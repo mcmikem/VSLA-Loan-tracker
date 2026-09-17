@@ -41,8 +41,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       ? Math.round((totalSavings / (totalSavings + totalLoansOut)) * 100)
       : 100;
 
-  const str = (en: string, lu: string, sw: string) =>
-    language === 'LU' ? lu : language === 'SW' ? sw : en;
+  const str = (en: string, lu: string) =>
+    language === 'LU' ? lu  : en;
 
   const [chartTab, setChartTab] = React.useState<'tables' | 'charts'>('tables');
 
@@ -50,9 +50,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const maxSaved = Math.max(1, ...topSavers.map((m) => m.sharesTotal || 0));
   const fundTotal = Math.max(1, totalSavings + totalLoansOut + totalWelfare);
   const donutSegs = [
-    { label: str('Savings', 'Enterekanya', 'Akiba'), value: totalSavings, color: '#006d30' },
-    { label: str('Loans out', 'Amabanja', 'Mikopo'), value: totalLoansOut, color: '#EAB308' },
-    { label: str('Welfare', 'Obuyambi', 'Jamii'), value: totalWelfare, color: '#0b3d2e' },
+    { label: str('Savings', 'Enterekanya'), value: totalSavings, color: '#006d30' },
+    { label: str('Loans out', 'Amabanja'), value: totalLoansOut, color: '#EAB308' },
+    { label: str('Welfare', 'Obuyambi'), value: totalWelfare, color: '#0b3d2e' },
   ];
   let donutOffset = 25;
 
@@ -105,13 +105,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </button>
           <div>
             <h1 className="font-bold text-primary">
-              {str('Financial Reports', 'Lipoota z\'Ensimbi', 'Ripoti za Fedha')}
+              {str('Financial Reports', 'Lipoota z\'Ensimbi')}
             </h1>
             <p className="text-xs text-text-muted">{state.groupName}</p>
           </div>
         </div>
         <span className="font-mono text-xs font-bold text-primary bg-surface-container px-2 py-1 rounded">
-          {repaymentRate}% {str('healthy', 'bulungi', 'nzuri')}
+          {repaymentRate}% {str('healthy', 'bulungi')}
         </span>
       </div>
 
@@ -121,14 +121,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           onClick={() => setChartTab('tables')}
           className={`flex-1 py-2 rounded-lg transition ${chartTab === 'tables' ? 'bg-primary-container text-white shadow-sm' : 'text-text-muted hover:text-primary'}`}
         >
-          {str('Tables', 'Emiwendo', 'Majedwali')}
+          {str('Tables', 'Emiwendo')}
         </button>
         <button
           type="button"
           onClick={() => setChartTab('charts')}
           className={`flex-1 py-2 rounded-lg transition ${chartTab === 'charts' ? 'bg-primary-container text-white shadow-sm' : 'text-text-muted hover:text-primary'}`}
         >
-          {str('Charts', 'Ebifaananyi', 'Chati')}
+          {str('Charts', 'Ebifaananyi')}
         </button>
       </div>
 
@@ -136,7 +136,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         <div className="space-y-4 animate-in fade-in duration-150">
           <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm">
             <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">
-              {str('Where the money sits', 'Ssente we ziri', 'Fedha zilipo')}
+              {str('Where the money sits', 'Ssente we ziri')}
             </h3>
             <div className="flex items-center gap-4">
               <svg viewBox="0 0 42 42" className="w-28 h-28 shrink-0" role="img" aria-label="Fund split">
@@ -175,7 +175,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
           <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm">
             <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">
-              {str('Top savers', 'Abatereka ennyo', 'Wanaoweka akiba')}
+              {str('Top savers', 'Abatereka ennyo')}
             </h3>
             <div className="space-y-2">
               {topSavers.map((m) => (
@@ -193,7 +193,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 </div>
               ))}
               {topSavers.length === 0 && (
-                <p className="text-xs text-text-muted">{str('No savings yet.', 'Tewali nterekanya.', 'Hakuna akiba.')}</p>
+                <p className="text-xs text-text-muted">{str('No savings yet.', 'Tewali nterekanya.')}</p>
               )}
             </div>
           </section>
@@ -204,19 +204,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div className="print-area space-y-4">
         <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm">
           <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
-            {str('Fund Performance', 'Embeera y\'Ensimbi', 'Hali ya Fedha')}
+            {str('Fund Performance', 'Embeera y\'Ensimbi')}
           </h3>
           <div className="grid grid-cols-2 gap-2">
-            {metric(str('Member savings', 'Enterekanya', 'Akiba'), `UGX ${totalSavings.toLocaleString()}`, `${members.length} ${str('members', 'bakiise', 'wanachama')}`)}
-            {metric(str('Loans outstanding', 'Amabanja', 'Mikopo nje'), `UGX ${totalLoansOut.toLocaleString()}`, `${debtors.length} ${str('borrowers', 'beewola', 'wakopaji')}`)}
-            {metric(str('Welfare held', 'Obuyambi', 'Jamii'), `UGX ${totalWelfare.toLocaleString()}`, str('emergency buffer', 'olwobuzibu', 'dharura'))}
-            {metric(str('Shop profit', 'Magoba ga dduuka', 'Faida ya duka'), `UGX ${shopProfit.toLocaleString()}`, str('to loan fund', 'mu byewolo', 'mfukoni'))}
-            {metric(str('Fines in/out', 'Engassi', 'Faini'), `UGX ${finesCollected.toLocaleString()}`, `${str('pending', 'ziri mu kkubo', 'zinasubiri')} UGX ${finesPending.toLocaleString()}`)}
+            {metric(str('Member savings', 'Enterekanya'), `UGX ${totalSavings.toLocaleString()}`, `${members.length} ${str('members', 'bakiise')}`)}
+            {metric(str('Loans outstanding', 'Amabanja'), `UGX ${totalLoansOut.toLocaleString()}`, `${debtors.length} ${str('borrowers', 'beewola')}`)}
+            {metric(str('Welfare held', 'Obuyambi'), `UGX ${totalWelfare.toLocaleString()}`, str('emergency buffer', 'olwobuzibu'))}
+            {metric(str('Shop profit', 'Magoba ga dduuka'), `UGX ${shopProfit.toLocaleString()}`, str('to loan fund', 'mu byewolo'))}
+            {metric(str('Fines in/out', 'Engassi'), `UGX ${finesCollected.toLocaleString()}`, `${str('pending', 'ziri mu kkubo')} UGX ${finesPending.toLocaleString()}`)}
           </div>
           {/* Repayment health bar */}
           <div className="mt-3">
             <div className="flex justify-between text-[11px] text-text-muted mb-1">
-              <span>{str('Portfolio health (savings vs loans out)', 'Obulamu bw\'ensimbi', 'Afya ya mtaji')}</span>
+              <span>{str('Portfolio health (savings vs loans out)', 'Obulamu bw\'ensimbi')}</span>
               <span className="font-mono font-bold text-primary">{repaymentRate}%</span>
             </div>
             <div className="w-full bg-border-line rounded-full h-2.5 overflow-hidden">
@@ -228,11 +228,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         {/* Arrears watch */}
         <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm space-y-2">
           <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
-            {str('Arrears Watch', 'Abeerina Amabanja', 'Wanaodaiwa')} ({debtors.length})
+            {str('Arrears Watch', 'Abeerina Amabanja')} ({debtors.length})
           </h3>
           {debtors.length === 0 ? (
             <p className="text-xs text-status-ok-tx bg-status-ok-bg rounded-lg p-3 font-semibold">
-              {str('No outstanding loans. All clean!', 'Tewali bbanja! Byonna birungi!', 'Hakuna deni! Yote safi!')}
+              {str('No outstanding loans. All clean!', 'Tewali bbanja! Byonna birungi!')}
             </p>
           ) : (
             debtors.map((m) => {
@@ -244,10 +244,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                       {m.name} <span className="font-mono text-text-muted">#{m.no}</span>
                     </p>
                     <p className="text-[11px] font-mono">
-                      {str('Owes', 'Abbanja', 'Anadaiwa')} UGX {m.loanBalance.toLocaleString()}
+                      {str('Owes', 'Abbanja')} UGX {m.loanBalance.toLocaleString()}
                       {risk && (
                         <span className="ml-1.5 px-1.5 py-0.2 rounded bg-status-bad-bg text-status-bad-tx text-[10px] font-bold">
-                          {str('HIGH RISK', 'AKABI', 'HATARI')}
+                          {str('HIGH RISK', 'AKABI')}
                         </span>
                       )}
                     </p>
@@ -257,7 +257,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                     onClick={() => onProposeFine(m)}
                     className="no-print shrink-0 px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-[11px] font-bold active:scale-95"
                   >
-                    + {str('Fine', 'Engassi', 'Faini')} 2k
+                    + {str('Fine', 'Engassi')} 2k
                   </button>
                 </div>
               );
@@ -268,16 +268,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         {/* Collections table */}
         <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm">
           <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
-            {str('Collections by Member', 'Okukunganyiza', 'Makusanyo')}
+            {str('Collections by Member', 'Okukunganyiza')}
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="text-left text-text-muted border-b border-border-line">
                   <th className="py-1.5 pr-2">#</th>
-                  <th className="py-1.5 pr-2">{str('Member', 'Omukiise', 'Mwanachama')}</th>
-                  <th className="py-1.5 pr-2 text-right">{str('Saved', 'Enterekanya', 'Akiba')}</th>
-                  <th className="py-1.5 text-right">{str('Loan', 'Bbanja', 'Deni')}</th>
+                  <th className="py-1.5 pr-2">{str('Member', 'Omukiise')}</th>
+                  <th className="py-1.5 pr-2 text-right">{str('Saved', 'Enterekanya')}</th>
+                  <th className="py-1.5 text-right">{str('Loan', 'Bbanja')}</th>
                 </tr>
               </thead>
               <tbody className="font-mono">
@@ -303,7 +303,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           className="flex-1 min-h-[48px] bg-primary-container text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.99]"
         >
           <span className="material-symbols-outlined text-[18px]">table_view</span>
-          {str('Export CSV', 'Fulumya CSV', 'Pakua CSV')}
+          {str('Export CSV', 'Fulumya CSV')}
         </button>
         <button
           type="button"
@@ -311,7 +311,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           className="flex-1 min-h-[48px] bg-surface-card border border-border-strong rounded-lg font-bold text-xs flex items-center justify-center gap-2 active:scale-[0.99]"
         >
           <span className="material-symbols-outlined text-[18px]">print</span>
-          {str('Print Report', 'Kuba Lipoota', 'Chapisha')}
+          {str('Print Report', 'Kuba Lipoota')}
         </button>
       </div>
     </main>

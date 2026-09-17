@@ -51,8 +51,8 @@ export const ShopView: React.FC<ShopViewProps> = ({
   const [expAmount, setExpAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const str = (en: string, lu: string, sw: string) =>
-    language === 'LU' ? lu : language === 'SW' ? sw : en;
+  const str = (en: string, lu: string) =>
+    language === 'LU' ? lu  : en;
 
   const visible = products.filter((p) => p.sellerType === tab);
   const sellProduct = products.find((p) => p.id === sellId);
@@ -101,8 +101,8 @@ export const ShopView: React.FC<ShopViewProps> = ({
             <span className="material-symbols-outlined text-lg">arrow_back</span>
           </button>
           <div>
-            <h1 className="font-bold text-[#00261b]">{str('Group Shop', 'Kaduuka k\'Ekibiina', 'Duka la Kikundi')}</h1>
-            <p className="text-xs text-[#4B5563]">{str('Stock, sales & profit back to the loan fund', 'Magoba gadde mu ssente z\'ebyewolo', 'Faida inarudi mfukoni')}</p>
+            <h1 className="font-bold text-[#00261b]">{str('Group Shop', 'Kaduuka k\'Ekibiina')}</h1>
+            <p className="text-xs text-[#4B5563]">{str('Stock, sales & profit back to the loan fund', 'Magoba gadde mu ssente z\'ebyewolo')}</p>
           </div>
         </div>
         <button
@@ -110,49 +110,49 @@ export const ShopView: React.FC<ShopViewProps> = ({
           onClick={() => { setShowAdd(!showAdd); setError(null); }}
           className="px-3 py-2 bg-[#00261b] text-white rounded-lg text-xs font-bold active:scale-95"
         >
-          + {str('Add', 'Yongera', 'Weka')}
+          + {str('Add', 'Yongera')}
         </button>
       </div>
 
       <div className="flex bg-white p-1 rounded-xl border border-[#CBD5E1] text-xs font-bold">
         <button type="button" onClick={() => setTab('group')} className={`flex-1 py-2 rounded-lg transition ${tab === 'group' ? 'bg-[#0b3d2e] text-white' : 'text-[#4B5563]'}`}>
-          {str('Group stock', 'Ebyamaguzi by\'ekibiina', 'Bidhaa za kikundi')}
+          {str('Group stock', 'Ebyamaguzi by\'ekibiina')}
         </button>
         <button type="button" onClick={() => setTab('member')} className={`flex-1 py-2 rounded-lg transition ${tab === 'member' ? 'bg-[#0b3d2e] text-white' : 'text-[#4B5563]'}`}>
-          {str('Member businesses', 'Bizinesi z\'abakiise', 'Biashara')}
+          {str('Member businesses', 'Bizinesi z\'abakiise')}
         </button>
       </div>
 
       {showAdd && (
         <section className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
           <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">
-            {tab === 'group' ? str('Buy stock for the group', 'Gula ebintu by\'ekibiina', 'Nunua bidhaa') : str('List a member business', 'Wandiisa bizinesi', 'Sajili biashara')}
+            {tab === 'group' ? str('Buy stock for the group', 'Gula ebintu by\'ekibiina') : str('List a member business', 'Wandiisa bizinesi')}
           </h3>
           {tab === 'group' && (
             <p className="text-[11px] text-[#4B5563]">
-              {str('Cash in box:', 'Ssente mu sanduuko:', 'Taslimu:')} <span className="font-mono font-bold">UGX {boxCashBalance.toLocaleString()}</span>
+              {str('Cash in box:', 'Ssente mu sanduuko:')} <span className="font-mono font-bold">UGX {boxCashBalance.toLocaleString()}</span>
             </p>
           )}
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={str('Product name (e.g. Maize flour)', 'Erinya ly\'ekintu', 'Jina la bidhaa')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={str('Product name (e.g. Maize flour)', 'Erinya ly\'ekintu')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
           {tab === 'member' && (
-            <input value={form.sellerName} onChange={(e) => setForm({ ...form, sellerName: e.target.value })} placeholder={str('Seller name', 'Nannyini bizinesi', 'Muuzaji')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+            <input value={form.sellerName} onChange={(e) => setForm({ ...form, sellerName: e.target.value })} placeholder={str('Seller name', 'Nannyini bizinesi')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
           )}
           <div className="grid grid-cols-3 gap-2">
-            <input value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} inputMode="numeric" placeholder={str('Cost', 'Omutindo', 'Gharama')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-2 text-sm font-mono" />
-            <input value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} inputMode="numeric" placeholder={str('Price', 'Omutengo', 'Bei')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-2 text-sm font-mono" />
-            <input value={form.stockQty} onChange={(e) => setForm({ ...form, stockQty: e.target.value })} inputMode="numeric" placeholder={str('Qty', 'Omuwendo', 'Idadi')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-2 text-sm font-mono" />
+            <input value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} inputMode="numeric" placeholder={str('Cost', 'Omutindo')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-2 text-sm font-mono" />
+            <input value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} inputMode="numeric" placeholder={str('Price', 'Omutengo')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-2 text-sm font-mono" />
+            <input value={form.stockQty} onChange={(e) => setForm({ ...form, stockQty: e.target.value })} inputMode="numeric" placeholder={str('Qty', 'Omuwendo')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-2 text-sm font-mono" />
           </div>
-          <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder={str('Unit (pcs, kg, litres)', 'Kipimo', 'Kipimo')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+          <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder={str('Unit (pcs, kg, litres)', 'Kipimo')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
           {error && <p className="text-[11px] font-bold text-[#B91C1C]">{error}</p>}
           <button type="button" onClick={submitAdd} className="w-full min-h-[48px] bg-[#006d30] text-white rounded-lg font-bold text-sm active:scale-[0.99]">
-            {tab === 'group' ? str('Buy stock from box cash', 'Gula okuva mu sanduuko', 'Nunua kwa taslimu') : str('List business', 'Wandiisa', 'Sajili')}
+            {tab === 'group' ? str('Buy stock from box cash', 'Gula okuva mu sanduuko') : str('List business', 'Wandiisa')}
           </button>
         </section>
       )}
 
       {visible.length === 0 && (
         <p className="text-xs text-[#4B5563] bg-white border border-[#E5E7EB] rounded-xl p-4 text-center">
-          {str('Nothing here yet. Add the first product above.', 'Tewali kintu. Yongerako ekisooka.', 'Hakuna bidhaa. Weka ya kwanza.')}
+          {str('Nothing here yet. Add the first product above.', 'Tewali kintu. Yongerako ekisooka.')}
         </p>
       )}
 
@@ -162,10 +162,10 @@ export const ShopView: React.FC<ShopViewProps> = ({
             <p className="text-xs font-bold text-[#00261b] truncate">{p.name}</p>
             <p className="text-[11px] text-[#4B5563]">
               {p.sellerType === 'member' && p.sellerName ? `${p.sellerName} · ` : ''}
-              {str('Cost', 'Omutindo', 'Gharama')} <span className="font-mono">{p.costPrice.toLocaleString()}</span> · {str('Price', 'Omutengo', 'Bei')} <span className="font-mono font-bold">{p.salePrice.toLocaleString()}</span>/{p.unit}
+              {str('Cost', 'Omutindo')} <span className="font-mono">{p.costPrice.toLocaleString()}</span> · {str('Price', 'Omutengo')} <span className="font-mono font-bold">{p.salePrice.toLocaleString()}</span>/{p.unit}
             </p>
             <p className="text-[11px] font-mono text-[#4B5563]">
-              {str('Stock:', 'Zisigadde:', 'Zilizopo:')} {p.stockQty} · {str('Sold:', 'Zitundiddwa:', 'Zilizouzwa:')} {p.soldQty}
+              {str('Stock:', 'Zisigadde:')} {p.stockQty} · {str('Sold:', 'Zitundiddwa:')} {p.soldQty}
             </p>
           </div>
           <button
@@ -174,7 +174,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
             onClick={() => { setSellId(p.id); setSellForm({ qty: '1', unitPrice: String(p.salePrice), buyer: '', method: 'cash' }); }}
             className="shrink-0 px-3.5 py-2.5 bg-[#006d30] text-white rounded-lg text-xs font-bold disabled:opacity-40 active:scale-95"
           >
-            {str('Sell', 'Tunda', 'Uza')}
+            {str('Sell', 'Tunda')}
           </button>
         </div>
       ))}
@@ -182,26 +182,26 @@ export const ShopView: React.FC<ShopViewProps> = ({
       {sellProduct && (
         <section className="bg-white rounded-xl border-2 border-[#00261b] p-4 space-y-2">
           <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">
-            {str('Sell', 'Tunda', 'Uza')} {sellProduct.name}
+            {str('Sell', 'Tunda')} {sellProduct.name}
           </h3>
           <div className="grid grid-cols-2 gap-2">
-            <input value={sellForm.qty} onChange={(e) => setSellForm({ ...sellForm, qty: e.target.value })} inputMode="numeric" placeholder={str('Qty', 'Omuwendo', 'Idadi')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
-            <input value={sellForm.unitPrice} onChange={(e) => setSellForm({ ...sellForm, unitPrice: e.target.value })} inputMode="numeric" placeholder={str('Unit price', 'Omutengo', 'Bei')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
+            <input value={sellForm.qty} onChange={(e) => setSellForm({ ...sellForm, qty: e.target.value })} inputMode="numeric" placeholder={str('Qty', 'Omuwendo')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
+            <input value={sellForm.unitPrice} onChange={(e) => setSellForm({ ...sellForm, unitPrice: e.target.value })} inputMode="numeric" placeholder={str('Unit price', 'Omutengo')} className="min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
           </div>
-          <input value={sellForm.buyer} onChange={(e) => setSellForm({ ...sellForm, buyer: e.target.value })} placeholder={str('Buyer name (optional)', 'Aguzze (optional)', 'Mnunuzi')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+          <input value={sellForm.buyer} onChange={(e) => setSellForm({ ...sellForm, buyer: e.target.value })} placeholder={str('Buyer name (optional)', 'Aguzze (optional)')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
           <div className="flex gap-2">
             {(['cash', 'momo'] as const).map((m) => (
               <button key={m} type="button" onClick={() => setSellForm({ ...sellForm, method: m })} className={`flex-1 min-h-[44px] rounded-lg text-xs font-bold border ${sellForm.method === m ? 'bg-[#00261b] text-white' : 'bg-white border-[#E5E7EB]'}`}>
-                {m === 'cash' ? str('Cash', 'Nkalu', 'Taslimu') : 'MoMo'}
+                {m === 'cash' ? str('Cash', 'Nkalu') : 'MoMo'}
               </button>
             ))}
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={submitSell} className="flex-1 min-h-[48px] bg-[#006d30] text-white rounded-lg font-bold text-sm active:scale-[0.99]">
-              {str('Confirm sale', 'Kakasa okutunda', 'Thibitisha mauzo')}
+              {str('Confirm sale', 'Kakasa okutunda')}
             </button>
             <button type="button" onClick={() => setSellId(null)} className="px-4 min-h-[48px] bg-[#F6F7F6] border border-[#E5E7EB] rounded-lg text-xs font-bold">
-              {str('Cancel', 'Sazaamu', 'Ghairi')}
+              {str('Cancel', 'Sazaamu')}
             </button>
           </div>
         </section>
@@ -209,9 +209,9 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
       {tab === 'group' && (
         <section className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
-          <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{str('Shop expense', 'Ssente ezisaasaanye', 'Gharama')}</h3>
+          <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{str('Shop expense', 'Ssente ezisaasaanye')}</h3>
           <div className="flex gap-2">
-            <input value={expLabel} onChange={(e) => setExpLabel(e.target.value)} placeholder={str('What for? (e.g. transport)', 'Kiki? (e.g. entambula)', 'Ya nini?')} className="flex-[2] min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
+            <input value={expLabel} onChange={(e) => setExpLabel(e.target.value)} placeholder={str('What for? (e.g. transport)', 'Kiki? (e.g. entambula)')} className="flex-[2] min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
             <input value={expAmount} onChange={(e) => setExpAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
           </div>
           <button
@@ -225,7 +225,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
             }}
             className="w-full min-h-[44px] bg-white border border-[#CBD5E1] rounded-lg text-xs font-bold text-[#00261b] active:scale-[0.99]"
           >
-            {str('Record expense from box cash', 'Wandiika ensaasaanya', 'Rekodi gharama')}
+            {str('Record expense from box cash', 'Wandiika ensaasaanya')}
           </button>
         </section>
       )}

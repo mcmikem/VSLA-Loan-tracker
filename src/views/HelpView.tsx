@@ -13,29 +13,29 @@ const SUPPORT_WHATSAPP = '256772445566';
  */
 export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' }) => {
   const [open, setOpen] = useState<number | null>(0);
-  const str = (en: string, lu: string, sw: string) =>
-    language === 'LU' ? lu : language === 'SW' ? sw : en;
+  const str = (en: string, lu: string) =>
+    language === 'LU' ? lu  : en;
 
   const faqs = [
     {
-      q: str('The screen went white / the app froze. What do I do?', 'Ssimu eraze olwelu? Nkole ntya?', 'Skrini imekuwa nyeupe. Nifanye nini?'),
-      a: str('Close the tab and reopen. Your records are saved on the phone. If it repeats, use Backup & Audit → Reset, then restore your last downloaded backup.', 'Ggalawo ttabu oddamu n\'ogiggulawo. Ebiwandiiko biri ku ssimu. Singa kiddamu, kozesa Backup → Reset.', 'Funga kichupo ufungue tena. Kumbukumbu ziko kwenye simu. Iikirudia, tumia Backup → Reset.'),
+      q: str('The screen went white / the app froze. What do I do?', 'Ssimu eraze olwelu? Nkole ntya?'),
+      a: str('Close the tab and reopen. Your records are saved on the phone. If it repeats, use Backup & Audit → Reset, then restore your last downloaded backup.', 'Ggalawo ttabu oddamu n\'ogiggulawo. Ebiwandiiko biri ku ssimu. Singa kiddamu, kozesa Backup → Reset.'),
     },
     {
-      q: str('How do I add a new member?', 'Nyungiza ntya omukiise omupya?', 'Nimwongezeaje mwanachama mpya?'),
-      a: str('Share your group invite code (Home → Invite). The member opens the app, taps the group menu → Join with Invite Code, and enters their name and phone.', 'Gabana koodi y\'ekibiina (Awaka → Yita). Omukiise aggulawo app → Yingirira ku Koodi.', 'Shiriki kodi ya kikundi (Mwanzo → Alika). Mwanachama afungue app → Jiunge kwa Kodi.'),
+      q: str('How do I add a new member?', 'Nyungiza ntya omukiise omupya?'),
+      a: str('Share your group invite code (Home → Invite). The member opens the app, taps the group menu → Join with Invite Code, and enters their name and phone.', 'Gabana koodi y\'ekibiina (Awaka → Yita). Omukiise aggulawo app → Yingirira ku Koodi.'),
     },
     {
-      q: str('Cash counted does not match the expected total?', 'Ssente ze mubaze teziringa?', 'Fedha zilizohesabiwa hazilingani?'),
-      a: str('Recount with two keyholders watching. If a gap remains, file a discrepancy form in Meeting Close — it adjusts via the welfare pot or a top-up, and logs everything to Audit.', 'Ddamu okubala n\'abakwasi babiri. Bwe wabawo enjawulo, jjuza fomu mu Meeting Close.', 'Hesabu tena na washika funguo wawili. Ikiwa pengo lipo, jaza fomu kwenye Meeting Close.'),
+      q: str('Cash counted does not match the expected total?', 'Ssente ze mubaze teziringa?'),
+      a: str('Recount with two keyholders watching. If a gap remains, file a discrepancy form in Meeting Close — it adjusts via the welfare pot or a top-up, and logs everything to Audit.', 'Ddamu okubala n\'abakwasi babiri. Bwe wabawo enjawulo, jjuza fomu mu Meeting Close.'),
     },
     {
-      q: str('How do I print a receipt or report?', 'Nkuba ntya risiti oba lipoota?', 'Nitachapishaje risiti au ripoti?'),
-      a: str('Every repayment and share purchase shows a receipt with a Print button. Reports → Print Report prints the full group report. Any phone with a Bluetooth printer works.', 'Buli kusasula kulaga risiti ne button ya Print. Lipoota → Chapisha.', 'Kila malipo unaonyesha risiti na kitufe cha Print. Ripoti → Chapisha.'),
+      q: str('How do I print a receipt or report?', 'Nkuba ntya risiti oba lipoota?'),
+      a: str('Every repayment and share purchase shows a receipt with a Print button. Reports → Print Report prints the full group report. Any phone with a Bluetooth printer works.', 'Buli kusasula kulaga risiti ne button ya Print. Lipoota → Chapisha.'),
     },
     {
-      q: str('Is my data safe without internet?', 'Data yange eri mu bulambulukufu awatali yintaneeti?', 'Data yangu iko salama bila mtandao?'),
-      a: str('Yes — the app is offline-first. Records live on the phone and sync when you are back online. Download a backup (JSON) after every meeting.', 'Yee — app ekola awatali yintaneeti. Koppa backup buli lukuŋŋaana.', 'Ndiyo — app inafanya kazi bila mtandao. Pakua nakala (JSON) baada ya kila mkutano.'),
+      q: str('Is my data safe without internet?', 'Data yange eri mu bulambulukufu awatali yintaneeti?'),
+      a: str('Yes — the app is offline-first. Records live on the phone and sync when you are back online. Download a backup (JSON) after every meeting.', 'Yee — app ekola awatali yintaneeti. Koppa backup buli lukuŋŋaana.'),
     },
   ];
 
@@ -50,8 +50,8 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' 
           <span className="material-symbols-outlined text-lg">arrow_back</span>
         </button>
         <div>
-          <h1 className="font-bold text-primary">{str('Help & Support', 'Buyambi', 'Msaada')}</h1>
-          <p className="text-xs text-text-muted">{str('Answers in English, Luganda & Swahili', 'Ebyokuddamu mu nnimi ssatu', 'Majibu kwa lugha tatu')}</p>
+          <h1 className="font-bold text-primary">{str('Help & Support', 'Buyambi')}</h1>
+          <p className="text-xs text-text-muted">{str('Answers in English & Luganda', 'Ebyokuddamu mu Luzungu n\'Oluganda')}</p>
         </div>
       </div>
 
@@ -63,8 +63,8 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' 
       >
         <span className="material-symbols-outlined text-[28px]">support_agent</span>
         <span>
-          <span className="block font-bold text-sm">{str('Chat with support on WhatsApp', 'Yogera naffe ku WhatsApp', 'Ongea nasi WhatsApp')}</span>
-          <span className="block text-xs opacity-80">+256 772 445566 · {str('Mon–Sat, 8am–6pm', 'Muw–Muk, 8–18', 'Jumatatu–Jumamosi')}</span>
+          <span className="block font-bold text-sm">{str('Chat with support on WhatsApp', 'Yogera naffe ku WhatsApp')}</span>
+          <span className="block text-xs opacity-80">+256 772 445566 · {str('Mon–Sat, 8am–6pm', 'Muw–Muk, 8–18')}</span>
         </span>
       </a>
 

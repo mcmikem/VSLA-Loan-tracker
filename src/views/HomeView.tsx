@@ -422,7 +422,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             onClick={() => onNavigate('audio_broadcast')}
             className="text-label-sm font-label-sm text-primary font-semibold hover:underline"
           >
-            {language === 'LU' ? 'Amaloboozi n\'Enkuŋŋaana Zonna' : language === 'SW' ? 'Matangazo na Mikutano Yote' : 'Broadcasts & All Meetings'}
+            {language === 'LU' ? 'Amaloboozi n\'Enkuŋŋaana Zonna'  : 'Broadcasts & All Meetings'}
           </button>
         </div>
 
@@ -460,7 +460,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 {t.home.attendance}
               </span>
               <span className="font-mono text-currency-md font-bold text-on-surface">
-                28/30 {language === 'LU' ? 'beetabye' : language === 'SW' ? 'wamehudhuria' : 'present'}
+                28/30 {language === 'LU' ? 'beetabye'  : 'present'}
               </span>
             </div>
           </div>

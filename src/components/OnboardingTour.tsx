@@ -11,19 +11,16 @@ const STEPS = [
     icon: 'account_balance',
     en: 'Your group vault lives here — box cash, loan fund and welfare at a glance.',
     lu: 'Ssente z\'ekibiina zirabikira wano — ssente enkalu, ebyewolo n\'obuyambi.',
-    sw: 'Hazina ya kikundi iko hapa — taslimu, mikopo na jamii kwa mtazamo.',
   },
   {
     icon: 'play_circle',
     en: 'Start Weekly Meeting opens attendance, cash count and box sealing.',
     lu: 'Tandika Olukuŋŋaana kiggulawo okubala abakiise, ssente n\'okusiba sanduuko.',
-    sw: 'Anzisha Mkutano hufungua mahudhurio, kuhesabu fedha na kufunga sanduku.',
   },
   {
     icon: 'menu_book',
     en: 'Member Passbook holds every saver\'s stamps, loans and printable receipts.',
     lu: 'Ppaasibuku erimu sitampu, ebyewolo ne risiti za buli mukiise.',
-    sw: 'Kitabu cha mwanachama kina stempu, mikopo na risiti za kila mwanachama.',
   },
 ];
 
@@ -34,7 +31,7 @@ const STEPS = [
 export const OnboardingTour: React.FC<OnboardingTourProps> = ({ language = 'EN', onDone }) => {
   const [step, setStep] = useState(0);
   const s = STEPS[step];
-  const text = language === 'LU' ? s.lu : language === 'SW' ? s.sw : s.en;
+  const text = language === 'LU' ? s.lu  : s.en;
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-6">
@@ -55,7 +52,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ language = 'EN',
             onClick={onDone}
             className="flex-1 min-h-[44px] text-xs font-bold text-text-muted active:scale-95"
           >
-            {language === 'LU' ? 'Buuka' : language === 'SW' ? 'Ruka' : 'Skip'}
+            {language === 'LU' ? 'Buuka'  : 'Skip'}
           </button>
           <button
             type="button"
@@ -63,8 +60,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ language = 'EN',
             className="flex-[2] min-h-[44px] bg-[#00261b] text-white rounded-lg font-bold text-sm active:scale-[0.99]"
           >
             {step + 1 >= STEPS.length
-              ? language === 'LU' ? 'Tandika!' : language === 'SW' ? 'Anza!' : "Let's go"
-              : language === 'LU' ? 'Weeyongereyo' : language === 'SW' ? 'Endelea' : 'Next'}
+              ? language === 'LU' ? 'Tandika!'  : "Let's go"
+              : language === 'LU' ? 'Weeyongereyo'  : 'Next'}
           </button>
         </div>
       </div>

@@ -47,9 +47,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               <span className="font-bold text-primary text-headline-sm">
                 {language === 'LU'
                   ? 'Ebikwata ku Kibiina kya Bakwata'
-                  : language === 'SW'
-                  ? 'Moduli za Kikundi cha Bakwata'
-                  : 'Bakwata VSLA Modules'}
+                   : 'Bakwata VSLA Modules'}
               </span>
               <button
                 onClick={() => setShowMoreMenu(false)}
@@ -94,7 +92,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                     {t.home.welfareFund}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Enkoba y\'Obuyambi' : language === 'SW' ? 'Mfuko wa Jamii' : 'Emergency fund'}
+                    {language === 'LU' ? 'Enkoba y\'Obuyambi'  : 'Emergency fund'}
                   </span>
                 </div>
               </button>
@@ -108,10 +106,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Ssemateeka n\'Engassi' : language === 'SW' ? 'Katiba na Faini' : 'Constitution & Fines'}
+                    {language === 'LU' ? 'Ssemateeka n\'Engassi'  : 'Constitution & Fines'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Amateeka n\'Emisoso' : language === 'SW' ? 'Sheria na Faini' : 'Bylaws & penalties'}
+                    {language === 'LU' ? 'Amateeka n\'Emisoso'  : 'Bylaws & penalties'}
                   </span>
                 </div>
               </button>
@@ -125,10 +123,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Okugaba Emigabo' : language === 'SW' ? 'Mgawanyo wa Hisa' : 'Cycle Share-Out'}
+                    {language === 'LU' ? 'Okugaba Emigabo'  : 'Cycle Share-Out'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Amagoba n\'Emigabo' : language === 'SW' ? 'Gawio la Faida' : 'Dividends & Payouts'}
+                    {language === 'LU' ? 'Amagoba n\'Emigabo'  : 'Dividends & Payouts'}
                   </span>
                 </div>
               </button>
@@ -142,10 +140,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Amaloboozi n\'Olukuŋŋaana' : language === 'SW' ? 'Sauti na Tangazo' : 'Audio Broadcast'}
+                    {language === 'LU' ? 'Amaloboozi n\'Olukuŋŋaana'  : 'Audio Broadcast'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Omubazi Ayogera ku Ssimu' : language === 'SW' ? 'Sauti ya Matangazo' : 'Voice summary'}
+                    {language === 'LU' ? 'Omubazi Ayogera ku Ssimu'  : 'Voice summary'}
                   </span>
                 </div>
               </button>
@@ -162,7 +160,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                     {t.legal.title}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Amateeka n\'ebyama' : language === 'SW' ? 'Masharti na faragha' : 'Terms, privacy, bylaws'}
+                    {language === 'LU' ? 'Amateeka n\'ebyama'  : 'Terms, privacy, bylaws'}
                   </span>
                 </div>
               </button>
@@ -176,7 +174,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Sindiika MoMo Push' : language === 'SW' ? 'Tuma Pesa kwa Simu' : 'Send MoMo Push'}
+                    {language === 'LU' ? 'Sindiika MoMo Push'  : 'Send MoMo Push'}
                   </span>
                   <span className="text-[11px] text-text-muted">MTN & Airtel Money</span>
                 </div>
@@ -191,10 +189,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Lipoota z\'Ensimbi' : language === 'SW' ? 'Ripoti za Fedha' : 'Financial Reports'}
+                    {language === 'LU' ? 'Lipoota z\'Ensimbi'  : 'Financial Reports'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Amabanja ne CSV' : language === 'SW' ? 'Madeni na CSV' : 'Arrears, exports & health'}
+                    {language === 'LU' ? 'Amabanja ne CSV'  : 'Arrears, exports & health'}
                   </span>
                 </div>
               </button>
@@ -208,10 +206,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Kaduuka' : language === 'SW' ? 'Duka' : 'Group Shop'}
+                    {language === 'LU' ? 'Kaduuka'  : 'Group Shop'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Ebintu n\'amagoba' : language === 'SW' ? 'Bidhaa na faida' : 'Stock, sales & profit'}
+                    {language === 'LU' ? 'Ebintu n\'amagoba'  : 'Stock, sales & profit'}
                   </span>
                 </div>
               </button>
@@ -225,10 +223,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Buyambi' : language === 'SW' ? 'Msaada' : 'Help & Support'}
+                    {language === 'LU' ? 'Buyambi'  : 'Help & Support'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Ebyokuddamu ne WhatsApp' : language === 'SW' ? 'Maswali na WhatsApp' : 'FAQs & WhatsApp'}
+                    {language === 'LU' ? 'Ebyokuddamu ne WhatsApp'  : 'FAQs & WhatsApp'}
                   </span>
                 </div>
               </button>
@@ -242,10 +240,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Ebikwata ku App' : language === 'SW' ? 'Kuhusu App' : 'About the App'}
+                    {language === 'LU' ? 'Ebikwata ku App'  : 'About the App'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Kyiki n\'okugiteeka' : language === 'SW' ? 'Maelezo na usakinishaji' : 'What it does & install'}
+                    {language === 'LU' ? 'Kyiki n\'okugiteeka'  : 'What it does & install'}
                   </span>
                 </div>
               </button>
@@ -259,10 +257,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Ggalawo Sanduuko' : language === 'SW' ? 'Funga Sanduku' : 'Close Box'}
+                    {language === 'LU' ? 'Ggalawo Sanduuko'  : 'Close Box'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Bala ssente n\'ebisumuluzo' : language === 'SW' ? 'Sawazisha na funga' : 'Reconcile & Padlock'}
+                    {language === 'LU' ? 'Bala ssente n\'ebisumuluzo'  : 'Reconcile & Padlock'}
                   </span>
                 </div>
               </button>
@@ -276,10 +274,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Abakozesa' : language === 'SW' ? 'Watumiaji' : 'Users & Roles'}
+                    {language === 'LU' ? 'Abakozesa'  : 'Users & Roles'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Buli akkozesa n\'obuyinza' : language === 'SW' ? 'Kila mtumiaji na ruhusa' : 'Logins & permissions'}
+                    {language === 'LU' ? 'Buli akkozesa n\'obuyinza'  : 'Logins & permissions'}
                   </span>
                 </div>
               </button>
@@ -293,10 +291,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Enteekateeka y\'Ekibiina' : language === 'SW' ? 'Mipangilio ya Kikundi' : 'Group Settings'}
+                    {language === 'LU' ? 'Enteekateeka y\'Ekibiina'  : 'Group Settings'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Erinya, emigabo, enkoba' : language === 'SW' ? 'Jina, hisa, michango' : 'Name, shares, welfare'}
+                    {language === 'LU' ? 'Erinya, emigabo, enkoba'  : 'Name, shares, welfare'}
                   </span>
                 </div>
               </button>
