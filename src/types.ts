@@ -290,4 +290,6 @@ export interface VSLAState {
   currentUser?: UserAccount;
   availableAccounts?: UserAccount[];
   activePreset?: string;
+  /** True when the group was created offline and not yet confirmed by /api/state. */
+  pendingSync?: boolean;
 }

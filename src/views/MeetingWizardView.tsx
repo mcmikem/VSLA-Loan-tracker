@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Language, Member, ScreenId, ShopProduct } from '../types';
+import { Language, Member, ScreenId, ShopProduct, VSLAState } from '../types';
+import { changeDue, gapNeedsSecondKey, GAP_TWO_KEY_THRESHOLD } from '../utils/policy';
 
 export interface WizardShareItem {
   memberId: string;
@@ -42,8 +43,12 @@ interface MeetingWizardViewProps {
   onSubmitLoan: (loan: { memberName: string; memberNo: string; amount: number; term: string; serviceFee: number; phone: string; provider: 'MTN' | 'Airtel' }) => void;
   onRecordFinesBulk: (items: WizardFineItem[]) => void;
   onRecordSalesBulk: (items: { productId: string; qty: number; unitPrice: number; buyer: string }[]) => void;
-  onCompleteMeeting: (countedCash: number, minutes: string) => void;
+  onCompleteMeeting: (countedCash: number, minutes: string) => VSLAState | void;
+  /** Download the sealed-state backup file (backup gate before leaving). */
+  onDownloadBackup: (sealed: VSLAState) => void;
   onAdjustDiscrepancy: (amount: number, reason: string, method: string) => void;
+  /** Name on the current account — enforces the 2-key gap rule. */
+  currentUserName?: string;
 }
 
 type AttStatus = 'present' | 'late' | 'absent' | 'excused';
@@ -62,6 +67,8 @@ interface Draft {
   counted: string;
   minutes: string;
   completed: boolean;
+  /** First officer to acknowledge a big cash gap (needs a different 2nd). */
+  gapFirstBy?: string;
 }
 
 const DRAFT_KEY = 'vsla_meeting_draft_v1';
@@ -116,7 +123,9 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   onRecordFinesBulk,
   onRecordSalesBulk,
   onCompleteMeeting,
+  onDownloadBackup,
   onAdjustDiscrepancy,
+  currentUserName = 'Officer',
 }) => {
   const [draft, setDraft] = useState<Draft>(loadDraft);
   const [repayInputs, setRepayInputs] = useState<Record<string, string>>({});
@@ -132,6 +141,9 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   const [discrepancyNote, setDiscrepancyNote] = useState('');
   const [saleQty, setSaleQty] = useState<Record<string, number>>({});
   const [saleBuyer, setSaleBuyer] = useState('');
+  // Backup gate: the sealed backup must be downloaded before leaving.
+  const [backupDone, setBackupDone] = useState(false);
+  const [lastSealed, setLastSealed] = useState<VSLAState | null>(null);
 
   useEffect(() => {
     try {
@@ -270,6 +282,22 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   const finishMeeting = () => {
     if (draft.counted === '') return;
     if (difference !== 0 && !discrepancyNote.trim()) return;
+    // Gap 3c: big cash gaps need TWO different officers to seal.
+    if (draft.counted !== '' && difference !== 0 && gapNeedsSecondKey(Math.abs(difference))) {
+      const me = (currentUserName || '').trim() || 'Officer';
+      if (!draft.gapFirstBy) {
+        patch({ gapFirstBy: me });
+        return;
+      }
+      if (draft.gapFirstBy.trim().toLowerCase() === me.toLowerCase()) {
+        alert(
+          language === 'LU'
+            ? `${me} yakkirizza ng'omukulu asooka. Omukulu omulala eyeetongodde yeetaagisa okuggala. Kyusa akawunti oluvannyuma lw'okukkiriza.`
+            : `${me} already acknowledged this gap as first officer. A DIFFERENT officer must seal. Switch account first.`
+        );
+        return;
+      }
+    }
     if (difference !== 0) {
       onAdjustDiscrepancy(
         Math.abs(difference),
@@ -277,7 +305,17 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         difference < 0 ? 'welfare' : 'topup'
       );
     }
-    onCompleteMeeting(countedNum, draft.minutes.trim());
+    const sealed = onCompleteMeeting(countedNum, draft.minutes.trim());
+    // Backup gate (gap 5b): the sealed file downloads NOW, in the seal tap.
+    if (sealed) {
+      try {
+        onDownloadBackup(sealed);
+        setBackupDone(true);
+      } catch {
+        /* manual button below */
+      }
+      setLastSealed(sealed);
+    }
     clearDraft();
     patch({ completed: true });
   };
@@ -462,18 +500,25 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </div>
           {debtors.length === 0 && <p className="text-xs font-bold text-[#166534] bg-[#DCFCE7] rounded-lg p-3">{str('No outstanding loans. All clean!', 'Tewali bbanja!')}</p>}
           {debtors.map((m) => (
-            <div key={m.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
-                <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja')} UGX {m.loanBalance.toLocaleString()}</p>
+            <div key={m.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
+                  <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja')} UGX {m.loanBalance.toLocaleString()}</p>
+                </div>
+                <input
+                  value={repayInputs[m.id] || ''}
+                  onChange={(e) => setRepayInputs({ ...repayInputs, [m.id]: e.target.value })}
+                  inputMode="numeric"
+                  placeholder="UGX"
+                  className="w-28 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono text-right"
+                />
               </div>
-              <input
-                value={repayInputs[m.id] || ''}
-                onChange={(e) => setRepayInputs({ ...repayInputs, [m.id]: e.target.value })}
-                inputMode="numeric"
-                placeholder="UGX"
-                className="w-28 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono text-right"
-              />
+              {changeDue(Number(repayInputs[m.id] || 0), m.loanBalance) > 0 && (
+                <p className="text-[11px] font-bold text-[#92400E] bg-[#FEF3C7] rounded-lg p-2">
+                  {str('Change due:', 'Zzaayo:')} UGX {changeDue(Number(repayInputs[m.id] || 0), m.loanBalance).toLocaleString()} — {str('hand back cash', 'zzaayo nkalu')}
+                </p>
+              )}
             </div>
           ))}
           {draft.repaymentsRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa')}</p>}
@@ -616,7 +661,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
       {draft.step === 7 && (
         <section className="space-y-2">
           <div className="bg-[#0b3d2e] text-white rounded-xl p-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#bcedd7]">{steps[6]}</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#bcedd7]">{steps[7]}</h3>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-xs text-white/70">{str('Expected in box:', 'Ezisuubirwa:')}</span>
               <span className="font-mono text-xl font-bold">UGX {expectedCash.toLocaleString()}</span>
@@ -624,7 +669,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </div>
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
             <label className="text-xs font-bold text-[#00261b] block">{str('Physical cash counted', 'Ssente ezibaliddwa')} (UGX)</label>
-            <input value={draft.counted} onChange={(e) => patch({ counted: e.target.value })} inputMode="numeric" placeholder="e.g. 1450000" className="w-full min-h-[52px] border-2 border-[#00261b] rounded-lg px-3 font-mono text-lg" />
+            <input value={draft.counted} onChange={(e) => patch({ counted: e.target.value, gapFirstBy: undefined })} inputMode="numeric" placeholder="e.g. 1450000" className="w-full min-h-[52px] border-2 border-[#00261b] rounded-lg px-3 font-mono text-lg" />
             {draft.counted !== '' && (
               <div className={`p-3 rounded-lg text-xs font-bold ${difference === 0 ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
                 {difference === 0
@@ -635,17 +680,48 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             {draft.counted !== '' && difference !== 0 && (
               <input value={discrepancyNote} onChange={(e) => setDiscrepancyNote(e.target.value)} placeholder={str('Explain the gap (required)', 'Nyonyola enjawulo')} className="w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
             )}
+            {draft.counted !== '' && difference !== 0 && gapNeedsSecondKey(Math.abs(difference)) && (
+              <div className="p-3 rounded-lg text-xs font-bold bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
+                {draft.gapFirstBy
+                  ? str(`Key 1/2 by ${draft.gapFirstBy} — a DIFFERENT officer must seal (gap ≥ UGX ${GAP_TWO_KEY_THRESHOLD.toLocaleString()}).`, `Ekisumuluzo 1/2 kya ${draft.gapFirstBy} — omukulu omulala eyeetongodde asibe.`)
+                  : str(`Big gap (≥ UGX ${GAP_TWO_KEY_THRESHOLD.toLocaleString()}): sealing needs 2 different officers. Your tap counts as key 1/2.`, `Enjawulo ennene: okusiba kwetaaga abakulu babiri. Okunyiga kwo kye kisumuluzo 1/2.`)}
+              </div>
+            )}
             <textarea value={draft.minutes} onChange={(e) => patch({ minutes: e.target.value })} placeholder={str('Meeting minutes / resolutions (optional)', 'Ebiwandiiko by\'olukuŋŋaana')} rows={2} className="w-full border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm" />
           </div>
           {draft.completed
             ? (
               <div className="bg-[#DCFCE7] border border-[#006d30] rounded-xl p-4 text-center space-y-2">
                 <p className="font-bold text-[#166534] text-sm">{str(`Meeting #${meetingNo} sealed!`, 'Olukuŋŋaana luggaddwa!')}</p>
-                {stepBtn(str('Back to Home', 'Ddayo awaka'), () => onNavigate('home'))}
+                {!backupDone && (
+                  <>
+                    <p className="text-[11px] font-bold text-[#92400E]">
+                      {str('The backup file did not download. The books live on this phone only until you save a copy.', 'Fayiro tekoppebwa. Kozesa wansi.')}
+                    </p>
+                    {stepBtn(str('Download backup file (required)', 'Koppa fayiro (kyetaagisa)'), () => {
+                      if (lastSealed) {
+                        try {
+                          onDownloadBackup(lastSealed);
+                          setBackupDone(true);
+                        } catch {
+                          /* retry */
+                        }
+                      }
+                    })}
+                  </>
+                )}
+                {stepBtn(
+                  backupDone ? str('Back to Home', 'Ddayo awaka') : str('Back to Home (download backup first)', 'Ddayo awaka (sooka okoppe)'),
+                  () => { if (backupDone) onNavigate('home'); },
+                  true,
+                  !backupDone
+                )}
               </div>
             )
             : stepBtn(
-              str(`Seal Meeting #${meetingNo}`, `Siba Olukuŋŋaana #${meetingNo}`),
+              draft.gapFirstBy && difference !== 0 && gapNeedsSecondKey(Math.abs(difference))
+                ? str(`Seal with 2nd officer key`, `Siba n'ekisumuluzo eky'okubiri`)
+                : str(`Seal Meeting #${meetingNo}`, `Siba Olukuŋŋaana #${meetingNo}`),
               finishMeeting,
               true,
               draft.counted === '' || (difference !== 0 && !discrepancyNote.trim())

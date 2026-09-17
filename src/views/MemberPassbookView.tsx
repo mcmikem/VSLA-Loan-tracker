@@ -626,6 +626,13 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                   max={member.loanBalance}
                   min={5000}
                 />
+                {repaymentAmount > member.loanBalance && (
+                  <p className="text-[11px] font-bold text-status-warn-tx bg-status-warn-bg border border-[#FDE68A] rounded-lg p-2 mt-1.5">
+                    {language === 'LU'
+                      ? `Okuwandiika okusukka: zzaayo UGX ${(repaymentAmount - member.loanBalance).toLocaleString()} eri ${member.name} ng'enzizo. Ekitabo kijja kuwandiika UGX ${member.loanBalance.toLocaleString()} yokka.`
+                      : `Overpayment: hand back UGX ${(repaymentAmount - member.loanBalance).toLocaleString()} change to ${member.name}. Only UGX ${member.loanBalance.toLocaleString()} will be recorded.`}
+                  </p>
+                )}
               </div>
 
               {/* Quick Preset Buttons */}

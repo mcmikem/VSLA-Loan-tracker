@@ -66,7 +66,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
           <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder={str('Last name', 'Erinya ly\'ekika')} className={inputCls} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <input value={form.phone} onChange={(e) => set('phone', e.target.value)} inputMode="tel" placeholder="07XX XXX XXX" className={inputCls} />
+          <input value={form.phone} onChange={(e) => set('phone', e.target.value)} inputMode="tel" placeholder={str('07XX XXX XXX (optional)', '07XX XXX XXX (si kyetaagisa)')} className={inputCls} />
           <select value={form.provider} onChange={(e) => set('provider', e.target.value as 'MTN' | 'Airtel')} className={`${inputCls} bg-white`}>
             <option value="MTN">MTN</option>
             <option value="Airtel">Airtel</option>

@@ -7,7 +7,7 @@ interface GroupOnboardingModalProps {
   availableGroups: GroupSummary[];
   currentGroupId: string;
   onSelectGroup: (groupId: string) => Promise<void>;
-  onCreateGroup: (payload: CreateGroupPayload) => Promise<{ success: boolean; group?: GroupSummary; inviteCode?: string; error?: string }>;
+  onCreateGroup: (payload: CreateGroupPayload) => Promise<{ success: boolean; group?: GroupSummary; inviteCode?: string; error?: string; offline?: boolean }>;
   onJoinGroup: (payload: JoinGroupPayload) => Promise<{ success: boolean; groupName?: string; memberNo?: string; error?: string }>;
   defaultTab?: 'register' | 'join' | 'directory';
 }
@@ -31,6 +31,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
     inviteCode: string;
     memberNo?: string;
     boxId?: string;
+    offline?: boolean;
   } | null>(null);
 
   // Registration Form State
@@ -90,6 +91,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
           groupName: res.group.name,
           inviteCode: res.group.inviteCode,
           boxId: res.group.boxIdentifier,
+          offline: res.offline,
         });
       } else {
         setFeedbackError(res.error || 'Failed to register group. Please check parameters.');
@@ -177,6 +179,11 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                   ? `Your digital savings box for "${successInfo.groupName}" is live and ready for Meeting #1.`
                   : `You are officially registered as Member #${successInfo.memberNo} in "${successInfo.groupName}".`}
               </p>
+              {successInfo.offline && (
+                <p className="text-[11px] font-bold text-blue-900 bg-blue-50 border border-blue-200 rounded-lg p-2.5 max-w-sm">
+                  No network — saved on this phone only. It will sync automatically when you're back online. Don't uninstall the app or clear its data.
+                </p>
+              )}
             </div>
 
             {/* Invite Code Showcase */}

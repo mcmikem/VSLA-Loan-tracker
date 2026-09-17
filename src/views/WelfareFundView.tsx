@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Member, ScreenId, WelfareGrant } from '../types';
+import { WELFARE_FAST_TRACK_CAP } from '../utils/policy';
 
 interface WelfareFundViewProps {
   welfareBalance: number;
   grants: WelfareGrant[];
   members?: Member[];
-  onDisburseGrant: (grant: WelfareGrant) => void;
+  /** Returns an error message when the payout is refused, null on success. */
+  onDisburseGrant: (grant: WelfareGrant) => string | null;
   onNavigate: (screen: ScreenId) => void;
 }
 
@@ -23,6 +25,7 @@ export const WelfareFundView: React.FC<WelfareFundViewProps> = ({
   const [amount, setAmount] = useState('100,000');
   const [reason, setReason] = useState('Emergency clinic admission for malaria treatment');
   const [isDisbursedSuccess, setIsDisbursedSuccess] = useState(false);
+  const [grantError, setGrantError] = useState<string | null>(null);
 
   const handleDisburse = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +41,10 @@ export const WelfareFundView: React.FC<WelfareFundViewProps> = ({
       minutesRef: 'Minutes ref #M-28',
       type: grantCategory,
     };
-    onDisburseGrant(newGrant);
-    setIsDisbursedSuccess(true);
-    setTimeout(() => setIsDisbursedSuccess(false), 4000);
+    const err = onDisburseGrant(newGrant);
+    setGrantError(err);
+    setIsDisbursedSuccess(!err);
+    if (!err) setTimeout(() => setIsDisbursedSuccess(false), 4000);
   };
 
   return (
@@ -110,6 +114,13 @@ export const WelfareFundView: React.FC<WelfareFundViewProps> = ({
         <div className="bg-status-ok-bg border border-secondary text-status-ok-tx p-3 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in">
           <span className="material-symbols-outlined text-base">check_circle</span>
           <span>Emergency grant recorded and deducted from welfare box!</span>
+        </div>
+      )}
+
+      {/* Cap refusal — route big payouts through the 2-key queue */}
+      {grantError && (
+        <div className="bg-status-warn-bg border border-[#FDE68A] text-status-warn-tx p-3 rounded-xl text-xs font-bold animate-in fade-in">
+          {grantError}
         </div>
       )}
 
@@ -187,10 +198,14 @@ export const WelfareFundView: React.FC<WelfareFundViewProps> = ({
             <input
               type="text"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => { setAmount(e.target.value); setGrantError(null); }}
               className="w-full py-2 px-3 text-sm font-mono font-bold text-primary border-0 focus:ring-0"
             />
           </div>
+          <p className="text-[11px] text-text-muted mt-1">
+            Instant payout up to UGX {WELFARE_FAST_TRACK_CAP.toLocaleString()} (single key, emergency only).
+            Bigger amounts go through Approvals so 2 officers sign.
+          </p>
         </div>
 
         {/* Reason */}

@@ -45,6 +45,14 @@ import { WhatsNewModal } from './components/WhatsNewModal';
 import { APP_VERSION } from './data/changelog';
 import { withAudit } from './utils/audit';
 import { getTranslations } from './i18n/translations';
+import { appliedRepayment, changeDue, WELFARE_FAST_TRACK_CAP, welfareNeedsQueue } from './utils/policy';
+import { downloadBackupFile } from './utils/backupFile';
+import {
+  buildLocalGroup,
+  clearPendingGroup,
+  loadPendingGroup,
+  savePendingGroup,
+} from './utils/offlineGroup';
 import { ShareOutResult } from './utils/shareout';
 import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
 import { isDefaultPin } from './utils/pin';
@@ -178,6 +186,17 @@ export function App() {
   // Fetch state for a specific group from server
   const fetchStateFromServer = useCallback(async (targetGroupId?: string) => {
     const gid = targetGroupId || currentGroupId || 'bakwata-01';
+    // Never let the server clobber an offline-created group the server
+    // doesn't know yet — its only copy lives on this phone.
+    try {
+      const local = JSON.parse(localStorage.getItem('bakwata_vsla_state') || 'null');
+      if (local && local.groupId === gid && local.pendingSync) {
+        setIsSyncing(false);
+        return;
+      }
+    } catch {
+      /* fall through to server */
+    }
     try {
       setIsSyncing(true);
       const res = await apiFetch(`/api/state?groupId=${gid}`, {
@@ -247,6 +266,15 @@ export function App() {
   };
 
   const handleCreateGroup = async (payload: CreateGroupPayload) => {
+    const applyState = (state: VSLAState, gid: string) => {
+      setVslaState(state);
+      setCurrentGroupId(gid);
+      setSelectedBox(`${state.groupName} • ${state.boxIdentifier}`);
+      try {
+        localStorage.setItem('bakwata_vsla_state', JSON.stringify(state));
+        localStorage.setItem('bakwata_active_group_id', gid);
+      } catch (e) {}
+    };
     try {
       const res = await apiFetch('/api/groups/create', {
         method: 'POST',
@@ -256,21 +284,59 @@ export function App() {
       const data = await res.json();
       if (res.ok && data.success) {
         await fetchGroupsList();
-        if (data.state) {
-          setVslaState(data.state);
-          setCurrentGroupId(data.groupId);
-          setSelectedBox(`${data.state.groupName} • ${data.state.boxIdentifier}`);
-          try {
-            localStorage.setItem('bakwata_vsla_state', JSON.stringify(data.state));
-            localStorage.setItem('bakwata_active_group_id', data.groupId);
-          } catch (e) {}
-        }
+        if (data.state) applyState({ ...data.state, pendingSync: false }, data.groupId);
         return { success: true, group: data.group, inviteCode: data.group?.inviteCode };
       } else {
         return { success: false, error: data.error || 'Failed to create savings group' };
       }
     } catch (err: any) {
-      return { success: false, error: err.message || 'Network error' };
+      // No network (gap 1a): create a fully working group on this phone and
+      // sync it to /api/state later. Nothing the secretary typed is lost.
+      try {
+        const { state, group, inviteCode } = buildLocalGroup(payload);
+        applyState(state, group.id);
+        savePendingGroup(group.id);
+        return { success: true, group, inviteCode, offline: true };
+      } catch (e: any) {
+        return { success: false, error: err.message || 'Network error' };
+      }
+    }
+  };
+
+  // Push an offline-created group to the server once network is back.
+  const syncPendingGroup = async (): Promise<boolean> => {
+    const pendingId = loadPendingGroup();
+    if (!pendingId) return true;
+    let stored: VSLAState | null = null;
+    try {
+      stored = JSON.parse(localStorage.getItem('bakwata_vsla_state') || 'null');
+    } catch {
+      stored = null;
+    }
+    if (!stored || stored.groupId !== pendingId) {
+      clearPendingGroup();
+      return true;
+    }
+    try {
+      const res = await apiFetch(`/api/state?groupId=${pendingId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-group-id': pendingId },
+        body: JSON.stringify({ state: { ...stored, pendingSync: false }, groupId: pendingId }),
+      });
+      if (res.ok) {
+        const cleared = { ...stored, pendingSync: false };
+        setVslaState(cleared);
+        try {
+          localStorage.setItem('bakwata_vsla_state', JSON.stringify(cleared));
+        } catch {}
+        clearPendingGroup();
+        setIsServerConnected(true);
+        fetchGroupsList();
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
   };
 
@@ -447,6 +513,14 @@ export function App() {
 
   const pendingApprovalsCount = vslaState.approvals.filter((a) => a.status === 'pending').length;
 
+  // Retry pending offline-group sync whenever we (re)connect.
+  useEffect(() => {
+    if (isServerConnected && loadPendingGroup()) {
+      syncPendingGroup();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isServerConnected]);
+
   const handleToggleLanguage = () => {
     setLanguage((prev) => {
       const next = prev === 'EN' ? 'LU' : 'EN';
@@ -609,14 +683,18 @@ export function App() {
   // Member Repayment
   const handleRecordRepaymentInPassbook = (amount: number, memberId: string) => {
     const targetMember = vslaState.members.find((m) => m.id === memberId);
+    // Gap 3a: overpayments used to inflate the fund and vanish. Cap at the
+    // balance, credit the fund with what was applied, flag change to hand back.
+    const pay = appliedRepayment(amount, targetMember?.loanBalance || 0);
+    const change = changeDue(amount, targetMember?.loanBalance || 0);
     const updatedMembers = vslaState.members.map((m) => {
       if (m.id === memberId) {
-        const newLoanBalance = Math.max(0, m.loanBalance - amount);
+        const newLoanBalance = Math.max(0, m.loanBalance - pay);
         const newActiveLoan = m.activeLoan
           ? {
               ...m.activeLoan,
-              repaid: m.activeLoan.repaid + amount,
-              balance: Math.max(0, m.activeLoan.balance - amount),
+              repaid: m.activeLoan.repaid + pay,
+              balance: Math.max(0, m.activeLoan.balance - pay),
             }
           : undefined;
 
@@ -624,8 +702,8 @@ export function App() {
           id: 'led-' + Date.now(),
           title: 'Meeting #28: Loan Repayment (Cash)',
           badge: 'CASH',
-          subtitle: `Physical cash received by box teller. Balance: UGX ${newLoanBalance.toLocaleString()}`,
-          amountText: `+UGX ${amount.toLocaleString()}`,
+          subtitle: `Physical cash received by box teller. Balance: UGX ${newLoanBalance.toLocaleString()}${change > 0 ? ` · CHANGE DUE UGX ${change.toLocaleString()} — hand back` : ''}`,
+          amountText: `+UGX ${pay.toLocaleString()}`,
           isPositive: true,
           date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
         };
@@ -645,13 +723,13 @@ export function App() {
         {
           ...vslaState,
           members: updatedMembers,
-          boxCashBalance: vslaState.boxCashBalance + amount,
-          loanFundBalance: vslaState.loanFundBalance + amount,
+          boxCashBalance: vslaState.boxCashBalance + pay,
+          loanFundBalance: vslaState.loanFundBalance + pay,
         },
         currentUser.name,
         'Recorded loan repayment',
-        `${targetMember?.name || 'Member'} (#${targetMember?.no || '-'})`,
-        amount
+        `${targetMember?.name || 'Member'} (#${targetMember?.no || '-'})${change > 0 ? ` · change UGX ${change.toLocaleString()} handed back` : ''}`,
+        pay
       )
     );
   };
@@ -774,11 +852,16 @@ export function App() {
   };
 
   // Disburse Welfare Grant — blocked on default PIN like approvals
-  const handleDisburseWelfareGrant = (grant: WelfareGrant) => {
+  const handleDisburseWelfareGrant = (grant: WelfareGrant): string | null => {
     if (isDefaultPin(currentUser.pin)) {
       alert('Change your default PIN 1234 first. Welfare money cannot move on a default PIN.');
       setIsAccountModalOpen(true);
-      return;
+      return 'Change your default PIN first.';
+    }
+    // Gap 4b: one rule, two doors. Direct payout is the emergency fast-track:
+    // capped single-key; anything bigger must pass the 2-key approvals queue.
+    if (welfareNeedsQueue(grant.amount)) {
+      return `UGX ${grant.amount.toLocaleString()} is above the UGX ${WELFARE_FAST_TRACK_CAP.toLocaleString()} fast-track cap — file it as a welfare request so 2 officers approve it.`;
     }
     persistState(
       withAudit(
@@ -788,11 +871,12 @@ export function App() {
           welfareGrants: [grant, ...vslaState.welfareGrants],
         },
         currentUser.name,
-        'Disbursed welfare grant',
+        `Disbursed welfare grant (FAST-TRACK single key ≤ UGX ${WELFARE_FAST_TRACK_CAP.toLocaleString()})`,
         `${grant.memberName} (#${grant.memberNo}) — ${grant.reason}`,
         grant.amount
       )
     );
+    return null;
   };
 
   // Fine Handlers
@@ -1064,11 +1148,14 @@ export function App() {
   const handleWizardRepayments = (items: { memberId: string; amount: number }[]) => {
     const map = new Map(items.map((i) => [i.memberId, Math.max(0, Math.floor(i.amount))]));
     let total = 0;
+    const changeNotes: string[] = [];
     const updatedMembers = vslaState.members.map((m) => {
       const amt = map.get(m.id) || 0;
       if (!amt) return m;
       const pay = Math.min(amt, m.loanBalance);
+      const change = changeDue(amt, m.loanBalance);
       total += pay;
+      if (change > 0) changeNotes.push(`${m.name} (#${m.no}): hand back UGX ${change.toLocaleString()}`);
       const newLoanBalance = m.loanBalance - pay;
       return {
         ...m,
@@ -1095,7 +1182,7 @@ export function App() {
         { ...vslaState, members: updatedMembers, boxCashBalance: vslaState.boxCashBalance + total, loanFundBalance: vslaState.loanFundBalance + total },
         currentUser.name,
         `Wizard: repayments from ${items.length} member(s)`,
-        `Meeting #${vslaState.recentMeetingsCount + 1}`,
+        `Meeting #${vslaState.recentMeetingsCount + 1}${changeNotes.length > 0 ? ` · CHANGE DUE — ${changeNotes.join('; ')}` : ''}`,
         total
       )
     );
@@ -1203,15 +1290,15 @@ export function App() {
 
   const handleCompleteWizardMeeting = (countedCash: number, minutes: string) => {
     const meetingNo = vslaState.recentMeetingsCount + 1;
-    persistState(
-      withAudit(
-        { ...vslaState, recentMeetingsCount: meetingNo, boxCashBalance: countedCash },
-        currentUser.name,
-        `Wizard: sealed Meeting #${meetingNo} at UGX ${countedCash.toLocaleString()}`,
-        minutes || 'No minutes recorded',
-        countedCash
-      )
+    const sealed: VSLAState = withAudit(
+      { ...vslaState, recentMeetingsCount: meetingNo, boxCashBalance: countedCash },
+      currentUser.name,
+      `Wizard: sealed Meeting #${meetingNo} at UGX ${countedCash.toLocaleString()}`,
+      minutes || 'No minutes recorded',
+      countedCash
     );
+    persistState(sealed);
+    return sealed;
   };
 
   // Arrears automation: propose a standard late fine for a debtor
@@ -1330,8 +1417,10 @@ export function App() {
     const first = input.firstName.trim();
     const last = input.lastName.trim();
     if (!first || !last) return 'First and last name are required.';
+    // Gap 2a: phoneless members exist. Phone optional — validated only if given.
     const digits = input.phone.replace(/\D/g, '');
-    if (digits.length < 9) return 'Enter a valid phone number.';
+    if (digits.length > 0 && digits.length < 9) return 'Enter a valid phone number.';
+    const phone = digits.length >= 9 ? input.phone.trim() : '';
     const name = `${first} ${last}`;
     if (vslaState.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
       return 'A member with this name already exists.';
@@ -1348,7 +1437,7 @@ export function App() {
       name,
       initials,
       zone: input.village.trim() || 'General',
-      phone: input.phone.trim(),
+      phone: phone || '—',
       provider: input.provider,
       nationalId: input.nationalId.trim() || undefined,
       business: input.business.trim() || undefined,
@@ -1384,7 +1473,7 @@ export function App() {
       memberId,
       memberNo: no,
       name,
-      phone: input.phone.trim(),
+      phone,
       provider: input.provider,
       role: 'member',
       roleTitle: `Member #${no}`,
@@ -1527,6 +1616,22 @@ export function App() {
           {t.a11y.publicDisplay}
         </button>
       </div>
+      {vslaState.pendingSync && (
+        <div className="bg-blue-50 border-b border-blue-200 text-blue-900 text-[11px] font-bold px-4 py-1.5 text-center flex items-center justify-center gap-2 flex-wrap">
+          <span>
+            {language === 'LU'
+              ? 'Ekibiina kino tekinnatuuka ku mutimbagano — kikolebwa ku ssimu eno yokka.'
+              : 'This group is saved on this phone only — not yet synced.'}
+          </span>
+          <button
+            type="button"
+            onClick={() => syncPendingGroup()}
+            className="underline font-bold"
+          >
+            {language === 'LU' ? 'Gezaako okusindika kati' : 'Try sync now'}
+          </button>
+        </div>
+      )}
       {showLocalOnlyBanner && (
         <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-[11px] font-bold px-4 py-1.5 text-center">
           Records stay on this phone only — connect the shared database (DATABASE_URL) so all officers see the same ledger.
@@ -1689,7 +1794,9 @@ export function App() {
             onRecordFinesBulk={handleWizardFines}
             onRecordSalesBulk={handleWizardSales}
             onCompleteMeeting={handleCompleteWizardMeeting}
+            onDownloadBackup={(sealed) => downloadBackupFile(sealed)}
             onAdjustDiscrepancy={handleDiscrepancyAdjustment}
+            currentUserName={currentUser.name}
           />
         )}
 
