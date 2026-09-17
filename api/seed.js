@@ -1,11 +1,15 @@
-import { getSeedForGroup, resolveGroupId } from '../_seed.js';
-import { actorName, requireRole } from '../_auth.js';
+/**
+ * Merged seed endpoint (was 1 function: seed/preset.js — kept as api/seed.js
+ * with ?action=preset so all state-changing routes share one pattern).
+ * vercel.json rewrite keeps the old URL working:
+ *   POST /api/seed/preset -> ?action=preset
+ */
+import { getSeedForGroup, resolveGroupId } from '../lib/_seed.js';
+import { actorName, requireRole } from '../lib/_auth.js';
+import { cors } from '../lib/_lib.js';
 
 export default function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-group-id, Authorization');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!cors(req, res, 'POST,OPTIONS')) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   // Test-scenario loader: secretary+ only once SESSION_SECRET is set.
@@ -44,5 +48,6 @@ export default function handler(req, res) {
     return res.status(400).json({ error: 'Unknown preset: ' + presetId });
   }
 
+  res.setHeader('x-vsla-actor', actorName(req, session));
   return res.status(200).json({ success: true, preset: presetId, state: current });
 }

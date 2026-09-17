@@ -1,7 +1,7 @@
-import { resolveGroupId } from './_seed.js';
-import { cors, rateLimit, stateSchema, validate } from './_lib.js';
-import { actorName, requireRole } from './_auth.js';
-import { loadGroup, saveGroup, storageInfo } from './_db.js';
+import { resolveGroupId } from '../lib/_seed.js';
+import { cors, rateLimit, stateSchema, validate } from '../lib/_lib.js';
+import { actorName, requireRole } from '../lib/_auth.js';
+import { loadGroup, saveGroup, storageInfo } from '../lib/_db.js';
 
 export default async function handler(req, res) {
   if (!cors(req, res, 'GET,POST,OPTIONS')) return;

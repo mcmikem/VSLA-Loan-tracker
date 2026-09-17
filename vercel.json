@@ -3,7 +3,22 @@
   "framework": "vite",
   "buildCommand": "npx vite build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/app", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/api/groups/create", "destination": "/api/groups?action=create" },
+    { "source": "/api/groups/join", "destination": "/api/groups?action=join" },
+    { "source": "/api/groups/:id/invite", "destination": "/api/groups?action=invite&id=:id" },
+    { "source": "/api/accounts", "destination": "/api/auth?action=accounts" },
+    { "source": "/api/accounts/switch", "destination": "/api/auth?action=switch" },
+    { "source": "/api/auth/login", "destination": "/api/auth?action=login" },
+    { "source": "/api/auth/status", "destination": "/api/auth?action=status" },
+    { "source": "/api/backup/restore", "destination": "/api/backup?action=restore" },
+    { "source": "/api/backup/snapshot", "destination": "/api/backup?action=snapshot" },
+    { "source": "/api/backup/reset", "destination": "/api/backup?action=reset" },
+    { "source": "/api/momo/config", "destination": "/api/momo?action=config" },
+    { "source": "/api/momo/push", "destination": "/api/momo?action=push" },
+    { "source": "/api/seed/preset", "destination": "/api/seed?action=preset" },
+    { "source": "/app", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
