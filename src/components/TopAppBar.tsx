@@ -20,6 +20,8 @@ interface TopAppBarProps {
   onSelectGroup?: (groupId: string) => void;
   onOpenGroupModal?: (tab?: 'register' | 'join' | 'directory') => void;
   onOpenShareInvite?: () => void;
+  /** Simple Mode: hide multi-group SaaS actions. Default ON. */
+  simpleMode?: boolean;
 }
 
 export const TopAppBar: React.FC<TopAppBarProps> = ({
@@ -39,6 +41,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
   onSelectGroup,
   onOpenGroupModal,
   onOpenShareInvite,
+  simpleMode = true,
 }) => {
   const [showBoxDropdown, setShowBoxDropdown] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -224,8 +227,8 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             </span>
           </button>
 
-          {/* Quick SaaS Onboard Trigger */}
-          {onOpenGroupModal && (
+          {/* Quick SaaS Onboard Trigger — hidden in Simple Mode */}
+          {!simpleMode && onOpenGroupModal && (
             <button
               type="button"
               onClick={() => onOpenGroupModal('register')}
@@ -243,16 +246,18 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
           <div className="absolute left-4 right-4 top-12 bg-surface-card border border-border-strong rounded-xl shadow-2xl z-50 overflow-hidden py-1 divide-y divide-border-line animate-in fade-in zoom-in-95 duration-150">
             <div className="px-3 py-2 bg-surface-container-low flex items-center justify-between text-[11px] font-bold text-text-muted uppercase tracking-wider">
               <span>Your Savings Groups ({availableGroups.length})</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowBoxDropdown(false);
-                  onOpenGroupModal?.('directory');
-                }}
-                className="text-primary hover:underline lowercase font-medium"
-              >
-                manage all
-              </button>
+              {!simpleMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBoxDropdown(false);
+                    onOpenGroupModal?.('directory');
+                  }}
+                  className="text-primary hover:underline lowercase font-medium"
+                >
+                  manage all
+                </button>
+              )}
             </div>
 
             <div className="max-h-60 overflow-y-auto divide-y divide-border-line/60">
@@ -288,8 +293,9 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
               })}
             </div>
 
-            {/* SaaS Actions at Bottom of Dropdown */}
-            <div className="p-2 bg-surface-container-low flex flex-col gap-1.5">
+            {/* SaaS Actions at Bottom of Dropdown — hidden in Simple Mode */}
+            {!simpleMode && (
+              <div className="p-2 bg-surface-container-low flex flex-col gap-1.5">
               <button
                 type="button"
                 onClick={() => {
@@ -312,7 +318,8 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
                 <span className="material-symbols-outlined text-[16px]">key</span>
                 Join with Invite Code
               </button>
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>

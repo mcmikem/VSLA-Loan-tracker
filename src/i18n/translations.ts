@@ -336,6 +336,10 @@ export const translations = {
       attendance: 'Abakiise',
       loansIssued: 'Ebyewolo Ebyaweereddwa',
       viewMinutes: 'Laba Ebiwandiiko',
+      simpleSteps: 'Emitendera 3 buli Lwokutaano',
+      simpleHelp: 'Obuze? Nyiga Buyambi wansi — oba buuza omuwandiisi.',
+      simpleSaveBackup: 'Kuuma Kkopi',
+      simpleSaveBackupSub: 'Kweka kkopi oluvannyuma lw\'olukuŋŋaana',
     },
     // Member Passbook View (Oluganda)
     passbook: {

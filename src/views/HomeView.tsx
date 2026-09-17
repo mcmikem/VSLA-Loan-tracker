@@ -19,6 +19,8 @@ interface HomeViewProps {
   onOpenGroupModal?: (tab?: 'register' | 'join' | 'directory') => void;
   onOpenShareInvite?: () => void;
   language?: Language;
+  /** Simple Mode: 3 giant Friday steps, no SaaS/testing jargon. Default ON. */
+  simpleMode?: boolean;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -38,9 +40,128 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenGroupModal,
   onOpenShareInvite,
   language = 'EN',
+  simpleMode = true,
 }) => {
   const formatUGX = (num: number) => num.toLocaleString('en-US');
   const t = getTranslations(language);
+
+  // ---- SIMPLE MODE: what a village member needs on Friday, nothing else ----
+  if (simpleMode) {
+    return (
+      <main className="flex-1 px-4 pt-3 pb-8 space-y-4 max-w-lg mx-auto w-full">
+        {/* Who + which group, one line */}
+        <section className="rounded-xl bg-surface-card border border-border-strong p-3 shadow-sm flex items-center gap-2.5">
+          <div
+            className={`w-11 h-11 rounded-full ${
+              currentUser?.avatarBg || 'bg-emerald-700'
+            } text-white flex items-center justify-center font-bold text-base shrink-0`}
+          >
+            {currentUser?.avatarInitials || 'GA'}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-sm text-primary truncate">
+              {currentUser?.name || 'Grace Akello'}
+            </p>
+            <p className="text-xs text-text-muted truncate">{groupName}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenAccountModal}
+            className="px-3 py-2 bg-surface-container text-primary border border-border-strong rounded-lg text-xs font-bold shrink-0 min-h-[44px]"
+          >
+            {t.home.switchAccount}
+          </button>
+        </section>
+
+        {/* Pending approvals nudge */}
+        {pendingApprovalsCount > 0 && (
+          <button
+            type="button"
+            onClick={() => onNavigate('approvals')}
+            className="w-full rounded-xl bg-status-warn-bg border-2 border-[#FDE68A] p-4 text-left active:scale-[0.99] min-h-[56px]"
+          >
+            <p className="font-bold text-status-warn-tx">
+              {pendingApprovalsCount} {t.home.pendingApprovals}
+            </p>
+            <p className="text-xs text-status-warn-tx underline">{t.home.reviewQueue}</p>
+          </button>
+        )}
+
+        {/* Box cash, huge */}
+        <section className="bg-primary-container text-white rounded-xl p-5 shadow-md">
+          <p className="text-xs text-primary-fixed uppercase tracking-wider font-semibold">
+            {t.home.boxCashBalance}
+          </p>
+          <p className="font-mono text-4xl font-bold tracking-tight">
+            {formatUGX(boxCashBalance)}
+          </p>
+          <p className="text-xs text-primary-fixed mt-1">
+            UGX · {t.home.welfareFund}: {formatUGX(welfareFundBalance)}
+          </p>
+        </section>
+
+        {/* 3 giant Friday steps */}
+        <section className="space-y-3">
+          <h2 className="font-bold text-on-surface px-0.5">{t.home.simpleSteps}</h2>
+          <button
+            type="button"
+            onClick={() => onNavigate('meeting_wizard')}
+            className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-[#15803D] text-white rounded-xl font-bold text-lg shadow active:scale-[0.99]"
+          >
+            <span className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-xl shrink-0">1</span>
+            <span className="text-left">{t.home.startMeeting}</span>
+            <span className="material-symbols-outlined ml-auto">arrow_forward</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('member_passbook')}
+            className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-surface-card border-2 border-border-strong rounded-xl font-bold text-lg text-primary shadow-sm active:scale-[0.99]"
+          >
+            <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl shrink-0">2</span>
+            <span className="text-left">{t.nav.members}</span>
+            <span className="material-symbols-outlined ml-auto">arrow_forward</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('approvals')}
+            className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-surface-card border-2 border-border-strong rounded-xl font-bold text-lg text-primary shadow-sm active:scale-[0.99]"
+          >
+            <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl shrink-0">3</span>
+            <span className="text-left">{t.nav.approvals}</span>
+            {pendingApprovalsCount > 0 && (
+              <span className="ml-1 px-2 py-0.5 rounded-full bg-status-warn-bg text-status-warn-tx text-xs font-bold border border-[#FDE68A]">
+                {pendingApprovalsCount}
+              </span>
+            )}
+            <span className="material-symbols-outlined ml-auto">arrow_forward</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('backup')}
+            className="w-full min-h-[60px] flex items-center gap-3 px-4 py-3 bg-status-ok-bg/40 border-2 border-secondary/60 rounded-xl font-bold text-primary active:scale-[0.99]"
+          >
+            <span className="material-symbols-outlined text-secondary">cloud_sync</span>
+            <span className="text-left">
+              <span className="block">{t.home.simpleSaveBackup}</span>
+              <span className="block text-xs font-normal text-text-muted">{t.home.simpleSaveBackupSub}</span>
+            </span>
+          </button>
+        </section>
+
+        {/* Lost? */}
+        <section className="rounded-xl bg-surface-card border border-border-line p-4 text-center space-y-2">
+          <p className="text-xs text-text-muted">{t.home.simpleHelp}</p>
+          <button
+            type="button"
+            onClick={() => onNavigate('help')}
+            className="w-full min-h-[52px] bg-primary text-white rounded-lg font-bold active:scale-[0.99]"
+          >
+            {language === 'LU' ? 'Buyambi' : 'Help & Support'}
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 px-4 pt-3 pb-8 space-y-4 max-w-lg mx-auto w-full">

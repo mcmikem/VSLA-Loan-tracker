@@ -44,6 +44,7 @@ import { OnboardingTour, ONBOARDING_KEY, SEEN_VERSION_KEY } from './components/O
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { APP_VERSION } from './data/changelog';
 import { withAudit } from './utils/audit';
+import { getTranslations } from './i18n/translations';
 import { ShareOutResult } from './utils/shareout';
 import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
 import { isDefaultPin } from './utils/pin';
@@ -52,7 +53,15 @@ import { LoginView } from './views/LoginView';
 import { apiFetch, fetchAuthStatus, getSessionToken, setSessionToken } from './utils/api';
 
 export function App() {
-  const [language, setLanguage] = useState<Language>('EN');
+  // Default Luganda: local users first. Persisted once the user picks.
+  const [language, setLanguage] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem('vsla_lang');
+      return saved === 'EN' || saved === 'LU' ? (saved as Language) : 'LU';
+    } catch {
+      return 'LU';
+    }
+  });
   const [activeTab, setActiveTab] = useState<MainTab>('home');
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
   const [isDiscrepancyModalOpen, setIsDiscrepancyModalOpen] = useState(false);
@@ -68,12 +77,13 @@ export function App() {
   const [storageDriver, setStorageDriver] = useState<string | null>(null);
   const [storageShared, setStorageShared] = useState<boolean | null>(null);
   const [loginPreselectId, setLoginPreselectId] = useState<string | undefined>(undefined);
-  // Accessibility for village reality: elder big-text + sunlight contrast (persisted)
+  // Accessibility for village reality: elder big-text + sunlight contrast (persisted).
+  // Elder text is ON unless explicitly switched off — old eyes are the norm.
   const [elderMode, setElderMode] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('vsla_elder_mode') === '1';
+      return localStorage.getItem('vsla_elder_mode') !== '0';
     } catch {
-      return false;
+      return true;
     }
   });
   const [sunlightMode, setSunlightMode] = useState<boolean>(() => {
@@ -84,6 +94,14 @@ export function App() {
     }
   });
   const [isPublicDisplayOpen, setIsPublicDisplayOpen] = useState(false);
+  // Simple Mode: 3 giant buttons, 4 tabs, no SaaS jargon. ON unless explicitly off.
+  const [simpleMode, setSimpleMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('vsla_simple_mode') !== '0';
+    } catch {
+      return true;
+    }
+  });
 
   // Multi-Tenant SaaS State
   const [currentGroupId, setCurrentGroupId] = useState<string>(() => {
@@ -430,7 +448,20 @@ export function App() {
   const pendingApprovalsCount = vslaState.approvals.filter((a) => a.status === 'pending').length;
 
   const handleToggleLanguage = () => {
-    setLanguage((prev) => (prev === 'EN' ? 'LU' : 'EN'));
+    setLanguage((prev) => {
+      const next = prev === 'EN' ? 'LU' : 'EN';
+      try {
+        localStorage.setItem('vsla_lang', next);
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleSelectLanguage = (lang: Language) => {
+    setLanguage(lang);
+    try {
+      localStorage.setItem('vsla_lang', lang);
+    } catch {}
   };
 
   const handleNavigateScreen = (screen: ScreenId) => {
@@ -1439,11 +1470,26 @@ export function App() {
   }
 
   const showLocalOnlyBanner = storageDriver !== null && storageShared === false;
+  const t = getTranslations(language);
 
   return (
     <div className={`min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans selection:bg-secondary/20 ${elderMode ? 'elder-mode' : ''} ${sunlightMode ? 'sunlight-mode' : ''}`}>
-      {/* Village accessibility bar: big-text + sunlight + public display (fixes #13, #21, #39) */}
-      <div className="bg-primary text-white text-[11px] font-bold px-3 py-1.5 flex items-center justify-center gap-2 no-print">
+      {/* Village accessibility bar: big-text + sunlight + public display + simple/advanced */}
+      <div className="bg-primary text-white text-[11px] font-bold px-3 py-1.5 flex items-center justify-center gap-2 no-print flex-wrap">
+        <button
+          type="button"
+          onClick={() => {
+            const next = !simpleMode;
+            setSimpleMode(next);
+            try {
+              localStorage.setItem('vsla_simple_mode', next ? '1' : '0');
+            } catch {}
+          }}
+          className={`px-2 py-1 rounded border ${simpleMode ? 'bg-[#EAB308] text-[#00261b] border-[#EAB308]' : 'border-white/40'}`}
+          title={simpleMode ? t.a11y.advanced : t.a11y.simple}
+        >
+          {simpleMode ? `✓ ${t.a11y.simple}` : t.a11y.advanced}
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -1454,9 +1500,9 @@ export function App() {
             } catch {}
           }}
           className={`px-2 py-1 rounded border ${elderMode ? 'bg-[#EAB308] text-[#00261b] border-[#EAB308]' : 'border-white/40'}`}
-          title="Big text for elders"
+          title={t.a11y.bigText}
         >
-          {elderMode ? '✓ Big text ON' : 'Big text'}
+          {elderMode ? `✓ ${t.a11y.bigText}` : t.a11y.bigText}
         </button>
         <button
           type="button"
@@ -1468,17 +1514,17 @@ export function App() {
             } catch {}
           }}
           className={`px-2 py-1 rounded border ${sunlightMode ? 'bg-white text-black border-white' : 'border-white/40'}`}
-          title="High contrast for sunlight under tree"
+          title={t.a11y.sunlight}
         >
-          {sunlightMode ? '✓ Sunlight ON' : 'Sunlight'}
+          {sunlightMode ? `✓ ${t.a11y.sunlight}` : t.a11y.sunlight}
         </button>
         <button
           type="button"
           onClick={() => setIsPublicDisplayOpen(true)}
           className="px-2 py-1 rounded border border-[#EAB308] text-[#EAB308]"
-          title="Show big public figures for all 30 members to see"
+          title={t.a11y.publicDisplay}
         >
-          Public display
+          {t.a11y.publicDisplay}
         </button>
       </div>
       {showLocalOnlyBanner && (
@@ -1498,6 +1544,7 @@ export function App() {
       <TopAppBar
         language={language}
         onToggleLanguage={handleToggleLanguage}
+        onSelectLanguage={handleSelectLanguage}
         pendingApprovalsCount={pendingApprovalsCount}
         selectedBox={selectedBox}
         onSelectBox={setSelectedBox}
@@ -1514,6 +1561,7 @@ export function App() {
           setIsGroupModalOpen(true);
         }}
         onOpenShareInvite={() => setIsShareInviteOpen(true)}
+        simpleMode={simpleMode}
       />
 
       {/* Screen Router */}
@@ -1538,6 +1586,8 @@ export function App() {
               setIsGroupModalOpen(true);
             }}
             onOpenShareInvite={() => setIsShareInviteOpen(true)}
+            language={language}
+            simpleMode={simpleMode}
           />
         )}
 
@@ -1820,6 +1870,8 @@ export function App() {
         onTabChange={setActiveTab}
         pendingApprovalsCount={pendingApprovalsCount}
         onNavigateScreen={handleNavigateScreen}
+        language={language}
+        simpleMode={simpleMode}
       />
     </div>
   );

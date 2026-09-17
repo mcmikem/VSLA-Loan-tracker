@@ -8,6 +8,8 @@ interface BottomNavBarProps {
   pendingApprovalsCount: number;
   onNavigateScreen: (screen: ScreenId) => void;
   language?: Language;
+  /** Simple Mode: 4 tabs for the Friday loop. Default ON. */
+  simpleMode?: boolean;
 }
 
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({
@@ -16,9 +18,61 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   pendingApprovalsCount,
   onNavigateScreen,
   language = 'EN',
+  simpleMode = true,
 }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const t = getTranslations(language);
+
+  const tabBtn = (
+    tab: MainTab,
+    screen: ScreenId,
+    icon: string,
+    label: string,
+    badge?: number
+  ) => (
+    <button
+      onClick={() => {
+        onTabChange(tab);
+        onNavigateScreen(screen);
+      }}
+      className={`relative flex flex-col items-center justify-center px-2 py-1 min-h-[52px] min-w-[56px] rounded-lg transition-colors active:scale-95 ${
+        activeTab === tab
+          ? 'bg-primary-container text-white shadow-sm'
+          : 'text-text-muted hover:bg-surface-container-low'
+      }`}
+      type="button"
+    >
+      <span
+        className="material-symbols-outlined text-[24px]"
+        style={{ fontVariationSettings: activeTab === tab ? "'FILL' 1" : "'FILL' 0" }}
+      >
+        {icon}
+      </span>
+      <span className="font-semibold tracking-tight mt-0.5 text-[11px]">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-0.5 rounded-full bg-status-warn-bg text-status-warn-tx font-bold text-[10px] border border-[#FDE68A]">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+
+  // ---- SIMPLE MODE: Home + Meeting + Passbook + Approvals. Nothing else. ----
+  if (simpleMode) {
+    return (
+      <nav
+        aria-label="Main Mobile Navigation"
+        className="fixed bottom-0 left-0 w-full z-50 bg-surface-card border-t border-border-line shadow-[0px_-2px_10px_rgba(0,0,0,0.06)]"
+      >
+        <div className="max-w-lg mx-auto flex justify-around items-center px-2 py-1.5">
+          {tabBtn('home', 'home', 'home', t.nav.home)}
+          {tabBtn('meetings', 'meeting_wizard', 'event', t.nav.meetings)}
+          {tabBtn('members', 'member_passbook', 'groups', t.nav.members)}
+          {tabBtn('approvals', 'approvals', 'rule', t.nav.approvals, pendingApprovalsCount)}
+        </div>
+      </nav>
+    );
+  }
 
   const handleMoreClick = () => {
     setShowMoreMenu(!showMoreMenu);
@@ -333,11 +387,11 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             </span>
           </button>
 
-          {/* Tab 2: Meetings */}
+          {/* Tab 2: Meetings — guided wizard (step-by-step, village-proof) */}
           <button
             onClick={() => {
               onTabChange('meetings');
-              onNavigateScreen('meeting_close');
+              onNavigateScreen('meeting_wizard');
             }}
             className={`flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
               activeTab === 'meetings'
