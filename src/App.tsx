@@ -1897,6 +1897,7 @@ export function App() {
             onWaiveFine={handleWaiveFine}
             onLevyFine={handleLevyFine}
             onNavigate={handleNavigateScreen}
+            language={language}
           />
         )}
       </div>

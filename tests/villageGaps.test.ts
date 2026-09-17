@@ -4,6 +4,7 @@ import {
   WELFARE_FAST_TRACK_CAP,
   appliedRepayment,
   changeDue,
+  displayFineReason,
   gapNeedsSecondKey,
   welfareNeedsQueue,
 } from '../src/utils/policy';
@@ -32,6 +33,15 @@ describe('village money policy', () => {
   it('welfare fast-track capped, above goes to queue', () => {
     expect(welfareNeedsQueue(WELFARE_FAST_TRACK_CAP)).toBe(false);
     expect(welfareNeedsQueue(WELFARE_FAST_TRACK_CAP + 1)).toBe(true);
+  });
+
+  it('fine reasons stay canonical EN, display LU', () => {
+    expect(displayFineReason('Late arrival', 'LU')).toBe('Okukerewa');
+    expect(displayFineReason('Late arrival', 'EN')).toBe('Late arrival');
+    expect(displayFineReason('Late Arrival (>10:15 AM) · Arrived after prayer', 'LU')).toBe(
+      'Okukerewa (>10:15) · Arrived after prayer'
+    );
+    expect(displayFineReason('Custom reason', 'LU')).toBe('Custom reason');
   });
 });
 

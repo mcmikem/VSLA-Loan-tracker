@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Language, Member, ScreenId, ShopProduct, VSLAState } from '../types';
-import { changeDue, gapNeedsSecondKey, GAP_TWO_KEY_THRESHOLD } from '../utils/policy';
+import { changeDue, displayFineReason, gapNeedsSecondKey, GAP_TWO_KEY_THRESHOLD, STANDARD_FINE_REASONS } from '../utils/policy';
 
 export interface WizardShareItem {
   memberId: string;
@@ -574,9 +574,9 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               {members.map((m) => <option key={m.id} value={m.id}>{m.name} (#{m.no})</option>)}
             </select>
             <div className="flex flex-wrap gap-1.5">
-              {['Late arrival', 'Absence', 'Phone disruption', 'No passbook'].map((r) => (
-                <button key={r} type="button" onClick={() => setFineReason(r)} className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold ${fineReason === r ? 'bg-[#00261b] text-white' : 'bg-[#F6F7F6] border border-[#E5E7EB]'}`}>
-                  {r}
+              {STANDARD_FINE_REASONS.slice(0, 4).map((r) => (
+                <button key={r.en} type="button" onClick={() => setFineReason(r.en)} className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold ${fineReason === r.en ? 'bg-[#00261b] text-white' : 'bg-[#F6F7F6] border border-[#E5E7EB]'}`}>
+                  {language === 'LU' ? r.lu : r.en}
                 </button>
               ))}
             </div>
@@ -590,7 +590,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </div>
           {stagedFines.map((f, i) => (
             <div key={i} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2 text-xs">
-              <span className="font-semibold">{f.memberName} · {f.reason} · <span className="font-mono">UGX {f.amount.toLocaleString()}</span> · {f.paid ? str('paid', 'asasudde') : str('pending', 'ekyakulinda')}</span>
+              <span className="font-semibold">{f.memberName} · {displayFineReason(f.reason, language)} · <span className="font-mono">UGX {f.amount.toLocaleString()}</span> · {f.paid ? str('paid', 'asasudde') : str('pending', 'ekyakulinda')}</span>
               <button type="button" onClick={() => setStagedFines(stagedFines.filter((_, j) => j !== i))} className="text-[#B91C1C] font-bold px-2">✕</button>
             </div>
           ))}

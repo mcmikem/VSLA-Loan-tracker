@@ -19,13 +19,77 @@ import {
 } from '../lib/_lib.js';
 import { loadGroup, saveGroup } from '../lib/_db.js';
 
+/** IDs of groups created via ?action=create (seeds are implicit). */
+async function groupRegistry() {
+  try {
+    const r = await loadGroup('__registry');
+    if (r && Array.isArray(r.ids)) return r;
+  } catch {
+    /* fresh store */
+  }
+  return { ids: [] };
+}
+
+async function registerGroup(groupId) {
+  try {
+    const reg = await groupRegistry();
+    if (!reg.ids.includes(groupId)) {
+      reg.ids.push(groupId);
+      await saveGroup('__registry', reg);
+    }
+  } catch (err) {
+    console.warn('group registry write failed:', err);
+  }
+}
+
+/** Persist a freshly created group so list + join find it. Never throws. */
+async function persistCreatedGroup(groupId, state) {
+  try {
+    await saveGroup(groupId, state);
+    await registerGroup(groupId);
+  } catch (err) {
+    console.warn('created-group persist failed (client holds the copy):', err);
+  }
+  return state;
+}
+
+/** Find a group by invite code across seeds + created groups. */
+async function findGroupByCode(code) {
+  const upper = String(code).trim().toUpperCase();
+  const candidates = ['bakwata-01', 'kibuli-01', ...(await groupRegistry()).ids];
+  for (const gid of new Set(candidates)) {
+    let g = null;
+    try {
+      g = await loadGroup(gid);
+    } catch {
+      continue;
+    }
+    if (!g || typeof g !== 'object') continue;
+    const codes = [g.inviteCode, g.groupProfile?.inviteCode]
+      .filter(Boolean)
+      .map((c) => String(c).toUpperCase());
+    if (codes.includes(upper)) return { group: JSON.parse(JSON.stringify(g)), groupId: g.groupId || gid };
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   const action = String(req.query?.action || '').toLowerCase();
 
-  // ---- LIST: GET /api/groups ----
+  // ---- LIST: GET /api/groups (seeds + every group created on this server) ----
   if (req.method === 'GET' && (!action || action === 'list')) {
     if (!cors(req, res, 'GET,OPTIONS')) return;
     const groups = [toGroupSummary(getBakwataSeed()), toGroupSummary(getKibuliSeed())];
+    const seen = new Set(['bakwata-01', 'kibuli-01']);
+    for (const gid of (await groupRegistry()).ids) {
+      if (seen.has(gid)) continue;
+      seen.add(gid);
+      try {
+        groups.push(toGroupSummary(await loadGroup(gid)));
+      } catch {
+        /* dropped group file — skip */
+      }
+    }
     return res.status(200).json({ success: true, groups });
   }
 
@@ -33,24 +97,19 @@ export default async function handler(req, res) {
   if (req.method === 'GET' && action === 'invite') {
     if (!cors(req, res, 'GET,OPTIONS')) return;
     const id = String(req.query?.id || '').trim();
-    let group = null;
-    let gid = null;
-    for (const c of ['bakwata-01', 'kibuli-01']) {
+    const found = await findGroupByCode(id);
+    // Also accept a raw group id (secretary sharing from the directory).
+    let group = found?.group || null;
+    let gid = found?.groupId || null;
+    if (!group) {
       try {
-        const g = await loadGroup(c);
-        const codes = [g.inviteCode, g.groupProfile?.inviteCode].filter(Boolean).map(String);
-        if (
-          g.groupId === id ||
-          g.groupProfile?.id === id ||
-          codes.includes(id) ||
-          codes.includes(id.toUpperCase())
-        ) {
+        const g = await loadGroup(id);
+        if (g && (g.groupId === id || g.groupProfile?.id === id)) {
           group = g;
-          gid = g.groupId || c;
-          break;
+          gid = g.groupId || id;
         }
       } catch {
-        /* try next */
+        /* not found below */
       }
     }
     if (!group) return res.status(404).json({ error: `No savings group found for "${id}".` });
@@ -133,7 +192,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true, groupId,
       group: { id: groupId, name, boxIdentifier: boxId, location: location || 'Uganda', meetingDay: meetingDay || 'Every Friday 4:00 PM', sharePrice: price, inviteCode, membersCount: 1, boxCashBalance: price, plan: plan || 'free' },
-      state: newGroupState, account: adminAccount,
+      state: await persistCreatedGroup(groupId, newGroupState), account: adminAccount,
       message: `Savings group "${name}" initialized successfully with invite code ${inviteCode}`,
     });
   }
@@ -148,31 +207,13 @@ export default async function handler(req, res) {
     const { inviteCode, memberName, phone, provider, nationalId, pin } = input;
 
     const code = String(inviteCode).trim().toUpperCase();
-    const knownIds = ['bakwata-01', 'kibuli-01'];
 
-    let targetGroup = null;
-    let foundGroupId = null;
-    // Check durable store first (covers groups created via ?action=create
-    // once DATABASE_URL is set), then built-in seeds.
-    for (const gid of knownIds) {
-      const seed = gid === 'kibuli-01' ? getKibuliSeed() : getBakwataSeed();
-      const seedCodes = [seed.inviteCode, seed.groupProfile?.inviteCode]
-        .filter(Boolean)
-        .map((c) => String(c).toUpperCase());
-      if (seedCodes.includes(code)) {
-        foundGroupId = gid;
-        try {
-          targetGroup = JSON.parse(JSON.stringify(await loadGroup(gid)));
-        } catch {
-          targetGroup = JSON.parse(JSON.stringify(seed));
-        }
-        break;
-      }
-    }
-
-    if (!targetGroup) {
+    const found = await findGroupByCode(code);
+    if (!found) {
       return res.status(404).json({ error: `No savings group found with invite code "${code}". Please ask your group secretary.` });
     }
+    const targetGroup = found.group;
+    const foundGroupId = found.groupId;
 
     // Plan member caps.
     const cap = memberCap(targetGroup);

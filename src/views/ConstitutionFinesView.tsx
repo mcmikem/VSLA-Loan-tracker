@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { PendingFine, ScreenId } from '../types';
+import { Language, PendingFine, ScreenId } from '../types';
+import { displayFineReason } from '../utils/policy';
 
 interface ConstitutionFinesViewProps {
   fines: PendingFine[];
@@ -7,7 +8,15 @@ interface ConstitutionFinesViewProps {
   onWaiveFine: (id: string) => void;
   onLevyFine: (fine: PendingFine) => void;
   onNavigate: (screen: ScreenId) => void;
+  language?: Language;
 }
+
+const INFRACTIONS = [
+  { en: 'Late Arrival (>10:15 AM)', cost: 2000 },
+  { en: 'Absent Without Prior Apology', cost: 5000 },
+  { en: 'Phone Ringing in Prayer/Meeting', cost: 1000 },
+  { en: 'Side Whispering / Disruption', cost: 1000 },
+];
 
 export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
   fines,
@@ -15,6 +24,7 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
   onWaiveFine,
   onLevyFine,
   onNavigate,
+  language = 'EN',
 }) => {
   const [selectedMember, setSelectedMember] = useState('Kato Moses');
   const [selectedMemberNo, setSelectedMemberNo] = useState('12');
@@ -94,7 +104,7 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
                       <span className="font-bold text-primary block">
                         {fine.memberName} (#{fine.memberNo})
                       </span>
-                      <p className="text-[11px] text-text-muted">{fine.reason}</p>
+                      <p className="text-[11px] text-text-muted">{displayFineReason(fine.reason, language)}</p>
                     </div>
                     <span className="font-mono font-bold text-status-bad-tx text-sm">
                       UGX {fine.amount.toLocaleString('en-US')}
@@ -168,23 +178,18 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
         <div>
           <label className="text-xs font-semibold text-text-muted block mb-1">Infraction Category</label>
           <div className="space-y-1 text-xs">
-            {[
-              { text: 'Late Arrival (>10:15 AM)', cost: 2000 },
-              { text: 'Absent Without Prior Apology', cost: 5000 },
-              { text: 'Phone Ringing in Prayer/Meeting', cost: 1000 },
-              { text: 'Side Whispering / Disruption', cost: 1000 },
-            ].map((inf) => (
+            {INFRACTIONS.map((inf) => (
               <button
-                key={inf.text}
+                key={inf.en}
                 type="button"
-                onClick={() => handleInfractionChange(inf.text, inf.cost)}
+                onClick={() => handleInfractionChange(inf.en, inf.cost)}
                 className={`w-full p-2 rounded-lg border flex items-center justify-between text-left ${
-                  selectedInfraction === inf.text
+                  selectedInfraction === inf.en
                     ? 'bg-primary-container text-white border-primary-container font-bold'
                     : 'bg-canvas-bg text-on-surface'
                 }`}
               >
-                <span>{inf.text}</span>
+                <span>{displayFineReason(inf.en, language)}</span>
                 <span className="font-mono font-bold">UGX {inf.cost.toLocaleString('en-US')}</span>
               </button>
             ))}
