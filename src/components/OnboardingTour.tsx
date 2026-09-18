@@ -61,7 +61,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ language = 'EN',
           >
             {step + 1 >= STEPS.length
               ? language === 'LU' ? 'Tandika!'  : "Let's go"
-              : language === 'LU' ? 'Weeyongereyo'  : 'Next'}
+              : language === 'LU' ? 'Eddaako'  : 'Next'}
           </button>
         </div>
       </div>

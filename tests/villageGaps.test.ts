@@ -12,6 +12,7 @@ import { buildLocalGroup } from '../src/utils/offlineGroup';
 import { backupFileName, buildBackupPayload } from '../src/utils/backupFile';
 import { estimateDataUrlBytes, findMemberPhoto } from '../src/utils/photo';
 import { ledgerHash } from '../src/utils/ledgerHash';
+import { getTranslations } from '../src/i18n/translations';
 
 describe('village money policy', () => {
   it('changeDue hands back overpayments, never negative', () => {
@@ -87,13 +88,23 @@ describe('offline group builder', () => {
     expect(estimateDataUrlBytes('data:image/jpeg;base64,' + 'QUJD'.repeat(10000))).toBe(30000);
   });
 
-  it('ledger hash is stable, short, and changes with content', () => {
-    const a = [{ id: 'x', amount: 600000 }];
+  it('ledger hash is stable, short, and changes with content', () => {    const a = [{ id: 'x', amount: 600000 }];
     const b = [{ id: 'x', amount: 600001 }];
     expect(ledgerHash(a)).toMatch(/^[0-9A-F]{5}$/);
     expect(ledgerHash(a)).toBe(ledgerHash(a));
     expect(ledgerHash(a)).not.toBe(ledgerHash(b));
     expect(ledgerHash([])).toMatch(/^[0-9A-F]{5}$/);
+  });
+
+  it('translator pack v1 corrections hold in Luganda', () => {
+    const lu = getTranslations('LU').common;
+    expect(lu.back).toBe('Ddayo emabega');
+    expect(lu.next).toBe('Eddaako');
+    expect(lu.share).toBe('Gabana');
+    expect(lu.copy).toBe('Koppolola');
+    expect(lu.save).toBe('Tereka');
+    expect(lu.search).toBe('Noonya');
+    expect(lu.cancel).toBe('Sazaamu');
   });
 
   it('finds member photos by number first, then name', () => {
