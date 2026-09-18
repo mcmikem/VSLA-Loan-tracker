@@ -15,12 +15,13 @@ interface MemberPassbookViewProps {
   onAddMember?: () => void;
   /** Retake an existing member's face photo (compressed on-device). */
   onUpdatePhoto?: (memberId: string, photoUrl: string) => void;
+  /** Current meeting number for receipt references. */
+  meetingNo?: number;
   language?: Language;
   groupName?: string;
   boxIdentifier?: string;
   issuerName?: string;
 }
-
 export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   members,
   selectedMember,
@@ -30,6 +31,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   onBuyShares,
   onAddMember,
   onUpdatePhoto,
+  meetingNo = 28,
   language = 'EN',
   groupName = 'Bakwata Savings Group',
   boxIdentifier = 'BOX-KLA-042',
@@ -178,7 +180,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
             <span className="material-symbols-outlined text-sm">task_alt</span>
             {feedbackNotice}
           </span>
-          <span className="font-mono text-[10px]">REC-PASS-28</span>
+          <span className="font-mono text-[10px]">REC-PASS-{meetingNo}</span>
         </div>
       )}
 

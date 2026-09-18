@@ -21,6 +21,13 @@ interface HomeViewProps {
   language?: Language;
   /** Simple Mode: 3 giant Friday steps, no SaaS/testing jargon. Default ON. */
   simpleMode?: boolean;
+  /** Real computed figures — never hardcode money on this screen. */
+  queueTotal?: number;
+  cycle?: number;
+  cycleMonth?: number;
+  totalCycleMonths?: number;
+  sharePrice?: number;
+  totalShares?: number;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -41,9 +48,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenShareInvite,
   language = 'EN',
   simpleMode = true,
+  queueTotal = 0,
+  cycle = 1,
+  cycleMonth = 1,
+  totalCycleMonths = 10,
+  sharePrice = 10000,
+  totalShares = 0,
 }) => {
   const formatUGX = (num: number) => num.toLocaleString('en-US');
   const t = getTranslations(language);
+  const cyclePct = Math.min(100, Math.round((cycleMonth / Math.max(1, totalCycleMonths)) * 100));
   // Bilingual safety net: every primary label carries the other language
   // underneath, so a wrong Luganda string never strands anyone.
   const tOther = getTranslations(language === 'LU' ? 'EN' : 'LU');
@@ -290,7 +304,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 <p className="text-body-sm font-body-sm text-status-warn-tx font-num">
                   {t.home.queueTotal}:{' '}
                   <span className="font-mono text-currency-sm font-semibold">
-                    UGX 1,450,000
+                    UGX {formatUGX(queueTotal)}
                   </span>
                 </p>
               </div>
@@ -325,10 +339,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
               {t.home.vaultStatus}
             </span>
           </div>
-          {/* Badge: Meeting in 2 days */}
+          {/* Badge: next meeting number (computed, never a guessed date) */}
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-card/15 border border-white/20 text-white font-label-sm text-xs">
             <span className="w-2 h-2 rounded-full bg-secondary-fixed animate-pulse" />
-            <span>{t.home.meetingInDays(2)}</span>
+            <span>{t.home.meetingNumber(recentMeetingsCount + 1)}</span>
           </div>
         </div>
 
@@ -382,38 +396,37 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-headline-sm font-headline-sm text-on-surface font-bold">
-                {t.home.cycleProgress} 1
+                {t.home.cycleProgress} {cycle}
               </h2>
               <span className="px-2 py-0.5 rounded text-label-sm font-label-sm bg-status-ok-bg text-status-ok-tx font-semibold text-xs">
-                Active
+                {t.home.activeStatus}
               </span>
             </div>
             <p className="text-body-sm font-body-sm text-text-muted mt-0.5 text-xs">
-              Month 7 of 10 • Scheduled Share-out Oct 2025
+              {t.home.cycleMonths(cycleMonth, totalCycleMonths)}
             </p>
           </div>
-          <span className="font-mono text-currency-md font-bold text-primary">70%</span>
+          <span className="font-mono text-currency-md font-bold text-primary">{cyclePct}%</span>
         </div>
 
         {/* Linear Progress Bar */}
         <div className="w-full bg-border-line rounded-full h-2.5 my-3 overflow-hidden">
-          <div className="bg-secondary h-2.5 rounded-full" style={{ width: '70%' }} />
+          <div className="bg-secondary h-2.5 rounded-full" style={{ width: `${cyclePct}%` }} />
         </div>
 
-        {/* Cycle Financial Metrics Grid */}
+        {/* Cycle Financial Metrics Grid (all computed from live state) */}
         <div className="grid grid-cols-3 gap-2 pt-1 text-left">
           <div className="bg-canvas-bg rounded-lg p-2 border border-border-line">
             <span className="text-[11px] font-medium text-text-muted block">{t.home.sharePrice}</span>
-            <span className="font-mono text-currency-sm font-bold text-on-surface">UGX 10,000</span>
+            <span className="font-mono text-currency-sm font-bold text-on-surface">UGX {formatUGX(sharePrice)}</span>
           </div>
           <div className="bg-canvas-bg rounded-lg p-2 border border-border-line">
             <span className="text-[11px] font-medium text-text-muted block">{t.home.totalShares}</span>
-            <span className="font-mono text-currency-sm font-bold text-on-surface">875 sold</span>
+            <span className="font-mono text-currency-sm font-bold text-on-surface">{formatUGX(totalShares)}</span>
           </div>
           <div className="bg-canvas-bg rounded-lg p-2 border border-border-line">
-            <span className="text-[11px] font-medium text-text-muted block">{t.home.shareValue}</span>
-            <span className="font-mono text-currency-sm font-bold text-status-ok-tx">UGX 11,420</span>
-            <span className="text-[10px] font-bold text-status-ok-tx block">+14.2%</span>
+            <span className="text-[11px] font-medium text-text-muted block">{t.home.membersLabel}</span>
+            <span className="font-mono text-currency-sm font-bold text-on-surface">{formatUGX(totalMembersCount)}</span>
           </div>
         </div>
       </section>
@@ -562,15 +575,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-headline-sm font-headline-sm font-bold text-on-surface">
-                  {t.home.meetingNumber(27)}
+                  {t.home.meetingNumber(recentMeetingsCount)}
                 </span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-label-sm font-semibold bg-status-ok-bg text-status-ok-tx text-xs">
                   {t.home.closedReconciled}
                 </span>
               </div>
-              <p className="text-body-sm font-body-sm text-text-muted mt-0.5 text-xs">
-                Last Saturday, 15 Feb 2025 • 10:00 AM
-              </p>
             </div>
             <span className="material-symbols-outlined text-text-muted text-[20px]">
               verified
@@ -580,18 +590,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="grid grid-cols-2 gap-3 py-3">
             <div>
               <span className="text-label-sm font-label-sm text-text-muted block text-xs">
-                {t.home.collectedCash}
+                {t.home.boxNow}
               </span>
               <span className="font-mono text-currency-md font-bold text-on-surface">
-                UGX 850,000
+                UGX {formatUGX(boxCashBalance)}
               </span>
             </div>
             <div>
               <span className="text-label-sm font-label-sm text-text-muted block text-xs">
-                {t.home.attendance}
+                {t.home.membersLabel}
               </span>
               <span className="font-mono text-currency-md font-bold text-on-surface">
-                28/30 {language === 'LU' ? 'beetabye'  : 'present'}
+                {formatUGX(totalMembersCount)}
               </span>
             </div>
           </div>

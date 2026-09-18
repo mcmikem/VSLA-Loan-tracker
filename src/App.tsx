@@ -561,15 +561,34 @@ export function App() {
   };
 
   // Approval Handlers — TWO-KEY RULE: money moves only on 2nd DISTINCT officer key.
-  // Blocks default PIN 1234 from authorizing money (fix #16, #20, #48).
-  const handleApproveItem = (id: string, payoutMethod?: string) => {
+  // Each key is turned with that officer's OWN pin (key ceremony modal).
+  // Returns an error message, or null when the key turned.
+  const handleApproveItem = (
+    id: string,
+    payoutMethod?: string,
+    key?: { officerId: string; pin: string }
+  ): string | null => {
     const targetItem = vslaState.approvals.find((a) => a.id === id);
-    if (!targetItem) return;
-    if (targetItem.status !== 'pending') return;
-    if (isDefaultPin(currentUser.pin)) {
-      alert('Change your default PIN 1234 first (Account → Change PIN). Money cannot move on a default PIN.');
-      setIsAccountModalOpen(true);
-      return;
+    if (!targetItem) return 'Request not found.';
+    if (targetItem.status !== 'pending') return 'Already decided.';
+
+    // Verify the officer holding the phone — not whoever is logged in.
+    let officerName = currentUser.name;
+    if (key) {
+      const acct = (vslaState.availableAccounts || []).find((a) => a.id === key.officerId);
+      if (!acct) return 'Unknown officer. Pick a name from the list.';
+      if (String(acct.pin || '').startsWith('hash:')) {
+        return 'This account uses secure sign-in — switch to it from Users (PIN gate) so its key is verified, then approve.';
+      }
+      if (!key.pin || key.pin !== String(acct.pin)) {
+        return `Wrong PIN for ${acct.name}. Hand the phone to that officer.`;
+      }
+      if (String(acct.pin) === '1234') {
+        return `${acct.name} still uses default PIN 1234 — change it (Account → Change PIN) before turning keys.`;
+      }
+      officerName = acct.name;
+    } else if (isDefaultPin(currentUser.pin)) {
+      return 'Change your default PIN 1234 first (Account → Change PIN). Money cannot move on a default PIN.';
     }
     const method = payoutMethod || targetItem.provider || 'Cash';
     const nowIso = new Date().toISOString();
@@ -577,24 +596,23 @@ export function App() {
     // Key 1/2: record first officer, move NO money.
     if (!targetItem.firstApprovedBy) {
       const updatedApprovals = vslaState.approvals.map((item) =>
-        item.id === id ? firstKeyUpdate(item, currentUser.name, nowIso) : item
+        item.id === id ? firstKeyUpdate(item, officerName, nowIso) : item
       );
       persistState(
         withAudit(
           { ...vslaState, approvals: updatedApprovals },
-          currentUser.name,
+          officerName,
           `First key (1/2) for ${targetItem.type.replace(/_/g, ' ')} ${targetItem.reqNumber} via ${method}`,
           `${targetItem.memberName} (#${targetItem.memberNo}) · needs a DIFFERENT officer for key 2/2 · no money moved`,
           targetItem.amount
         )
       );
-      return;
+      return null;
     }
 
     // Same officer cannot turn both keys.
-    if (isSameOfficer(targetItem, currentUser.name)) {
-      alert(`${currentUser.name} already turned key 1/2. A DIFFERENT officer must turn key 2/2.`);
-      return;
+    if (isSameOfficer(targetItem, officerName)) {
+      return `${officerName} already turned key 1/2. A DIFFERENT officer must turn key 2/2.`;
     }
 
     // Key 2/2 by a different officer: move money now.
@@ -618,9 +636,9 @@ export function App() {
             ...item,
             status: 'approved' as const,
             provider: (method === 'MTN' || method === 'Airtel' ? method : item.provider) as 'MTN' | 'Airtel' | 'Cash',
-            decidedBy: `${targetItem.firstApprovedBy} + ${currentUser.name}`,
+            decidedBy: `${targetItem.firstApprovedBy} + ${officerName}`,
             decidedAt: nowIso,
-            secondApprovedBy: currentUser.name,
+            secondApprovedBy: officerName,
             secondApprovedAt: nowIso,
             payoutMethod: method,
           }
@@ -636,12 +654,13 @@ export function App() {
           welfareFundBalance: welfareFund,
           approvals: updatedApprovals,
         },
-        currentUser.name,
+        officerName,
         `Second key (2/2) APPROVED ${targetItem.type.replace(/_/g, ' ')} ${targetItem.reqNumber} via ${method}`,
-        `${targetItem.memberName} (#${targetItem.memberNo}) · keys: ${targetItem.firstApprovedBy} + ${currentUser.name} · payout ${method}`,
+        `${targetItem.memberName} (#${targetItem.memberNo}) · keys: ${targetItem.firstApprovedBy} + ${officerName} · payout ${method}`,
         targetItem.amount
       )
     );
+    return null;
   };
 
   const handleRejectItem = (id: string) => {
@@ -1725,6 +1744,14 @@ export function App() {
             onOpenShareInvite={() => setIsShareInviteOpen(true)}
             language={language}
             simpleMode={simpleMode}
+            queueTotal={vslaState.approvals
+              .filter((a) => a.status === 'pending')
+              .reduce((s, a) => s + (a.amount || 0), 0)}
+            cycle={vslaState.cycle}
+            cycleMonth={vslaState.cycleMonth}
+            totalCycleMonths={vslaState.totalCycleMonths}
+            sharePrice={vslaState.groupProfile?.sharePrice || 10000}
+            totalShares={vslaState.members.reduce((s, m) => s + (m.sharesCount || 0), 0)}
           />
         )}
 
@@ -1736,6 +1763,7 @@ export function App() {
             onCreateSnapshot={handleCreateSnapshot}
             onResetToBaseline={handleResetToBaseline}
             onRefreshFromServer={fetchStateFromServer}
+            language={language}
           />
         )}
 
@@ -1857,6 +1885,7 @@ export function App() {
             dualAuth={authEnforced}
             currentUserName={currentUser.name}
             members={vslaState.members}
+            officers={vslaState.availableAccounts || SEED_ACCOUNTS}
           />
         )}
 
@@ -1870,6 +1899,7 @@ export function App() {
             onBuyShares={handleBuyShares}
             onAddMember={() => setIsAddMemberOpen(true)}
             onUpdatePhoto={handleUpdatePhoto}
+            meetingNo={vslaState.recentMeetingsCount}
             language={language}
             groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
             boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}

@@ -1,26 +1,23 @@
 import React, { useState } from 'react';
-import { ApprovalItem, Member } from '../types';
+import { ApprovalItem, Member, UserAccount } from '../types';
 import { describeKeys, isSameOfficer } from '../utils/dualApproval';
 import { feeNotice } from '../utils/momoFees';
 import { findMemberPhoto } from '../utils/photo';
+import { ledgerHash } from '../utils/ledgerHash';
 import { MemberAvatar } from '../components/MemberAvatar';
+import { ApprovalsKeyModal } from '../components/ApprovalsKeyModal';
 
 interface ApprovalsQueueViewProps {
   approvals: ApprovalItem[];
-  onApprove: (id: string, payoutMethod?: string) => void;
+  /** Returns an error message, or null when the key turned. */
+  onApprove: (id: string, payoutMethod?: string, key?: { officerId: string; pin: string }) => string | null;
   onReject: (id: string) => void;
   dualAuth?: boolean;
   currentUserName?: string;
   /** Member directory for face photos (low-literacy verification). */
   members?: Member[];
-}
-
-interface ApprovalsQueueViewProps {
-  approvals: ApprovalItem[];
-  onApprove: (id: string, payoutMethod?: string) => void;
-  onReject: (id: string) => void;
-  dualAuth?: boolean;
-  currentUserName?: string;
+  /** Accounts allowed to turn keys (verified by their own PIN). */
+  officers?: UserAccount[];
 }
 
 export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
@@ -30,10 +27,12 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
   dualAuth,
   currentUserName = '',
   members = [],
+  officers = [],
 }) => {
   const [filter, setFilter] = useState<'all' | 'vsla_loan' | 'savings_withdrawal' | 'welfare_grant'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [payoutMethods, setPayoutMethods] = useState<Record<string, string>>({});
+  const [keyTargetId, setKeyTargetId] = useState<string | null>(null);
 
   const payoutFor = (item: ApprovalItem) =>
     payoutMethods[item.id] || item.provider || (item.type === 'welfare_grant' ? 'Cash' : 'MTN');
@@ -59,14 +58,29 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
 
   const handleAction = (id: string, action: 'approve' | 'reject', name: string) => {
     if (action === 'approve') {
-      const item = approvals.find((a) => a.id === id);
-      const method = item ? payoutFor(item) : 'Cash';
-      onApprove(id, method);
-      showToast(`Disbursement approved for ${name} via ${method}. Ledger transaction signed.`);
+      // Key ceremony: the officer holding the phone proves who they are.
+      setKeyTargetId(id);
     } else {
       onReject(id);
       showToast(`Request for ${name} rejected.`);
     }
+  };
+
+  const keyTarget = approvals.find((a) => a.id === keyTargetId) || null;
+
+  const handleKeyConfirm = (officerId: string, pin: string): string | null => {
+    if (!keyTarget) return 'Request expired. Close and retry.';
+    const method = payoutFor(keyTarget);
+    const wasSecondKey = !!keyTarget.firstApprovedBy;
+    const err = onApprove(keyTarget.id, method, { officerId, pin });
+    if (err) return err;
+    setKeyTargetId(null);
+    showToast(
+      wasSecondKey
+        ? `Key 2/2 — released to ${keyTarget.memberName} via ${method}.`
+        : `Key 1/2 recorded for ${keyTarget.memberName} — a different officer must turn key 2/2.`
+    );
+    return null;
   };
 
   const showToast = (msg: string) => {
@@ -126,7 +140,8 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
         <div className="bg-surface-container-low border border-border-line rounded-lg p-2.5 flex items-center gap-2">
           <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
           <p className="text-label-sm font-label-sm text-text-muted leading-snug text-xs">
-            Two-key rule: 2 DIFFERENT officers must approve. Key 1/2 moves no money. Key 2/2 releases cash.
+            Two-key rule: 2 DIFFERENT officers must approve. Each turns their key
+            with their own PIN — hand the phone over.
             {dualAuth
               ? ' Sign-in enforced. Every key is stamped with the officer’s name below.'
               : ' Single-device mode: switch account between key 1 and key 2.'}
@@ -625,9 +640,22 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
             sync_saved_locally
           </span>
           Offline Sync Ready • Group Ledger Hash:{' '}
-          <span className="font-mono text-primary font-semibold">9B32-E01</span>
+          <span className="font-mono text-primary font-semibold">{ledgerHash(approvals)}</span>
         </p>
       </div>
+
+      {keyTarget && (
+        <ApprovalsKeyModal
+          isOpen={!!keyTarget}
+          keyLabel={keyTarget.firstApprovedBy ? 'Key 2/2 — releases cash' : 'Key 1/2'}
+          memberLine={`${keyTarget.memberName} (#${keyTarget.memberNo})`}
+          amountText={`UGX ${keyTarget.amount.toLocaleString('en-US')}`}
+          officers={officers}
+          excludeName={keyTarget.firstApprovedBy}
+          onCancel={() => setKeyTargetId(null)}
+          onConfirm={handleKeyConfirm}
+        />
+      )}
     </main>
   );
 };

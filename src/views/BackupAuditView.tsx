@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { VSLAState, BackupSnapshot, ScreenId } from '../types';
+import { VSLAState, BackupSnapshot, Language, ScreenId } from '../types';
 import { formatAuditTime } from '../utils/audit';
+import { RecoverySheetModal } from '../components/RecoverySheetModal';
 
 interface BackupAuditViewProps {
   state: VSLAState;
@@ -9,6 +10,7 @@ interface BackupAuditViewProps {
   onCreateSnapshot: (label: string) => Promise<void>;
   onResetToBaseline: () => Promise<void>;
   onRefreshFromServer: () => Promise<void>;
+  language?: Language;
 }
 
 export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
@@ -18,6 +20,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
   onCreateSnapshot,
   onResetToBaseline,
   onRefreshFromServer,
+  language = 'EN',
 }) => {
   const [snapshotLabel, setSnapshotLabel] = useState('');
   const [pastedJson, setPastedJson] = useState('');
@@ -26,6 +29,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'export' | 'restore' | 'snapshots' | 'audit'>('export');
   const [isCopied, setIsCopied] = useState(false);
+  const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
 
   // Generate downloadable JSON
   const handleDownloadBackup = () => {
@@ -370,6 +374,15 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
               </button>
 
               <button
+                onClick={() => setIsRecoveryOpen(true)}
+                className="w-full py-3 bg-primary text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow active:scale-[0.99] transition"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-base">print</span>
+                {language === 'LU' ? 'Kuba olupapula lw’okuzzaawo' : 'Print recovery sheet'}
+              </button>
+
+              <button
                 onClick={handleCopyClipboard}
                 className="w-full py-2.5 bg-surface-container hover:bg-surface-container-high border border-border-strong text-primary rounded-lg font-semibold text-xs flex items-center justify-center gap-2 active:scale-[0.99] transition"
                 type="button"
@@ -679,6 +692,13 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
           </div>
         )}
       </section>
+
+      <RecoverySheetModal
+        isOpen={isRecoveryOpen}
+        onClose={() => setIsRecoveryOpen(false)}
+        state={state}
+        language={language}
+      />
     </main>
   );
 };

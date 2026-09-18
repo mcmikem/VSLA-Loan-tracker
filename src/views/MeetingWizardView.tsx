@@ -3,6 +3,7 @@ import { Language, Member, ScreenId, ShopProduct, VSLAState } from '../types';
 import { changeDue, displayFineReason, gapNeedsSecondKey, GAP_TWO_KEY_THRESHOLD, STANDARD_FINE_REASONS } from '../utils/policy';
 import { MemberAvatar } from '../components/MemberAvatar';
 import { MemberFaceGrid } from '../components/MemberFaceGrid';
+import { DenomCounter } from '../components/DenomCounter';
 
 export interface WizardShareItem {
   memberId: string;
@@ -498,6 +499,31 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[3]}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">{debtors.length} {str('members owe', 'beebbanja')}</p>
+            {(() => {
+              const entered = debtors.reduce((s, m) => s + Math.max(0, Math.floor(Number(repayInputs[m.id] || 0))), 0);
+              const owed = debtors.reduce((s, m) => s + (m.loanBalance || 0), 0);
+              return (
+                <div className="mt-2 pt-2 border-t border-[#E5E7EB] flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-[#00261b]">
+                    {str('Entered:', 'Oteekeddemu:')} <span className="font-mono">UGX {entered.toLocaleString()}</span>
+                  </span>
+                  <span className="text-[11px] text-[#4B5563]">
+                    {str('of', 'ku')} <span className="font-mono">UGX {owed.toLocaleString()}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const full: Record<string, string> = {};
+                      debtors.forEach((m) => { full[m.id] = String(m.loanBalance || 0); });
+                      setRepayInputs(full);
+                    }}
+                    className="text-[11px] font-bold text-[#006d30] underline shrink-0"
+                  >
+                    {str('Fill all full', 'Jjuza zonna')}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
           {debtors.length === 0 && <p className="text-xs font-bold text-[#166534] bg-[#DCFCE7] rounded-lg p-3">{str('No outstanding loans. All clean!', 'Tewali bbanja!')}</p>}
           {debtors.map((m) => (
@@ -510,13 +536,23 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                     <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja')} UGX {m.loanBalance.toLocaleString()}</p>
                   </div>
                 </div>
-                <input
-                  value={repayInputs[m.id] || ''}
-                  onChange={(e) => setRepayInputs({ ...repayInputs, [m.id]: e.target.value })}
-                  inputMode="numeric"
-                  placeholder="UGX"
-                  className="w-28 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono text-right"
-                />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <input
+                    value={repayInputs[m.id] || ''}
+                    onChange={(e) => setRepayInputs({ ...repayInputs, [m.id]: e.target.value })}
+                    inputMode="numeric"
+                    placeholder="UGX"
+                    className="w-24 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono text-right"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setRepayInputs({ ...repayInputs, [m.id]: String(m.loanBalance || 0) })}
+                    className="px-2 min-h-[44px] rounded-lg bg-[#F6F7F6] border border-[#E5E7EB] text-[11px] font-bold text-[#006d30]"
+                    title={str('Fill full balance', 'Jjuza zonna')}
+                  >
+                    {str('Full', 'Zonna')}
+                  </button>
+                </div>
               </div>
               {changeDue(Number(repayInputs[m.id] || 0), m.loanBalance) > 0 && (
                 <p className="text-[11px] font-bold text-[#92400E] bg-[#FEF3C7] rounded-lg p-2">
@@ -670,6 +706,10 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
             <label className="text-xs font-bold text-[#00261b] block">{str('Physical cash counted', 'Ssente ezibaliddwa')} (UGX)</label>
             <input value={draft.counted} onChange={(e) => patch({ counted: e.target.value, gapFirstBy: undefined })} inputMode="numeric" placeholder="e.g. 1450000" className="w-full min-h-[52px] border-2 border-[#00261b] rounded-lg px-3 font-mono text-lg" />
+            <DenomCounter
+              language={language}
+              onTotal={(t) => patch({ counted: String(t), gapFirstBy: undefined })}
+            />
             {draft.counted !== '' && (
               <div className={`p-3 rounded-lg text-xs font-bold ${difference === 0 ? 'bg-[#DCFCE7] text-[#166534]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
                 {difference === 0

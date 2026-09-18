@@ -104,6 +104,8 @@ export const translations = {
       simpleHelp: 'Lost? Tap Help below — or ask your secretary.',
       simpleSaveBackup: 'Save Backup',
       simpleSaveBackupSub: 'Keep a copy after the meeting',
+      membersLabel: 'Members',
+      boxNow: 'Box now',
     },
     // Member Passbook View
     passbook: {
@@ -340,6 +342,8 @@ export const translations = {
       simpleHelp: 'Obuze? Nyiga Buyambi wansi — oba buuza omuwandiisi.',
       simpleSaveBackup: 'Kuuma Kkopi',
       simpleSaveBackupSub: 'Kweka kkopi oluvannyuma lw\'olukuŋŋaana',
+      membersLabel: 'Abakiise',
+      boxNow: 'Sanduuko kati',
     },
     // Member Passbook View (Oluganda)
     passbook: {
