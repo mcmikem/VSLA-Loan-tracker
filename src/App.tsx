@@ -57,6 +57,7 @@ import { ShareOutResult } from './utils/shareout';
 import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
 import { isDefaultPin } from './utils/pin';
 import { PublicDisplayModal } from './components/PublicDisplayModal';
+import { LanguagePicker } from './components/LanguagePicker';
 import { LoginView } from './views/LoginView';
 import { apiFetch, fetchAuthStatus, getSessionToken, setSessionToken } from './utils/api';
 
@@ -106,6 +107,14 @@ export function App() {
   const [simpleMode, setSimpleMode] = useState<boolean>(() => {
     try {
       return localStorage.getItem('vsla_simple_mode') !== '0';
+    } catch {
+      return true;
+    }
+  });
+  // First-run language picker: show once until the user chooses.
+  const [langChosen, setLangChosen] = useState<boolean>(() => {
+    try {
+      return !!localStorage.getItem('vsla_lang');
     } catch {
       return true;
     }
@@ -529,10 +538,12 @@ export function App() {
       } catch {}
       return next;
     });
+    setLangChosen(true);
   };
 
   const handleSelectLanguage = (lang: Language) => {
     setLanguage(lang);
+    setLangChosen(true);
     try {
       localStorage.setItem('vsla_lang', lang);
     } catch {}
@@ -1996,6 +2007,8 @@ export function App() {
         onClose={() => setIsPublicDisplayOpen(false)}
         state={vslaState}
       />
+
+      {!langChosen && <LanguagePicker onPick={handleSelectLanguage} />}
 
       {/* Universal Sticky Bottom Navigation Bar */}
       <BottomNavBar

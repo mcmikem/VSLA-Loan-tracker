@@ -44,6 +44,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const formatUGX = (num: number) => num.toLocaleString('en-US');
   const t = getTranslations(language);
+  // Bilingual safety net: every primary label carries the other language
+  // underneath, so a wrong Luganda string never strands anyone.
+  const tOther = getTranslations(language === 'LU' ? 'EN' : 'LU');
+  const dual = (primary: string, secondary: string) => (
+    <span className="text-left leading-tight">
+      <span className="block">{primary}</span>
+      <span className="block text-xs font-normal opacity-70">{secondary}</span>
+    </span>
+  );
 
   // ---- SIMPLE MODE: what a village member needs on Friday, nothing else ----
   if (simpleMode) {
@@ -109,7 +118,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-[#15803D] text-white rounded-xl font-bold text-lg shadow active:scale-[0.99]"
           >
             <span className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-xl shrink-0">1</span>
-            <span className="text-left">{t.home.startMeeting}</span>
+            {dual(t.home.startMeeting, tOther.home.startMeeting)}
             <span className="material-symbols-outlined ml-auto">arrow_forward</span>
           </button>
           <button
@@ -118,7 +127,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-surface-card border-2 border-border-strong rounded-xl font-bold text-lg text-primary shadow-sm active:scale-[0.99]"
           >
             <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl shrink-0">2</span>
-            <span className="text-left">{t.nav.members}</span>
+            {dual(t.nav.members, tOther.nav.members)}
             <span className="material-symbols-outlined ml-auto">arrow_forward</span>
           </button>
           <button
@@ -127,7 +136,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-surface-card border-2 border-border-strong rounded-xl font-bold text-lg text-primary shadow-sm active:scale-[0.99]"
           >
             <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl shrink-0">3</span>
-            <span className="text-left">{t.nav.approvals}</span>
+            {dual(t.nav.approvals, tOther.nav.approvals)}
             {pendingApprovalsCount > 0 && (
               <span className="ml-1 px-2 py-0.5 rounded-full bg-status-warn-bg text-status-warn-tx text-xs font-bold border border-[#FDE68A]">
                 {pendingApprovalsCount}
@@ -144,6 +153,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <span className="text-left">
               <span className="block">{t.home.simpleSaveBackup}</span>
               <span className="block text-xs font-normal text-text-muted">{t.home.simpleSaveBackupSub}</span>
+              <span className="block text-xs font-normal opacity-70">{tOther.home.simpleSaveBackup}</span>
             </span>
           </button>
         </section>
