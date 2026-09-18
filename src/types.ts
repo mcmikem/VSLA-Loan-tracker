@@ -226,6 +226,8 @@ export interface GroupProfile {
   createdAt: string;
   adminName: string;
   adminPhone: string;
+  /** Group's own logo (compressed data URL). Replaces VSLA branding in-app. */
+  logoUrl?: string;
 }
 
 export interface GroupSummary {

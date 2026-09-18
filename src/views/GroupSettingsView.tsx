@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ScreenId } from '../types';
+import { fileToAvatarDataUrl } from '../utils/photo';
+import { GroupLogo } from '../components/GroupLogo';
 
 export interface GroupSettingsPatch {
   groupName: string;
@@ -9,6 +11,7 @@ export interface GroupSettingsPatch {
   sharePrice: number;
   welfareMonthly: number;
   totalCycleMonths: number;
+  logoUrl?: string;
 }
 
 interface GroupSettingsViewProps {
@@ -21,6 +24,7 @@ interface GroupSettingsViewProps {
   totalCycleMonths: number;
   inviteCode: string;
   membersCount: number;
+  logoUrl?: string;
   onSave: (patch: GroupSettingsPatch) => void;
   onNavigate: (screen: ScreenId) => void;
 }
@@ -36,6 +40,7 @@ export const GroupSettingsView: React.FC<GroupSettingsViewProps> = ({
   totalCycleMonths,
   inviteCode,
   membersCount,
+  logoUrl,
   onSave,
   onNavigate,
 }) => {
@@ -47,11 +52,30 @@ export const GroupSettingsView: React.FC<GroupSettingsViewProps> = ({
     sharePrice,
     welfareMonthly,
     totalCycleMonths,
+    logoUrl: logoUrl || '',
   });
   const [saved, setSaved] = useState(false);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
   const set = (k: keyof GroupSettingsPatch, v: string | number) => {
     setForm({ ...form, [k]: v });
     setSaved(false);
+  };
+
+  const pickLogo = async (file: File | undefined) => {
+    if (!file) return;
+    setLogoBusy(true);
+    setLogoError(null);
+    try {
+      const url = await fileToAvatarDataUrl(file);
+      setForm({ ...form, logoUrl: url });
+      setSaved(false);
+    } catch (e: any) {
+      setLogoError(e.message || 'Logo failed.');
+    } finally {
+      setLogoBusy(false);
+    }
   };
   const inputCls = 'w-full min-h-[44px] border border-border-strong rounded-lg px-3 text-sm bg-white text-primary';
 
@@ -97,6 +121,40 @@ export const GroupSettingsView: React.FC<GroupSettingsViewProps> = ({
       )}
 
       <form onSubmit={submit} className="bg-surface-card border border-border-line rounded-xl p-4 space-y-3">
+        <div>
+          <label className="text-[11px] font-bold text-text-muted uppercase block mb-1">Group logo</label>
+          <div className="flex items-center gap-3">
+            <GroupLogo logoUrl={form.logoUrl || undefined} alt={form.groupName} className="w-14 h-14 rounded-xl border border-border-strong" />
+            <div className="flex-1 space-y-1.5">
+              <button
+                type="button"
+                onClick={() => logoRef.current?.click()}
+                disabled={logoBusy}
+                className="px-3 py-2 bg-surface-container border border-border-strong text-primary rounded-lg text-xs font-bold active:scale-95 disabled:opacity-50"
+              >
+                {logoBusy ? '…' : form.logoUrl ? 'Change logo' : 'Upload logo'}
+              </button>
+              {form.logoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, logoUrl: '' })}
+                  className="block text-[11px] font-bold text-text-muted underline"
+                >
+                  Use VSLA logo instead
+                </button>
+              )}
+            </div>
+            <input
+              ref={logoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => pickLogo(e.target.files?.[0])}
+            />
+          </div>
+          {logoError && <p className="text-[11px] font-bold text-status-bad-tx">{logoError}</p>}
+          <p className="text-[11px] text-text-muted mt-1">Your logo replaces the VSLA mark everywhere in this app — top bar, sign-in, receipts.</p>
+        </div>
         <div>
           <label className="text-[11px] font-bold text-text-muted uppercase block mb-1">Group name</label>
           <input value={form.groupName} onChange={(e) => set('groupName', e.target.value)} className={inputCls} />

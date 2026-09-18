@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ScreenId, UserAccount } from '../types';
 import { setSessionToken } from '../utils/api';
+import { GroupLogo } from '../components/GroupLogo';
 
 interface LoginViewProps {
   accounts: UserAccount[];
@@ -10,6 +11,7 @@ interface LoginViewProps {
   initialAccountId?: string;
   onLogin: (account: UserAccount) => void;
   onNavigate?: (screen: ScreenId) => void;
+  logoUrl?: string;
 }
 
 /** PIN gate shown when the server enforces auth (SESSION_SECRET set). */
@@ -20,6 +22,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   groupId,
   initialAccountId,
   onLogin,
+  logoUrl,
 }) => {
   const [selectedId, setSelectedId] = useState(initialAccountId || accounts[0]?.id || '');
   const [pin, setPin] = useState('');
@@ -61,8 +64,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
   return (
     <main className="w-full max-w-sm mx-auto px-4 pt-10 pb-12 flex-1">
       <div className="text-center space-y-1 mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-[#0b3d2e] text-white flex items-center justify-center mx-auto shadow">
-          <span className="material-symbols-outlined text-3xl">lock</span>
+        <div className="flex justify-center">
+          <GroupLogo logoUrl={logoUrl} alt={groupName} className="w-14 h-14 rounded-2xl shadow" />
         </div>
         <h1 className="font-bold text-primary text-lg">{groupName}</h1>
         <p className="text-xs text-text-muted font-mono">{boxIdentifier} · sign in with your PIN</p>

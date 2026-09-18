@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GroupSummary, Language, UserAccount } from '../types';
 import { LANGUAGE_OPTIONS, getTranslations } from '../i18n/translations';
+import { GroupLogo } from './GroupLogo';
 
 interface TopAppBarProps {
   language: Language;
@@ -22,6 +23,8 @@ interface TopAppBarProps {
   onOpenShareInvite?: () => void;
   /** Simple Mode: hide multi-group SaaS actions. Default ON. */
   simpleMode?: boolean;
+  /** Group's own logo (Settings) — replaces the VSLA mark. */
+  logoUrl?: string;
 }
 
 export const TopAppBar: React.FC<TopAppBarProps> = ({
@@ -42,6 +45,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
   onOpenGroupModal,
   onOpenShareInvite,
   simpleMode = true,
+  logoUrl,
 }) => {
   const [showBoxDropdown, setShowBoxDropdown] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
@@ -59,9 +63,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
       <div className="flex justify-between items-center w-full px-4 h-14 max-w-lg mx-auto">
         {/* Leading Icon + Group Title */}
         <div className="flex items-center gap-2 overflow-hidden">
-          <div className="w-8 h-8 rounded-lg bg-primary-container text-white flex items-center justify-center shrink-0 shadow-sm">
-            <span className="material-symbols-outlined text-[20px]">lock</span>
-          </div>
+          <GroupLogo logoUrl={logoUrl} alt={t.topBar.appName} className="w-8 h-8 rounded-lg" />
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5">
               <h1 className="text-headline-sm font-headline-sm font-bold text-primary tracking-tight truncate">

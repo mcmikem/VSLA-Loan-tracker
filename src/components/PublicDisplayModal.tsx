@@ -1,6 +1,7 @@
 import React from 'react';
 import { VSLAState } from '../types';
 import { buildMeetingSms, smsLink, waLink } from '../utils/summary';
+import { GroupLogo } from './GroupLogo';
 
 interface Props {
   isOpen: boolean;
@@ -23,6 +24,9 @@ export const PublicDisplayModal: React.FC<Props> = ({ isOpen, onClose, state }) 
         onClick={(e) => e.stopPropagation()}
       >
         <p className="text-center text-xs font-bold tracking-widest">PUBLIC — SHOW TO ALL MEMBERS</p>
+        <div className="flex justify-center">
+          <GroupLogo logoUrl={state.groupProfile?.logoUrl} alt={state.groupName} className="w-12 h-12 rounded-xl" />
+        </div>
         <h2 className="text-center text-xl font-bold">{state.groupName} · Mtg #{state.recentMeetingsCount}</h2>
         <div className="space-y-2 text-center">
           <div className="border-2 border-black rounded-xl p-3">

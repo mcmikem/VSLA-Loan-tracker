@@ -58,6 +58,7 @@ import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
 import { isDefaultPin } from './utils/pin';
 import { PublicDisplayModal } from './components/PublicDisplayModal';
 import { LanguagePicker } from './components/LanguagePicker';
+import { BootSplash } from './components/BootSplash';
 import { LoginView } from './views/LoginView';
 import { apiFetch, fetchAuthStatus, getSessionToken, setSessionToken } from './utils/api';
 
@@ -1578,11 +1579,12 @@ export function App() {
             meetingDay: patch.meetingDay,
             sharePrice: patch.sharePrice,
             welfareMonthly: patch.welfareMonthly,
+            logoUrl: patch.logoUrl || undefined,
           },
         },
         currentUser.name,
         'Updated group settings',
-        `${patch.groupName} · ${patch.boxIdentifier} · share UGX ${patch.sharePrice.toLocaleString()}`,
+        `${patch.groupName} · ${patch.boxIdentifier} · share UGX ${patch.sharePrice.toLocaleString()}${patch.logoUrl ? ' · new logo' : ''}`,
         undefined
       )
     );
@@ -1604,6 +1606,7 @@ export function App() {
           groupId={currentGroupId}
           initialAccountId={loginPreselectId}
           onLogin={handleLogin}
+          logoUrl={vslaState.groupProfile?.logoUrl}
         />
       </div>
     );
@@ -1718,6 +1721,7 @@ export function App() {
         }}
         onOpenShareInvite={() => setIsShareInviteOpen(true)}
         simpleMode={simpleMode}
+        logoUrl={vslaState.groupProfile?.logoUrl}
       />
 
       {/* Screen Router */}
@@ -1831,6 +1835,7 @@ export function App() {
             totalCycleMonths={vslaState.totalCycleMonths || 10}
             inviteCode={vslaState.inviteCode || vslaState.groupProfile?.inviteCode || 'BAK-4290'}
             membersCount={vslaState.members.length}
+            logoUrl={vslaState.groupProfile?.logoUrl}
             onSave={handleUpdateGroupSettings}
             onNavigate={handleNavigateScreen}
           />
@@ -2036,6 +2041,11 @@ export function App() {
         isOpen={isPublicDisplayOpen}
         onClose={() => setIsPublicDisplayOpen(false)}
         state={vslaState}
+      />
+
+      <BootSplash
+        logoUrl={vslaState.groupProfile?.logoUrl}
+        groupName={vslaState.groupName || vslaState.groupProfile?.name}
       />
 
       {!langChosen && <LanguagePicker onPick={handleSelectLanguage} />}
