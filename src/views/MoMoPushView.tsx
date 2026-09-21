@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Language, ScreenId } from '../types';
 import { feeNotice } from '../utils/momoFees';
+import { apiFetch } from '../utils/api';
 
 interface MoMoPushViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -23,12 +24,15 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
   const [momoMode, setMomoMode] = useState<'sandbox' | 'live'>('sandbox');
   const [momoHint, setMomoHint] = useState<string | null>(null);
   const [txnId, setTxnId] = useState('MM-98421034');
+  const [providerTransactionId, setProviderTransactionId] = useState<string | null>(null);
+  const [momoError, setMomoError] = useState<string | null>(null);
+  const settledRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch('/api/momo/config');
+        const res = await apiFetch('/api/momo/config');
         if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
@@ -44,57 +48,99 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
   }, []);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (status === 'waiting_pin') {
+    if (status !== 'waiting_pin') return undefined;
+    let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const numericAmt = parseInt(amount.replace(/,/g, ''), 10) || 50000;
+    const complete = () => {
+      if (cancelled || settledRef.current) return;
+      settledRef.current = true;
+      setStatus('confirmed');
+      onSuccessTransaction?.(numericAmt, `${purpose} for ${memberName}`);
+    };
+
+    if (momoMode === 'sandbox') {
       interval = setInterval(() => {
         setTimerSeconds((prev) => {
-          if (prev <= 1) {
-            setStatus('confirmed');
-            const numericAmt = parseInt(amount.replace(/,/g, ''), 10) || 50000;
-            if (onSuccessTransaction) {
-              onSuccessTransaction(numericAmt, `${purpose} for ${memberName}`);
-            }
-            return 0;
-          }
-          if (prev === 52) {
-            // Auto complete in simulation after 8 seconds
-            setStatus('confirmed');
-            const numericAmt = parseInt(amount.replace(/,/g, ''), 10) || 50000;
-            if (onSuccessTransaction) {
-              onSuccessTransaction(numericAmt, `${purpose} for ${memberName}`);
-            }
+          if (prev <= 1 || prev === 52) {
+            complete();
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
+    } else if (providerTransactionId) {
+      const poll = async () => {
+        try {
+          const res = await apiFetch(
+            `/api/momo/status?network=${encodeURIComponent(network)}&transactionId=${encodeURIComponent(providerTransactionId)}`
+          );
+          const data = await res.json().catch(() => ({}));
+          if (cancelled) return;
+          if (data.status === 'confirmed') complete();
+          else if (data.status === 'failed') {
+            setMomoError('The mobile-money request was declined or expired. No money was taken.');
+            setStatus('failed');
+          }
+        } catch {
+          // Keep polling until the visible 60-second window expires.
+        }
+      };
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => {
+          if (prev <= 1) {
+            setMomoError('No confirmation arrived within 60 seconds. Check the member phone before retrying.');
+            setStatus('failed');
+            return 0;
+          }
+          return prev - 1;
+        });
+        void poll();
+      }, 3000);
+      void poll();
     }
-    return () => clearInterval(interval);
-  }, [status, amount, purpose, memberName, onSuccessTransaction]);
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+    };
+  }, [status, momoMode, providerTransactionId, network, amount, purpose, memberName, onSuccessTransaction]);
 
   const handleSendPush = () => {
     setStatus('pushing');
+    setMomoError(null);
+    setProviderTransactionId(null);
+    settledRef.current = false;
     const numericAmt = parseInt(amount.replace(/,/g, ''), 10) || 50000;
-    fetch('/api/momo/push', {
+    apiFetch('/api/momo/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ network, phone: phoneNumber, amount: numericAmt, memberName, purpose }),
     })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.transactionId) setTxnId(data.transactionId);
-        if (data?.mode === 'live') setMomoMode('live');
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) throw new Error(data.error || 'MoMo request failed. No money was taken.');
+        return data;
       })
-      .catch(() => {})
-      .finally(() => {
-        setStatus('waiting_pin');
+      .then((data) => {
+        setTxnId(data.transactionId);
+        setProviderTransactionId(data.mode === 'live' ? data.transactionId : null);
+        setMomoMode(data.mode === 'live' ? 'live' : 'sandbox');
         setTimerSeconds(60);
+        setStatus('waiting_pin');
+      })
+      .catch((error: Error) => {
+        setMomoError(error.message || 'MoMo request failed. No money was taken.');
+        setStatus('failed');
       });
   };
 
   const handleReset = () => {
     setStatus('idle');
     setTimerSeconds(60);
+    setProviderTransactionId(null);
+    setMomoError(null);
+    settledRef.current = false;
   };
 
   return (
@@ -122,7 +168,7 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
       </div>
       {momoMode === 'sandbox' && (
         <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-          {momoHint || 'Sandbox simulation — no real money moves. Add your MTN/Airtel keys (.env: MTN_MOMO_SUBSCRIPTION_KEY, MTN_MOMO_API_KEY, AIRTEL_CLIENT_ID, AIRTEL_CLIENT_SECRET, MOMO_LIVE=1) to go live.'}
+          {momoHint || 'Sandbox simulation — no real money moves. Add both provider credentials and MOMO_LIVE=1 to go live.'}
         </p>
       )}
 
@@ -268,9 +314,13 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
                 sync
               </span>
               <div>
-                <h3 className="font-bold text-amber-900 text-sm">USSD Push Sent to Member Phone</h3>
+                <h3 className="font-bold text-amber-900 text-sm">
+                  {momoMode === 'live' ? 'Live MoMo Prompt Sent' : 'USSD Push Sent to Member Phone'}
+                </h3>
                 <p className="text-xs text-amber-800">
-                  Waiting for {memberName} to enter Mobile Money PIN...
+                  {momoMode === 'live'
+                    ? `Waiting for ${memberName} to approve the prompt on their phone...`
+                    : `Waiting for ${memberName} to enter Mobile Money PIN...`}
                 </p>
               </div>
             </div>
@@ -279,27 +329,49 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
             </span>
           </div>
 
-          {/* Simulated phone screen preview */}
-          <div className="bg-[#1E293B] text-white rounded-lg p-3 font-mono text-xs space-y-1 shadow-inner">
-            <p className="text-yellow-400 font-bold">{network} MoMo Payment Request:</p>
-            <p>Pay UGX {amount} to Bakwata Savings Group?</p>
-            <p className="text-slate-400">Ref: {purpose.split(' ')[0]}</p>
-            <div className="flex items-center justify-between pt-1 border-t border-slate-700 text-[11px]">
-              <span className="text-emerald-400">{language === 'LU' ? 'Yingiza koodi' : '1. Enter PIN to Authorize'}</span>
-              <button
-                onClick={() => {
-                  setStatus('confirmed');
-                  const numericAmt = parseInt(amount.replace(/,/g, ''), 10) || 50000;
-                  if (onSuccessTransaction) {
-                    onSuccessTransaction(numericAmt, `${purpose} for ${memberName}`);
-                  }
-                }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded font-bold"
-              >
-                Simulate PIN Entry (Instant)
-              </button>
+          {momoMode === 'live' ? (
+            <div className="bg-white/80 rounded-lg p-3 text-xs text-amber-900 border border-amber-200 space-y-1">
+              <p className="font-bold">Ask the member to approve the prompt on their phone.</p>
+              <p className="font-mono text-[11px] break-all">Reference: {providerTransactionId || txnId}</p>
+              <p className="text-[11px]">The ledger updates only after the provider confirms payment.</p>
+            </div>
+          ) : (
+            <div className="bg-[#1E293B] text-white rounded-lg p-3 font-mono text-xs space-y-1 shadow-inner">
+              <p className="text-yellow-400 font-bold">{network} MoMo Payment Request:</p>
+              <p>Pay UGX {amount} to Bakwata Savings Group?</p>
+              <p className="text-slate-400">Ref: {purpose.split(' ')[0]}</p>
+              <div className="flex items-center justify-between pt-1 border-t border-slate-700 text-[11px]">
+                <span className="text-emerald-400">{language === 'LU' ? 'Yingiza koodi' : '1. Enter PIN to Authorize'}</span>
+                <button
+                  onClick={() => {
+                    if (settledRef.current) return;
+                    settledRef.current = true;
+                    setStatus('confirmed');
+                    const numericAmt = parseInt(amount.replace(/,/g, ''), 10) || 50000;
+                    onSuccessTransaction?.(numericAmt, `${purpose} for ${memberName}`);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded font-bold"
+                >
+                  Simulate PIN Entry (Instant)
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {status === 'failed' && (
+        <section className="bg-red-50 border-2 border-red-200 rounded-xl p-4 shadow-sm space-y-3 animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-red-700 text-2xl">error</span>
+            <div>
+              <h3 className="font-bold text-red-900 text-sm">MoMo collection not confirmed</h3>
+              <p className="text-xs text-red-800">{momoError || 'No money was taken. Check the phone and try again.'}</p>
             </div>
           </div>
+          <button type="button" onClick={handleReset} className="w-full py-2.5 bg-white border border-red-300 text-red-900 text-xs font-bold rounded-lg">
+            Try Again
+          </button>
         </section>
       )}
 
@@ -318,7 +390,7 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
           </div>
           <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200 text-xs font-mono flex justify-between">
             <span>Txn ID: {txnId}</span>
-            <span className="text-secondary font-bold">STATUS: SUCCESS{momoMode === 'sandbox' ? ' · SANDBOX' : ''}</span>
+            <span className="text-secondary font-bold">STATUS: SUCCESS · {momoMode === 'sandbox' ? 'SANDBOX' : 'LIVE'}</span>
           </div>
           <div className="flex gap-2">
             <button

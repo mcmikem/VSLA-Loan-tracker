@@ -65,6 +65,7 @@ import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
 import { mergePhotosIntoRestored, stripPhotosForSnapshot } from './utils/photo';
 import { isDefaultPin } from './utils/pin';
 import { PublicDisplayModal } from './components/PublicDisplayModal';
+import { WelcomeView } from './components/WelcomeView';
 import { DefaultPinGate } from './components/DefaultPinGate';
 import { LanguagePicker } from './components/LanguagePicker';
 import { BootSplash } from './components/BootSplash';
@@ -301,6 +302,27 @@ export function App() {
     await fetchStateFromServer(groupId);
   };
 
+  // Sign in with fresh credentials (welcome gate: just registered/joined).
+  // Returns true when a session token was stored.
+  const loginWithCredentials = async (groupId: string, accountId: string, pin: string): Promise<boolean> => {
+    try {
+      const res = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, accountId, pin }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.token) {
+        setSessionToken(data.token);
+        setSessionTokenState(data.token);
+        return true;
+      }
+    } catch {
+      /* offline — caller keeps local flow */
+    }
+    return false;
+  };
+
   const handleCreateGroup = async (payload: CreateGroupPayload) => {
     const applyState = (state: VSLAState, gid: string) => {
       setVslaState(state);
@@ -321,6 +343,10 @@ export function App() {
       if (res.ok && data.success) {
         await fetchGroupsList();
         if (data.state) applyState({ ...data.state, pendingSync: false }, data.groupId);
+        // Sessionless (welcome gate): sign straight in with the PIN just set.
+        if (!getSessionToken() && data.account?.id) {
+          await loginWithCredentials(data.groupId, data.account.id, payload.adminPin);
+        }
         return { success: true, group: data.group, inviteCode: data.group?.inviteCode };
       } else {
         return { success: false, error: data.error || 'Failed to create savings group' };
@@ -376,8 +402,7 @@ export function App() {
     }
   };
 
-  const handleJoinGroup = async (payload: JoinGroupPayload) => {
-    try {
+  const handleJoinGroup = async (payload: JoinGroupPayload) => {    try {
       const res = await apiFetch('/api/groups/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -394,6 +419,10 @@ export function App() {
             localStorage.setItem('bakwata_vsla_state', JSON.stringify(data.state));
             localStorage.setItem('bakwata_active_group_id', data.groupId);
           } catch (e) {}
+        }
+        // Sessionless (welcome gate): sign straight in with the PIN just set.
+        if (!getSessionToken() && data.account?.id) {
+          await loginWithCredentials(data.groupId, data.account.id, payload.pin);
         }
         return { success: true, groupName: data.groupName, memberNo: data.memberNo };
       } else {
@@ -1817,22 +1846,21 @@ export function App() {
   const fundsTotal = totalFunds(vslaState);
   const isMemberSelfService = currentUser.role === 'member' && !!myMember;
 
-  // PIN gate: when the server enforces auth, no app content without a session.
-  if (authEnforced && !sessionToken) {
+  // Entry gate: strangers get real paths (join / register / sign in) plus a
+  // clearly-labeled demo door. Seed accounts never greet real users.
+  if (authEnforced && !sessionToken && !isPractice) {
     return (
-      <div className="min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans">
-        <LoginView
-          key={loginPreselectId || 'login'}
-          accounts={vslaState.availableAccounts || SEED_ACCOUNTS}
-          groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
-          boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}
-          groupId={currentGroupId}
-          initialAccountId={loginPreselectId}
-          onLogin={handleLogin}
-          logoUrl={vslaState.groupProfile?.logoUrl}
-          language={language}
-        />
-      </div>
+      <WelcomeView
+        language={language}
+        onEnterPractice={handleEnterPractice}
+        onLogin={handleLogin}
+        availableGroups={availableGroups}
+        currentGroupId={currentGroupId}
+        onSelectGroup={handleSelectGroup}
+        onCreateGroup={handleCreateGroup}
+        onJoinGroup={handleJoinGroup}
+        logoUrl={vslaState.groupProfile?.logoUrl}
+      />
     );
   }
 
