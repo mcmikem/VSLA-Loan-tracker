@@ -279,6 +279,9 @@ export function App() {
       if (res.ok) {
         setIsServerConnected(true);
         fetchGroupsList();
+      } else if (res.status === 403) {
+        // Forbidden (e.g. member rank) still proves the server is reachable.
+        setIsServerConnected(true);
       } else {
         setIsServerConnected(false);
       }
@@ -442,6 +445,27 @@ export function App() {
       setSelectedMemberId(account.memberId);
     }
     await persistState({ ...vslaState, currentUser: account });
+    // Pull the shared ledger now that we hold a session (cross-device sync),
+    // keeping THIS login as the current user — never the server's stale one.
+    try {
+      const res = await apiFetch(`/api/state?groupId=${currentGroupId}`, {
+        headers: { 'x-group-id': currentGroupId },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state && Array.isArray(data.state.members)) {
+          const merged: VSLAState = { ...data.state, groupId: currentGroupId, currentUser: account };
+          setVslaState(merged);
+          try {
+            localStorage.setItem('bakwata_vsla_state', JSON.stringify(merged));
+            localStorage.setItem('bakwata_active_group_id', currentGroupId);
+          } catch {}
+          setIsServerConnected(true);
+        }
+      }
+    } catch {
+      /* offline — local seed stands */
+    }
     setCurrentScreen('home');
     setActiveTab('home');
   };
@@ -787,11 +811,11 @@ export function App() {
     return null;
   };
 
-  const handleRejectItem = (id: string) => {
+  const handleRejectItem = (id: string, reason?: string) => {
     const targetItem = vslaState.approvals.find((a) => a.id === id);
     const updatedApprovals = vslaState.approvals.map((item) =>
       item.id === id
-        ? { ...item, status: 'rejected' as const, decidedBy: currentUser.name, decidedAt: new Date().toISOString() }
+        ? { ...item, status: 'rejected' as const, decidedBy: currentUser.name, decidedAt: new Date().toISOString(), rejectReason: reason || undefined }
         : item
     );
     persistState(
@@ -802,7 +826,7 @@ export function App() {
         },
         currentUser.name,
         `Rejected ${targetItem?.type.replace(/_/g, ' ') || 'request'} ${targetItem?.reqNumber || ''}`,
-        `${targetItem?.memberName || 'Unknown'} (#${targetItem?.memberNo || '-'})`,
+        `${targetItem?.memberName || 'Unknown'} (#${targetItem?.memberNo || '-'})${reason ? ` — ${reason}` : ''}`,
         targetItem?.amount
       )
     );
@@ -1744,6 +1768,13 @@ export function App() {
               id: currentGroupId,
               name: patch.groupName,
               boxIdentifier: patch.boxIdentifier,
+              cycle: vslaState.cycle,
+              cycleMonth: vslaState.cycleMonth,
+              totalCycleMonths: patch.totalCycleMonths,
+              location: patch.location,
+              meetingDay: patch.meetingDay,
+              sharePrice: patch.sharePrice,
+              welfareMonthly: patch.welfareMonthly,
               inviteCode: vslaState.inviteCode || 'BAK-4290',
               plan: 'pro' as const,
               createdAt: new Date().toISOString(),
@@ -2138,6 +2169,7 @@ export function App() {
             currentUserName={currentUser.name}
             momoBalance={funds.momo}
             bankBalance={funds.bank}
+            groupId={currentGroupId}
           />
         )}
 
@@ -2196,6 +2228,8 @@ export function App() {
             groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
             boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || 'BOX-KLA-042'}
             issuerName={currentUser.name}
+            viewerMemberId={myMember?.id}
+            viewerIsOfficer={currentUser.role !== 'member'}
           />
         )}
 

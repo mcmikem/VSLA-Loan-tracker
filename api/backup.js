@@ -11,33 +11,54 @@
 import { getSeedForGroup, resolveGroupId } from '../lib/_seed.js';
 import { cors, rateLimit } from '../lib/_lib.js';
 import { actorName, requireRole } from '../lib/_auth.js';
-import { saveGroup } from '../lib/_db.js';
+import { loadGroup, saveGroup } from '../lib/_db.js';
+
+/** Exports never carry secrets — strip account PINs (hashes included). */
+function stripSecrets(group) {
+  const copy = JSON.parse(JSON.stringify(group));
+  if (Array.isArray(copy.availableAccounts)) {
+    copy.availableAccounts = copy.availableAccounts.map((a) => {
+      const { pin: _omit, ...safe } = a || {};
+      return safe;
+    });
+  }
+  if (copy.currentUser && typeof copy.currentUser === 'object') {
+    const { pin: _omit, ...safe } = copy.currentUser;
+    copy.currentUser = safe;
+  }
+  return copy;
+}
 
 function handleExport(req, res) {
   if (!cors(req, res, 'GET,OPTIONS')) return;
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const groupId = resolveGroupId(req);
-  const currentData = getSeedForGroup(groupId);
-  if (req.query?.download === 'true') {
-    const filename = `${groupId}_vsla_backup_${new Date().toISOString().split('T')[0]}.json`;
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  }
-  return res.status(200).json({
-    schemaVersion: '2.0-VSLA-OFFLINE',
-    app: 'Bakwata Village Savings and Loan Association Digital Passbook',
-    groupId,
-    groupName: currentData.groupName || 'Bakwata Savings Group',
-    boxIdentifier: currentData.boxIdentifier || 'BOX-KLA-042',
+  // Full ledger incl. phones/balances/audit: members only, once enforced.
+  const session = requireRole(req, res, 'member');
+  if (session === undefined) return;
+  return loadGroup(groupId).then((live) => {
+    const currentData = live && live.members ? live : getSeedForGroup(groupId);
+    const safe = stripSecrets(currentData);
+    if (req.query?.download === 'true') {
+      const filename = `${groupId}_vsla_backup_${new Date().toISOString().split('T')[0]}.json`;
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    }
+    return res.status(200).json({
+      success: true,
+      groupId,
+      groupName: safe.groupName || 'Bakwata Savings Group',
+      boxIdentifier: safe.boxIdentifier || 'BOX-KLA-042',
     exportedAt: new Date().toISOString(),
     recordCounts: {
-      members: currentData.members?.length || 0,
-      approvals: currentData.approvals?.length || 0,
-      fines: currentData.fines?.length || 0,
-      welfareGrants: currentData.welfareGrants?.length || 0,
+      members: safe.members?.length || 0,
+      approvals: safe.approvals?.length || 0,
+      fines: safe.fines?.length || 0,
+      welfareGrants: safe.welfareGrants?.length || 0,
     },
     checksum: `VSLA-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-    data: currentData,
+    data: safe,
+  });
   });
 }
 

@@ -349,7 +349,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
                   Full Group Database File
                 </h3>
                 <p className="text-xs text-text-muted mt-0.5">
-                  Encrypted, tamper-evident JSON file with all {state.members.length} member passbooks, stamp cards, loan appraisals, and audit logs.
+                  Readable JSON copy of all {state.members.length} member passbooks, stamp cards, loan appraisals, and audit logs. Keep it secret — anyone with this file can read the books. Not encrypted.
                 </p>
               </div>
             </div>

@@ -11,7 +11,7 @@ interface ApprovalsQueueViewProps {
   approvals: ApprovalItem[];
   /** Returns an error message, or null when the key turned. */
   onApprove: (id: string, payoutMethod?: string, key?: { officerId: string; pin: string }) => string | null;
-  onReject: (id: string) => void;
+  onReject: (id: string, reason?: string) => void;
   dualAuth?: boolean;
   currentUserName?: string;
   /** Member directory for face photos (low-literacy verification). */
@@ -61,7 +61,9 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
       // Key ceremony: the officer holding the phone proves who they are.
       setKeyTargetId(id);
     } else {
-      onReject(id);
+      const reason = window.prompt(`Why is ${name}'s request rejected? (optional — shown in history)`);
+      if (reason === null) return; // Cancelled — keep it pending.
+      onReject(id, reason.trim() || undefined);
       showToast(`Request for ${name} rejected.`);
     }
   };
@@ -618,6 +620,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       {d.reqNumber} · {d.decidedBy ? `by ${d.decidedBy}` : 'by officer'}
                       {d.decidedAt ? ` · ${new Date(d.decidedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
                       {d.payoutMethod ? ` · via ${d.payoutMethod}` : ''}
+                      {d.status === 'rejected' && d.rejectReason ? ` · "${d.rejectReason}"` : ''}
                     </span>
                   </div>
                 </div>

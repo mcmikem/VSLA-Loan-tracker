@@ -18,3 +18,5 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npx vite build
+      - name: Check serverless function syntax (tsc only covers .ts)
+        run: node --check api/auth.js && node --check api/state.js && node --check api/groups.js && node --check api/backup.js && node --check api/momo.js && node --check api/seed.js && node --check lib/_db.js && node --check lib/_lib.js && node --check lib/_auth.js && node --check lib/_seed.js

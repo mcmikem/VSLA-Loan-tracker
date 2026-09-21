@@ -15,6 +15,10 @@ export default async function handler(req, res) {
   const groupId = resolveGroupId(req);
 
   if (req.method === 'GET') {
+    // Reads carry the full ledger (phones, balances, audit). In enforced
+    // mode only signed-in group members may read; pilots stay open.
+    const session = requireRole(req, res, 'member');
+    if (session === undefined) return;
     const state = await loadGroup(groupId);
     return res.status(200).json({ success: true, groupId, state, storage: storageInfo(), ...state });
   }

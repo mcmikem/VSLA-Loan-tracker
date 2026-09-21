@@ -3,7 +3,7 @@ import { Language, Member, ScreenId } from '../types';
 import { getTranslations } from '../i18n/translations';
 import { ReceiptData, ReceiptModal } from '../components/ReceiptModal';
 import { MemberAvatar } from '../components/MemberAvatar';
-import { fileToAvatarDataUrl } from '../utils/photo';
+import { fileToAvatarDataUrl, maskContact } from '../utils/photo';
 
 interface MemberPassbookViewProps {
   members: Member[];
@@ -21,7 +21,12 @@ interface MemberPassbookViewProps {
   groupName?: string;
   boxIdentifier?: string;
   issuerName?: string;
+  /** Signed-in member id — a member viewing their OWN book sees everything. */
+  viewerMemberId?: string;
+  /** Officers see full contact details; members see only their own. */
+  viewerIsOfficer?: boolean;
 }
+
 export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   members,
   selectedMember,
@@ -36,6 +41,8 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   groupName = 'Bakwata Savings Group',
   boxIdentifier = 'BOX-KLA-042',
   issuerName = 'Group Secretary',
+  viewerMemberId,
+  viewerIsOfficer = true,
 }) => {
   const [showRepaymentModal, setShowRepaymentModal] = useState(false);
   const [repaymentAmount, setRepaymentAmount] = useState(40000);
@@ -50,6 +57,9 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
 
   const t = getTranslations(language);
   const member = selectedMember || members[0];
+  // Privacy on shared phones: full contacts for officers + own book only.
+  const showPrivate = viewerIsOfficer || (viewerMemberId !== undefined && viewerMemberId === member.id);
+  const shownPhone = (p?: string) => (showPrivate ? p || '—' : maskContact(p));
 
   const retakePhoto = async (file: File | undefined) => {
     if (!file || !member || !onUpdatePhoto) return;
@@ -336,9 +346,9 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                 </p>
                 {(member.kinName || member.guarantorName) && (
                   <p className="text-[11px] text-white/80 mt-1">
-                    {member.kinName ? `Kin: ${member.kinName}${member.kinPhone ? ` (${member.kinPhone})` : ''}` : ''}
+                    {member.kinName ? `Kin: ${member.kinName}${member.kinPhone ? ` (${shownPhone(member.kinPhone)})` : ''}` : ''}
                     {member.kinName && member.guarantorName ? ' · ' : ''}
-                    {member.guarantorName ? `Guarantor: ${member.guarantorName}${member.guarantorPhone ? ` (${member.guarantorPhone})` : ''}` : ''}
+                    {member.guarantorName ? `Guarantor: ${member.guarantorName}${member.guarantorPhone ? ` (${shownPhone(member.guarantorPhone)})` : ''}` : ''}
                   </p>
                 )}
               </div>
@@ -360,7 +370,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
             <div className="flex items-center gap-1.5 bg-black/25 px-2.5 py-1 rounded-lg">
               <span className={`w-2.5 h-2.5 rounded-full ${member.provider === 'MTN' ? 'bg-[#EAB308]' : 'bg-red-500'}`} />
               <span className="font-mono text-white font-semibold">
-                {member.provider} {member.phone}
+                {member.provider} {shownPhone(member.phone)}
               </span>
               <span className="material-symbols-outlined text-secondary-fixed text-[16px]">
                 verified

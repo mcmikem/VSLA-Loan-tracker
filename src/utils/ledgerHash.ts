@@ -1,7 +1,8 @@
 /**
- * Short tamper-evident fingerprint for the approvals queue, shown on the
+ * Short change-detector fingerprint for the approvals queue, shown on the
  * approvals dock so officers can confirm they're looking at the same ledger.
- * djb2 over the canonical JSON — NOT cryptographic, just a checksum.
+ * djb2 over the canonical JSON — detects accidental drift, NOT malicious
+ * tampering (use the audit trail + backups for disputes).
  */
 export function ledgerHash(value: unknown): string {
   const str = JSON.stringify(value ?? null);

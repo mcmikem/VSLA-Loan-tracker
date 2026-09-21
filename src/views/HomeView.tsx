@@ -601,7 +601,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <p className="text-body-sm-bold font-body-sm-bold text-on-surface leading-snug font-bold">
                 {t.home.recordRepayment}
               </p>
-              <p className="text-label-sm font-label-sm text-text-muted text-xs">{t.home.repaymentSub}</p>
+              <p className="text-label-sm font-label-sm text-text-muted text-xs">{t.home.recordRepaymentSub}</p>
             </div>
           </button>
 

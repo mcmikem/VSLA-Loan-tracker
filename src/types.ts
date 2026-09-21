@@ -53,6 +53,8 @@ export interface ApprovalItem {
   firstApprovedAt?: string;
   secondApprovedBy?: string;
   secondApprovedAt?: string;
+  /** Rejection reason (optional) — shown in history and to the applicant. */
+  rejectReason?: string;
 }
 
 export interface StampItem {
@@ -63,15 +65,15 @@ export interface StampItem {
 
 export interface LedgerEntry {
   id: string;
-  meetingNo: number;
-  meetingCode: string;
+  meetingNo?: number;
+  meetingCode?: string;
   title: string;
   subtitle: string;
   date: string;
   badge: string;
   amountText: string;
   isPositive: boolean;
-  extraText: string;
+  extraText?: string;
 }
 
 export interface Member {
@@ -177,8 +179,8 @@ export interface BackupSnapshot {
   label: string;
   membersCount: number;
   boxCashBalance: number;
-  loanFundBalance: number;
-  welfareFundBalance: number;
+  loanFundBalance?: number;
+  welfareFundBalance?: number;
   data: string; // JSON string
 }
 

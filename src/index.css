@@ -128,3 +128,11 @@
   }
 }
 
+/* Cheap Androids with gesture bars / notches: keep fixed chrome clear. */
+nav[aria-label="Main Mobile Navigation"] {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+header.sticky {
+  padding-top: env(safe-area-inset-top);
+}
+

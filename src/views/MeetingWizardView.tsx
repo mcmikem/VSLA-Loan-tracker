@@ -55,6 +55,8 @@ interface MeetingWizardViewProps {
   /** Floats excluded from the physical count — shown so nobody recounts them. */
   momoBalance?: number;
   bankBalance?: number;
+  /** Owning group — a draft opened for another group is discarded, not merged. */
+  groupId?: string;
 }
 
 type AttStatus = 'present' | 'late' | 'absent' | 'excused';
@@ -75,6 +77,8 @@ interface Draft {
   completed: boolean;
   /** First officer to acknowledge a big cash gap (needs a different 2nd). */
   gapFirstBy?: string;
+  /** Group this draft belongs to — switching groups with an open draft discards it. */
+  groupId?: string;
 }
 
 const DRAFT_KEY = 'vsla_meeting_draft_v1';
@@ -96,14 +100,25 @@ const blankDraft = (): Draft => ({
   completed: false,
 });
 
-function loadDraft(): Draft {
+function loadDraft(groupId: string): Draft {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    if (raw) return { ...blankDraft(), ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = { ...blankDraft(), ...JSON.parse(raw) };
+      // Draft ownership: a draft opened for another group is discarded, never
+      // merged — mixing two groups' cash counts would corrupt both meetings.
+      // Legacy drafts without a groupId are adopted into the current group.
+      if (!parsed.groupId) {
+        parsed.groupId = groupId;
+        return parsed;
+      }
+      if (parsed.groupId === groupId) return parsed;
+      localStorage.removeItem(DRAFT_KEY);
+    }
   } catch {
     /* fresh */
   }
-  return blankDraft();
+  return { ...blankDraft(), groupId };
 }
 
 /**
@@ -134,8 +149,10 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   currentUserName = 'Officer',
   momoBalance = 0,
   bankBalance = 0,
+  groupId = '',
 }) => {
-  const [draft, setDraft] = useState<Draft>(loadDraft);
+  const [draft, setDraft] = useState<Draft>(() => loadDraft(groupId));
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [repayInputs, setRepayInputs] = useState<Record<string, string>>({});
   const [loanForm, setLoanForm] = useState<WizardLoanForm>({ memberId: members[0]?.id || '', amount: '', term: '3 months' });
   const [fineMember, setFineMember] = useState(members[0]?.id || '');
@@ -325,6 +342,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
       setLastSealed(sealed);
     }
     clearDraft();
+    setReviewConfirmed(false);
     patch({ completed: true });
   };
 
@@ -742,6 +760,127 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             )}
             <textarea value={draft.minutes} onChange={(e) => patch({ minutes: e.target.value })} placeholder={str('Meeting minutes / resolutions (optional)', 'Ebiwandiiko by\'olukuŋŋaana')} rows={2} className="w-full border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm" />
           </div>
+          {/* Review before seal: every section is Done, Zero, or Needs attention.
+              The seal stays locked until the secretary ticks the confirm box. */}
+          {(() => {
+            type S = 'done' | 'zero' | 'attention';
+            const rows: { label: string; status: S; detail: string; step: number }[] = [
+              {
+                label: steps[0], status: 'done',
+                detail: `${attendanceCount}/${members.length} ${str('marked', 'bateekeddwako')}`,
+                step: 0,
+              },
+              {
+                label: steps[1],
+                status: draft.sharesRecorded ? 'done' : sharesTotal > 0 ? 'attention' : 'zero',
+                detail: draft.sharesRecorded
+                  ? str('Recorded to passbooks', 'Kikoseddwa')
+                  : sharesTotal > 0
+                    ? `${sharesTotal} ${str('staged but not recorded', 'biteekeddwateka naye tebinnakwatibwa')}`
+                    : str('No shares today', 'Tewali migabo leero'),
+                step: 1,
+              },
+              {
+                label: steps[2],
+                status: draft.welfareRecorded ? 'done' : presentIds.length > 0 ? 'attention' : 'zero',
+                detail: draft.welfareRecorded
+                  ? str('Collected', 'Zikunganyiziddwa')
+                  : str('Not collected yet', 'Tezinnakunganyizibwa'),
+                step: 2,
+              },
+              {
+                label: steps[3],
+                status: draft.repaymentsRecorded ? 'done' : debtors.length > 0 ? 'attention' : 'zero',
+                detail: draft.repaymentsRecorded
+                  ? str('Recorded', 'Kikoseddwa')
+                  : debtors.length > 0
+                    ? `${debtors.length} ${str('debtors owe — enter or confirm zero', 'beebbanja — yingiza oba kakasa zeru')}`
+                    : str('No loans out', 'Tewali bbanja'),
+                step: 3,
+              },
+              {
+                label: steps[4],
+                status: draft.loansRecorded ? 'done' : 'zero',
+                detail: draft.loansRecorded
+                  ? str('Request queued', 'Kisindikiddwa')
+                  : str('No new requests', 'Tewali kusaba kupya'),
+                step: 4,
+              },
+              {
+                label: steps[5],
+                status: draft.finesRecorded ? 'done' : stagedFines.length > 0 ? 'attention' : 'zero',
+                detail: draft.finesRecorded
+                  ? str('Recorded', 'Kikoseddwa')
+                  : stagedFines.length > 0
+                    ? `${stagedFines.length} ${str('staged but not recorded', 'biteekeddwateka naye tebinnakwatibwa')}`
+                    : str('No fines', 'Tewali ngassi'),
+                step: 5,
+              },
+              {
+                label: steps[6],
+                status: draft.salesRecorded ? 'done' : 'zero',
+                detail: draft.salesRecorded
+                  ? str('Recorded', 'Kikoseddwa')
+                  : str('No sales', 'Tewali kutunda'),
+                step: 6,
+              },
+            ];
+            const attention = rows.filter((r) => r.status === 'attention');
+            const chip = (s: S) =>
+              s === 'done'
+                ? 'bg-[#DCFCE7] text-[#166534]'
+                : s === 'zero'
+                  ? 'bg-[#F6F7F6] text-[#4B5563] border border-[#E5E7EB]'
+                  : 'bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]';
+            const chipText = (s: S) =>
+              s === 'done' ? '✓' : s === 'zero' ? '0' : '!';
+            return (
+              <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
+                <h4 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">
+                  {str('Review before seal', 'Kebera nga tonnasiba')}
+                </h4>
+                {rows.map((r) => (
+                  <button
+                    key={r.label}
+                    type="button"
+                    onClick={() => patch({ step: r.step })}
+                    className="w-full flex items-center gap-2.5 text-left active:scale-[0.99]"
+                  >
+                    <span className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 ${chip(r.status)}`}>
+                      {chipText(r.status)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-bold text-[#00261b]">{r.label}</span>
+                      <span className="block text-[11px] text-[#4B5563] truncate">{r.detail}</span>
+                    </span>
+                    {r.status === 'attention' && (
+                      <span className="material-symbols-outlined text-[#92400E] text-[18px] shrink-0">arrow_forward</span>
+                    )}
+                  </button>
+                ))}
+                {attention.length > 0 && (
+                  <p className="text-[11px] font-bold text-[#92400E] bg-[#FEF3C7] rounded-lg p-2">
+                    {str(
+                      `${attention.length} section(s) staged but not recorded — tap to finish, or confirm below that nothing was collected.`,
+                      `Emitendera ${attention.length} giteekeddwateka naye teginnakwatibwa — nyiga ogimalirize, oba kakasa wansi nti tewali kikunganyiziddwa.`
+                    )}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setReviewConfirmed(!reviewConfirmed)}
+                  className={`w-full min-h-[48px] rounded-lg text-xs font-bold border-2 flex items-center justify-center gap-2 active:scale-[0.99] ${
+                    reviewConfirmed ? 'bg-[#DCFCE7] border-[#006d30] text-[#166534]' : 'bg-white border-[#CBD5E1] text-[#4B5563]'
+                  }`}
+                >
+                  <span className={`w-5 h-5 rounded border-2 flex items-center justify-center ${reviewConfirmed ? 'bg-[#006d30] border-[#006d30] text-white' : 'border-[#CBD5E1] text-transparent'}`}>
+                    <span className="material-symbols-outlined text-[16px]">check</span>
+                  </span>
+                  {str('I reviewed every section above', 'Nkeberedde emitendera gyonna waggulu')}
+                </button>
+              </div>
+            );
+          })()}
           {draft.completed
             ? (
               <div className="bg-[#DCFCE7] border border-[#006d30] rounded-xl p-4 text-center space-y-2">
@@ -792,7 +931,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                 : str(`Seal Meeting #${meetingNo}`, `Siba Olukuŋŋaana #${meetingNo}`),
               finishMeeting,
               true,
-              draft.counted === '' || (difference !== 0 && !discrepancyNote.trim())
+              draft.counted === '' || (difference !== 0 && !discrepancyNote.trim()) || !reviewConfirmed
             )}
         </section>
       )}

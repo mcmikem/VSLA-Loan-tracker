@@ -69,8 +69,15 @@ export function stripPhotosForSnapshot(state: VSLAState): VSLAState {
   };
 }
 
-/** Merge live face photos into a restored state so snapshot restore never blanks faces. */
-export function mergePhotosIntoRestored(restored: VSLAState, live: VSLAState): VSLAState {
+/** Shared-phone privacy: mask contact details when a member peeks at another book. */
+export function maskContact(value?: string): string {
+  const v = (value || '').trim();
+  if (!v || v === '—') return '—';
+  if (v.length >= 6) return `${v.slice(0, 4)}•••${v.slice(-2)}`;
+  return '•••';
+}
+
+/** Merge live face photos into a restored state so snapshot restore never blanks faces. */export function mergePhotosIntoRestored(restored: VSLAState, live: VSLAState): VSLAState {
   const livePhotos = new Map(
     (live.members || []).filter((m) => m.photoUrl).map((m) => [m.id, m.photoUrl as string])
   );

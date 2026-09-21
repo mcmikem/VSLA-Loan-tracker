@@ -532,8 +532,8 @@ export const DEFAULT_INITIAL_STATE = {
   availableAccounts: SEED_ACCOUNTS,
   activePreset: 'meeting_close',
   products: [
-    { id: 'p1', name: 'Maize Flour (Group Stock)', sellerType: 'group', costPrice: 8000, salePrice: 10000, stockQty: 40, soldQty: 6, unit: 'kg' },
-    { id: 'p2', name: 'Dried Fish', sellerType: 'member', sellerName: 'Sarah Nabukalu', costPrice: 5000, salePrice: 7000, stockQty: 20, soldQty: 0, unit: 'pcs' },
+    { id: 'p1', name: 'Maize Flour (Group Stock)', sellerType: 'group' as const, costPrice: 8000, salePrice: 10000, stockQty: 40, soldQty: 6, unit: 'kg' },
+    { id: 'p2', name: 'Dried Fish', sellerType: 'member' as const, sellerName: 'Sarah Nabukalu', costPrice: 5000, salePrice: 7000, stockQty: 20, soldQty: 0, unit: 'pcs' },
   ],
   productSales: [],
   productExpenses: [],

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergePhotosIntoRestored, stripPhotosForSnapshot } from '../src/utils/photo';
+import { mergePhotosIntoRestored, maskContact, stripPhotosForSnapshot } from '../src/utils/photo';
 import type { VSLAState } from '../src/types';
 
 const base = {
@@ -31,5 +31,12 @@ describe('snapshot photo hygiene', () => {
     const snap = stripPhotosForSnapshot(base);
     (snap.members[0] as any).photoUrl = 'data:newface';
     expect(mergePhotosIntoRestored(snap, base).members[0].photoUrl).toBe('data:newface');
+  });
+
+  it('masks contact details for shared-phone privacy', () => {
+    expect(maskContact('0772-123-456')).toBe('0772•••56');
+    expect(maskContact('—')).toBe('—');
+    expect(maskContact('')).toBe('—');
+    expect(maskContact('123')).toBe('•••');
   });
 });

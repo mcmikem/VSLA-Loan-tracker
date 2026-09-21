@@ -150,7 +150,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
                       : str('Waiting for first officer key', 'Kulindirira omukulu asooka')
                     : r.status === 'approved'
                     ? `${str('Approved', 'Kyakkiriziddwa')} ${r.decidedBy ? `· ${r.decidedBy}` : ''}`
-                    : str('Rejected', 'Kyagaaniddwa')}
+                    : `${str('Rejected', 'Kyagaaniddwa')}${r.rejectReason ? ` — ${r.rejectReason}` : ''}`}
                 </p>
               </div>
               <span className={`px-2 py-1 rounded text-[10px] font-bold shrink-0 ${statusStyle(r.status)}`}>
