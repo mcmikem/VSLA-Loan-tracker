@@ -2061,6 +2061,9 @@ export function App() {
             isPractice={isPractice}
             onEnterPractice={handleEnterPractice}
             onExitPractice={handleExitPractice}
+            groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Savings Group'}
+            boxIdentifier={vslaState.boxIdentifier || vslaState.groupProfile?.boxIdentifier || ''}
+            reporterName={currentUser.name}
           />
         )}
 

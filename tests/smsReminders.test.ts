@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildBalanceSnapshot,
+  buildFraudReportMessage,
   buildMeetingReminder,
   buildRepaymentReminder,
   isSingleSms,
@@ -49,5 +50,22 @@ describe('sms reminders', () => {
     expect(s).toContain(encodeURIComponent('Hello Sarah'));
     const w = waHref('0772123456', 'Hello Sarah');
     expect(w).toBe(`https://wa.me/256772123456?text=${encodeURIComponent('Hello Sarah')}`);
+  });
+
+  it('fraud report carries group context, stays anonymous by default', () => {
+    const en = buildFraudReportMessage({
+      groupName: 'Bakwata', boxIdentifier: 'BOX-01', category: 'missing',
+      details: '50000 missing after Friday', lang: 'EN',
+    });
+    expect(en).toContain('Bakwata');
+    expect(en).toContain('BOX-01');
+    expect(en).toContain('Anonymous member');
+    expect(en).toContain('50000 missing after Friday');
+    const lu = buildFraudReportMessage({
+      groupName: 'Bakwata', boxIdentifier: 'BOX-01', category: 'leader',
+      details: '', reporterName: 'Sarah', lang: 'LU',
+    });
+    expect(lu).toContain('Sarah');
+    expect(lu).toContain('Omukulu');
   });
 });

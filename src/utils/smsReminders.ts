@@ -83,3 +83,36 @@ export function buildBalanceSnapshot(
 export function isSingleSms(text: string): boolean {
   return text.length <= 160;
 }
+
+export type FraudCategory = 'missing' | 'balance' | 'leader' | 'app' | 'other';
+
+export const FRAUD_CATEGORIES: { id: FraudCategory; en: string; lu: string }[] = [
+  { id: 'missing', en: 'Missing money', lu: 'Ensimbi ezibula' },
+  { id: 'balance', en: 'Wrong balance', lu: 'Balance si ntuufu' },
+  { id: 'leader', en: 'Leader problem', lu: 'Omukulu' },
+  { id: 'app', en: 'App not working', lu: 'App — tekoze' },
+  { id: 'other', en: 'Something else', lu: 'Ekirala' },
+];
+
+/**
+ * Confidential fraud report sent OUT of the phone (WhatsApp to support).
+ * Deliberately leaves no local trace — no audit entry, no draft — so a
+ * report about a leader can't be found on the leader's phone.
+ */
+export function buildFraudReportMessage(opts: {
+  groupName: string;
+  boxIdentifier: string;
+  category: FraudCategory;
+  details: string;
+  reporterName?: string;
+  lang: ReminderLang;
+}): string {
+  const cat =
+    FRAUD_CATEGORIES.find((c) => c.id === opts.category) || FRAUD_CATEGORIES[4];
+  const who = opts.reporterName?.trim() || (opts.lang === 'LU' ? 'Member (erinnya likwekeddwa)' : 'Anonymous member');
+  const details = opts.details.trim().slice(0, 500);
+  if (opts.lang === 'LU') {
+    return `VSLA UG — OKULOOPA (kyama)\nEkibiina: ${opts.groupName} (${opts.boxIdentifier})\nEnsonga: ${cat.lu}\nOmutumya: ${who}\nEbisingawo: ${details || '—'}`;
+  }
+  return `VSLA UG — FRAUD REPORT (confidential)\nGroup: ${opts.groupName} (${opts.boxIdentifier})\nIssue: ${cat.en}\nFrom: ${who}\nDetails: ${details || '—'}`;
+}

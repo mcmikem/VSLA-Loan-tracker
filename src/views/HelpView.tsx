@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FraudCategory, FRAUD_CATEGORIES, buildFraudReportMessage, waHref } from '../utils/smsReminders';
 import { Language, ScreenId } from '../types';
 
 interface HelpViewProps {
@@ -7,6 +8,9 @@ interface HelpViewProps {
   isPractice?: boolean;
   onEnterPractice?: () => void;
   onExitPractice?: () => void;
+  groupName?: string;
+  boxIdentifier?: string;
+  reporterName?: string;
 }
 
 const SUPPORT_WHATSAPP = '256772445566';
@@ -14,10 +18,36 @@ const SUPPORT_WHATSAPP = '256772445566';
 /**
  * Upgrade #18 — in-app Help & Support center.
  */
-export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN', isPractice = false, onEnterPractice, onExitPractice }) => {
+export const HelpView: React.FC<HelpViewProps> = ({
+  onNavigate,
+  language = 'EN',
+  isPractice = false,
+  onEnterPractice,
+  onExitPractice,
+  groupName = 'Savings Group',
+  boxIdentifier = '',
+  reporterName = '',
+}) => {
   const [open, setOpen] = useState<number | null>(0);
+  const [fraudCat, setFraudCat] = useState<FraudCategory>('missing');
+  const [fraudDetails, setFraudDetails] = useState('');
+  const [fraudNamed, setFraudNamed] = useState(false);
+  const [fraudSent, setFraudSent] = useState(false);
   const str = (en: string, lu: string) =>
     language === 'LU' ? lu  : en;
+  const lang = language === 'LU' ? 'LU' : 'EN';
+
+  const fraudLink = waHref(
+    SUPPORT_WHATSAPP,
+    buildFraudReportMessage({
+      groupName,
+      boxIdentifier,
+      category: fraudCat,
+      details: fraudDetails,
+      reporterName: fraudNamed ? reporterName : '',
+      lang,
+    })
+  );
 
   const faqs = [
     {
@@ -100,6 +130,65 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN',
             {str('Open practice group (free, safe)', 'Ggulawo ekibiina eky’ekigezo (mawa)')}
           </button>
         )}
+      </section>
+
+      {/* Confidential fraud report — leaves no trace on this phone */}
+      <section className="bg-status-bad-bg/40 border-2 border-status-bad-tx/40 rounded-xl p-4 space-y-2.5">
+        <h2 className="font-bold text-sm text-status-bad-tx flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[20px]">report</span>
+          {str('Report a problem — privately', 'Loopa ensonga — mu kyama')}
+        </h2>
+        <p className="text-xs text-text-muted leading-relaxed">
+          {str(
+            'Money missing? Wrong balance? Goes straight to VSLA UG support on WhatsApp. Nothing is saved on this phone.',
+            'Ensimbi ezibula? Balance si ntuufu? Yita support ku WhatsApp butereevu. Tewali kikolebwa ku ssimu eno.'
+          )}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {FRAUD_CATEGORIES.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setFraudCat(c.id)}
+              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition ${
+                fraudCat === c.id ? 'bg-status-bad-tx text-white shadow' : 'bg-white border border-border-strong text-on-surface'
+              }`}
+            >
+              {language === 'LU' ? c.lu : c.en}
+            </button>
+          ))}
+        </div>
+        <textarea
+          value={fraudDetails}
+          onChange={(e) => setFraudDetails(e.target.value)}
+          rows={2}
+          placeholder={str('What happened? (optional, max 500)', 'Kiki ekyabadde? (optional)')}
+          className="w-full border border-border-strong rounded-lg px-3 py-2 text-xs bg-white"
+        />
+        <button
+          type="button"
+          onClick={() => setFraudNamed(!fraudNamed)}
+          className={`w-full min-h-[44px] rounded-lg text-xs font-bold border transition ${
+            fraudNamed ? 'bg-primary-container text-white border-primary-container' : 'bg-white border-border-strong text-text-muted'
+          }`}
+        >
+          {fraudNamed
+            ? str(`✓ Sending as ${reporterName || 'member'}`, `✓ Otuma nga ${reporterName || 'member'}`)
+            : str('Stay anonymous (recommended)', 'Sigala mu kyama (kirungi)')}
+        </button>
+        <a
+          href={fraudLink}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => {
+            setFraudSent(true);
+            setFraudDetails('');
+            setTimeout(() => setFraudSent(false), 4000);
+          }}
+          className="block text-center w-full py-3 bg-status-bad-tx text-white rounded-lg font-bold text-sm active:scale-[0.99]"
+        >
+          {fraudSent ? str('✓ Opened WhatsApp — send it there', '✓ WhatsApp eggudde — weereza eyo') : str('Send report on WhatsApp', 'Weereza kuloopa ku WhatsApp')}
+        </a>
       </section>
 
       <section className="space-y-2">
