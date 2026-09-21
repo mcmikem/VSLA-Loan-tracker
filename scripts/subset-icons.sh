@@ -10,7 +10,7 @@ PARTIAL=/tmp/ms-partial.ttf
 KEEP=/tmp/keep.txt
 
 echo "1/4 downloading full variable font..."
-curl -s -o "$FULL" "https://fonts.gstatic.com/s/materialsymbolsoutlined/v372/kJEhBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oFsLjBuVY.woff2"
+curl -s -o "$FULL" "https://fonts.gstatic.com/s/materialsymbolsoutlined/v373/kJEhBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oFsI.woff2"
 
 echo "2/4 collecting icon names used in src/..."
 python3 -c "
