@@ -8,9 +8,27 @@ interface BackupAuditViewProps {
   onNavigate: (screen: ScreenId) => void;
   onRestoreState: (newState: VSLAState) => Promise<boolean>;
   onCreateSnapshot: (label: string) => Promise<void>;
+  onDeleteSnapshot?: (id: string) => void;
   onResetToBaseline: () => Promise<void>;
   onRefreshFromServer: () => Promise<void>;
   language?: Language;
+}
+
+/** Bytes this app holds on the phone. Cheap phones die near ~5MB. */
+export function phoneStorageBytes(): { used: number; keys: number } {
+  let used = 0;
+  let keys = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) || '';
+      if (!/^(bakwata|vsla)_/.test(k)) continue;
+      keys++;
+      used += (localStorage.getItem(k) || '').length * 2;
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return { used, keys };
 }
 
 export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
@@ -18,6 +36,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
   onNavigate,
   onRestoreState,
   onCreateSnapshot,
+  onDeleteSnapshot,
   onResetToBaseline,
   onRefreshFromServer,
   language = 'EN',
@@ -518,6 +537,33 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
       {/* TAB 3: SNAPSHOTS */}
       {activeTab === 'snapshots' && (
         <div className="space-y-4 animate-in fade-in duration-150">
+          {/* Phone storage meter — cheap phones die near ~5MB */}
+          {(() => {
+            const { used } = phoneStorageBytes();
+            const mb = used / (1024 * 1024);
+            const pct = Math.min(100, Math.round((used / (5 * 1024 * 1024)) * 100));
+            const hot = mb > 3.5;
+            return (
+              <section className={`rounded-xl border p-3.5 ${hot ? 'bg-status-warn-bg border-[#FDE68A]' : 'bg-surface-card border-border-line'}`}>
+                <div className="flex items-center justify-between text-xs">
+                  <span className={`font-bold ${hot ? 'text-status-warn-tx' : 'text-primary'}`}>
+                    {language === 'LU' ? 'Data mu ssimu' : 'Phone storage'} · {mb.toFixed(1)} MB
+                  </span>
+                  <span className="font-mono text-text-muted">{pct}%</span>
+                </div>
+                <div className="w-full bg-border-line rounded-full h-2 mt-2 overflow-hidden">
+                  <div className={`h-2 rounded-full ${hot ? 'bg-status-warn-tx' : 'bg-secondary'}`} style={{ width: `${Math.max(2, pct)}%` }} />
+                </div>
+                {hot && (
+                  <p className="text-[11px] font-bold text-status-warn-tx mt-1.5">
+                    {language === 'LU'
+                      ? 'Kumpi kujjula — wannula backup, era sazaamu snapshots enkadde wansi.'
+                      : 'Nearly full — download a backup, then delete old snapshots below.'}
+                  </p>
+                )}
+              </section>
+            );
+          })()}
           {/* Create Instant Snapshot */}
           <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm space-y-3">
             <h3 className="font-headline-sm text-sm font-bold text-primary flex items-center gap-1.5">
@@ -587,6 +633,20 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
                       type="button"
                     >
                       Rollback
+                    </button>
+                  )}
+                  {onDeleteSnapshot && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Delete snapshot "${snap.label}"? The live books stay untouched.`)) {
+                          onDeleteSnapshot(snap.id);
+                        }
+                      }}
+                      className="px-2.5 py-1.5 bg-white border border-border-strong text-status-bad-tx text-xs font-bold rounded-lg active:scale-95"
+                      type="button"
+                      title="Delete snapshot to free phone storage"
+                    >
+                      ✕
                     </button>
                   )}
                 </div>

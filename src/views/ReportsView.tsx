@@ -1,6 +1,7 @@
 import React from 'react';
 import { Language, Member, ScreenId, VSLAState } from '../types';
 import { buildCollectionSheet } from '../utils/collectionSheet';
+import { LATE_FINE_AMOUNT } from '../utils/policy';
 
 interface ReportsViewProps {
   state: VSLAState;
@@ -8,8 +9,6 @@ interface ReportsViewProps {
   onProposeFine: (member: Member) => void;
   language?: Language;
 }
-
-const LATE_FINE_AMOUNT = 2000;
 
 /**
  * Upgrades #11 + #13 — financial reports (collections, arrears,

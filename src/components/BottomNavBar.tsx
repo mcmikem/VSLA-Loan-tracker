@@ -10,6 +10,14 @@ interface BottomNavBarProps {
   language?: Language;
   /** Simple Mode: 4 tabs for the Friday loop. Default ON. */
   simpleMode?: boolean;
+  /** Member-role users get 4 personal tabs instead of the officer loop. */
+  role?: string;
+  /** Officer powers — hide modules the signed-in user may not touch. */
+  permissions?: {
+    canLockBox: boolean;
+    canApproveLoans: boolean;
+    canManageBackups: boolean;
+  };
 }
 
 export const BottomNavBar: React.FC<BottomNavBarProps> = ({
@@ -19,9 +27,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   onNavigateScreen,
   language = 'EN',
   simpleMode = true,
+  role = 'secretary',
+  permissions,
 }) => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const t = getTranslations(language);
+  const isMember = role === 'member';
+  // Officer-only modules stay invisible to members (they also 403 server-side).
+  const canLock = permissions?.canLockBox ?? !isMember;
+  const canApprove = permissions?.canApproveLoans ?? !isMember;
+  const canBackup = permissions?.canManageBackups ?? !isMember;
 
   const tabBtn = (
     tab: MainTab,
@@ -58,7 +73,24 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   );
 
   // ---- SIMPLE MODE: Home + Meeting + Passbook + Approvals. Nothing else. ----
+  // Members get a personal loop instead: My Account + Shop + Loan + Help.
   if (simpleMode) {
+    if (isMember) {
+      const lu = language === 'LU';
+      return (
+        <nav
+          aria-label="Main Mobile Navigation"
+          className="fixed bottom-0 left-0 w-full z-50 bg-surface-card border-t border-border-line shadow-[0px_-2px_10px_rgba(0,0,0,0.06)]"
+        >
+          <div className="max-w-lg mx-auto flex justify-around items-center px-2 py-1.5">
+            {tabBtn('members', 'member_home', 'account_circle', lu ? 'Akawunti kange' : 'My Account')}
+            {tabBtn('more', 'shop', 'storefront', lu ? 'Kaduuka' : 'Shop')}
+            {tabBtn('loans', 'new_loan', 'add_card', lu ? 'Loan' : 'Loan')}
+            {tabBtn('more', 'help', 'help', lu ? 'Obuyambi' : 'Help')}
+          </div>
+        </nav>
+      );
+    }
     return (
       <nav
         aria-label="Main Mobile Navigation"
@@ -128,6 +160,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                   </span>
                 </div>
               </button>
+              {canBackup && (
               <button
                 onClick={() => handleSelectMoreOption('backup', 'more')}
                 className="col-span-2 p-3 text-left rounded-lg bg-status-ok-bg/30 border-2 border-secondary/50 hover:border-secondary active:bg-surface-container transition-all flex items-start gap-2.5 shadow-sm"
@@ -149,6 +182,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                   </span>
                 </div>
               </button>
+              )}
 
               <button
                 onClick={() => handleSelectMoreOption('welfare_fund', 'more')}
@@ -162,11 +196,12 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                     {t.home.welfareFund}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Enkoba y\'Obuyambi'  : 'Emergency fund'}
+                    {language === 'LU' ? 'Ensimbi z\'Obuyambi'  : 'Emergency fund'}
                   </span>
                 </div>
               </button>
 
+              {!isMember && (
               <button
                 onClick={() => handleSelectMoreOption('constitution_fines', 'more')}
                 className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
@@ -183,7 +218,9 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                   </span>
                 </div>
               </button>
+              )}
 
+              {canApprove && (
               <button
                 onClick={() => handleSelectMoreOption('share_out', 'more')}
                 className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
@@ -200,6 +237,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                   </span>
                 </div>
               </button>
+              )}
 
               <button
                 onClick={() => handleSelectMoreOption('audio_broadcast', 'meetings')}
@@ -318,6 +356,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
               </button>
 
+              {canLock && (
               <button
                 onClick={() => handleSelectMoreOption('meeting_close', 'meetings')}
                 className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
@@ -327,14 +366,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Ggalawo Sanduuko'  : 'Close Box'}
+                    {language === 'LU' ? 'Ggalawo Akasanduuko'  : 'Close Box'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Bala ssente n\'ebisumuluzo'  : 'Reconcile & Padlock'}
+                    {language === 'LU' ? 'Bala ensimbi'  : 'Reconcile & Padlock'}
                   </span>
                 </div>
               </button>
+              )}
 
+              {!isMember && (
               <button
                 onClick={() => handleSelectMoreOption('users', 'more')}
                 className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
@@ -351,7 +392,9 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                   </span>
                 </div>
               </button>
+              )}
 
+              {!isMember && (
               <button
                 onClick={() => handleSelectMoreOption('group_settings', 'more')}
                 className="p-3 text-left rounded-lg bg-canvas-bg border border-border-line hover:border-primary active:bg-surface-container transition-all flex items-start gap-2.5"
@@ -364,10 +407,11 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                     {language === 'LU' ? 'Enteekateeka y\'Ekibiina'  : 'Group Settings'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Erinya, emigabo, enkoba'  : 'Name, shares, welfare'}
+                    {language === 'LU' ? 'Erinnya, emigabo, obuyambi'  : 'Name, shares, welfare'}
                   </span>
                 </div>
               </button>
+              )}
             </div>
           </div>
         </div>

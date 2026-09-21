@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import {
   ApprovalItem,
   CreateGroupPayload,
@@ -21,33 +21,37 @@ import { AccountProfileModal } from './components/AccountProfileModal';
 import { GroupOnboardingModal } from './components/GroupOnboardingModal';
 import { ShareInviteModal } from './components/ShareInviteModal';
 import { HomeView } from './views/HomeView';
-import { MeetingCloseBoxView } from './views/MeetingCloseBoxView';
-import { ApprovalsQueueView } from './views/ApprovalsQueueView';
-import { MemberPassbookView } from './views/MemberPassbookView';
 import { MemberHomeView } from './views/MemberHomeView';
 import { fundBalances, totalFunds, transferError, applyTransfer, FundLocation } from './utils/fundLocations';
-import { MoMoPushView } from './views/MoMoPushView';
-import { NewLoanRequestView } from './views/NewLoanRequestView';
-import { CycleShareOutView } from './views/CycleShareOutView';
-import { WelfareFundView } from './views/WelfareFundView';
-import { AudioBroadcastView } from './views/AudioBroadcastView';
-import { ConstitutionFinesView } from './views/ConstitutionFinesView';
-import { BackupAuditView } from './views/BackupAuditView';
-import { LegalView } from './views/LegalView';
-import { MeetingWizardView } from './views/MeetingWizardView';
-import { ShopView, NewProductInput, SaleInput } from './views/ShopView';
-import { UsersView } from './views/UsersView';
-import { GroupSettingsView, GroupSettingsPatch } from './views/GroupSettingsView';
+// Cheap-phone rule: only the two home screens ship in the first download.
+// Every other screen lazy-loads on first visit (one small chunk each).
+const MeetingCloseBoxView = lazy(() => import('./views/MeetingCloseBoxView').then((m) => ({ default: m.MeetingCloseBoxView })));
+const ApprovalsQueueView = lazy(() => import('./views/ApprovalsQueueView').then((m) => ({ default: m.ApprovalsQueueView })));
+const MemberPassbookView = lazy(() => import('./views/MemberPassbookView').then((m) => ({ default: m.MemberPassbookView })));
+const MoMoPushView = lazy(() => import('./views/MoMoPushView').then((m) => ({ default: m.MoMoPushView })));
+const NewLoanRequestView = lazy(() => import('./views/NewLoanRequestView').then((m) => ({ default: m.NewLoanRequestView })));
+const CycleShareOutView = lazy(() => import('./views/CycleShareOutView').then((m) => ({ default: m.CycleShareOutView })));
+const WelfareFundView = lazy(() => import('./views/WelfareFundView').then((m) => ({ default: m.WelfareFundView })));
+const AudioBroadcastView = lazy(() => import('./views/AudioBroadcastView').then((m) => ({ default: m.AudioBroadcastView })));
+const ConstitutionFinesView = lazy(() => import('./views/ConstitutionFinesView').then((m) => ({ default: m.ConstitutionFinesView })));
+const BackupAuditView = lazy(() => import('./views/BackupAuditView').then((m) => ({ default: m.BackupAuditView })));
+const LegalView = lazy(() => import('./views/LegalView').then((m) => ({ default: m.LegalView })));
+const MeetingWizardView = lazy(() => import('./views/MeetingWizardView').then((m) => ({ default: m.MeetingWizardView })));
+const ShopView = lazy(() => import('./views/ShopView').then((m) => ({ default: m.ShopView })));
+const UsersView = lazy(() => import('./views/UsersView').then((m) => ({ default: m.UsersView })));
+const GroupSettingsView = lazy(() => import('./views/GroupSettingsView').then((m) => ({ default: m.GroupSettingsView })));
+const ReportsView = lazy(() => import('./views/ReportsView').then((m) => ({ default: m.ReportsView })));
+const AboutView = lazy(() => import('./views/AboutView').then((m) => ({ default: m.AboutView })));
+const HelpView = lazy(() => import('./views/HelpView').then((m) => ({ default: m.HelpView })));
+import type { NewProductInput, SaleInput } from './views/ShopView';
+import type { GroupSettingsPatch } from './views/GroupSettingsView';
 import { AddMemberModal, NewMemberInput } from './components/AddMemberModal';
-import { ReportsView, LATE_FINE_AMOUNT } from './views/ReportsView';
-import { AboutView } from './views/AboutView';
-import { HelpView } from './views/HelpView';
 import { OnboardingTour, ONBOARDING_KEY, SEEN_VERSION_KEY } from './components/OnboardingTour';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { APP_VERSION } from './data/changelog';
 import { withAudit } from './utils/audit';
 import { getTranslations } from './i18n/translations';
-import { appliedRepayment, changeDue, WELFARE_FAST_TRACK_CAP, memberCapForPlan, welfareNeedsQueue } from './utils/policy';
+import { appliedRepayment, changeDue, LATE_FINE_AMOUNT, WELFARE_FAST_TRACK_CAP, memberCapForPlan, welfareNeedsQueue } from './utils/policy';
 import { downloadBackupFile } from './utils/backupFile';
 import {
   buildLocalGroup,
@@ -58,6 +62,7 @@ import {
 import { ShareOutResult } from './utils/shareout';
 import { buildPracticeState, isPracticeGroup, popStashedGroup, PRACTICE_GROUP_ID, stashRealGroup } from './utils/practiceGroup';
 import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
+import { mergePhotosIntoRestored, stripPhotosForSnapshot } from './utils/photo';
 import { isDefaultPin } from './utils/pin';
 import { PublicDisplayModal } from './components/PublicDisplayModal';
 import { DefaultPinGate } from './components/DefaultPinGate';
@@ -108,6 +113,9 @@ export function App() {
     }
   });
   const [isPublicDisplayOpen, setIsPublicDisplayOpen] = useState(false);
+  // Members land on their own account; officers see the group home.
+  // Members can peek at the group home via a quiet link (resets on switch).
+  const [showGroupHome, setShowGroupHome] = useState(false);
   // Simple Mode: 3 giant buttons, 4 tabs, no SaaS jargon. ON unless explicitly off.
   const [simpleMode, setSimpleMode] = useState<boolean>(() => {
     try {
@@ -410,6 +418,7 @@ export function App() {
     if (account.memberId) {
       setSelectedMemberId(account.memberId);
     }
+    setShowGroupHome(false);
     await persistState(updatedState);
     try {
       await apiFetch(`/api/accounts/switch?groupId=${currentGroupId}`, {
@@ -428,6 +437,7 @@ export function App() {
   const handleLogin = async (account: UserAccount) => {
     setSessionTokenState(getSessionToken());
     setLoginPreselectId(undefined);
+    setShowGroupHome(false);
     if (account.memberId) {
       setSelectedMemberId(account.memberId);
     }
@@ -649,9 +659,21 @@ export function App() {
 
   const handleNavigateScreen = (screen: ScreenId) => {
     setCurrentScreen(screen);
-    if (screen === 'home') setActiveTab('home');
+    if (screen === 'home') {
+      setActiveTab('home');
+      setShowGroupHome(false);
+    }
     else if (screen === 'meeting_close' || screen === 'meeting_wizard' || screen === 'audio_broadcast') setActiveTab('meetings');
-    else if (screen === 'member_passbook' || screen === 'member_home') setActiveTab('members');
+    else if (screen === 'member_passbook' || screen === 'member_home') {
+      setActiveTab('members');
+      // Members opening the passbook land on their OWN book, not the roster.
+      if (screen === 'member_passbook' && currentUser.role === 'member') {
+        const self =
+          vslaState.members.find((m) => m.id === currentUser.memberId) ||
+          vslaState.members.find((m) => m.no === currentUser.memberNo);
+        if (self) setSelectedMemberId(self.id);
+      }
+    }
     else if (screen === 'new_loan') setActiveTab('loans');
     else if (screen === 'approvals') setActiveTab('approvals');
     else setActiveTab('more');
@@ -1100,7 +1122,7 @@ export function App() {
     );
   };
 
-  // Backup & Restore Handlers
+  // Backup & Restore Handlers — restores always keep live face photos.
   const handleRestoreState = async (newState: VSLAState): Promise<boolean> => {
     try {
       const res = await apiFetch('/api/backup/restore', {
@@ -1110,14 +1132,16 @@ export function App() {
       });
       if (res.ok) {
         const json = await res.json();
-        setVslaState(json.state || newState);
-        localStorage.setItem('bakwata_vsla_state', JSON.stringify(json.state || newState));
+        const merged = mergePhotosIntoRestored(json.state || newState, vslaState);
+        setVslaState(merged);
+        localStorage.setItem('bakwata_vsla_state', JSON.stringify(merged));
         return true;
       }
     } catch (e) {
       console.warn('Backend restore failed, setting state locally:', e);
-      setVslaState(newState);
-      localStorage.setItem('bakwata_vsla_state', JSON.stringify(newState));
+      const merged = mergePhotosIntoRestored(newState, vslaState);
+      setVslaState(merged);
+      localStorage.setItem('bakwata_vsla_state', JSON.stringify(merged));
       return true;
     }
     return false;
@@ -1141,19 +1165,28 @@ export function App() {
       console.warn('Backend snapshot failed, taking local snapshot:', e);
     }
 
-    // Local snapshot fallback
+    // Local snapshot fallback — faces stripped (books only), max 8 kept.
+    // Full-group snapshots multiply ~1MB of photos each; cheap phones die at ~5MB.
     const newSnapshot = {
       id: 'snap-' + Date.now(),
       label,
       timestamp: new Date().toISOString(),
       membersCount: vslaState.members.length,
       boxCashBalance: vslaState.boxCashBalance,
-      data: JSON.stringify(vslaState),
+      data: JSON.stringify(stripPhotosForSnapshot(vslaState)),
     };
     persistState({
       ...vslaState,
-      snapshots: [newSnapshot, ...(vslaState.snapshots || [])],
+      snapshots: [newSnapshot, ...(vslaState.snapshots || [])].slice(0, 8),
       lastBackupDate: new Date().toISOString(),
+    });
+  };
+
+  // Delete a snapshot to free phone storage (books stay, faces untouched).
+  const handleDeleteSnapshot = (id: string) => {
+    persistState({
+      ...vslaState,
+      snapshots: (vslaState.snapshots || []).filter((s) => s.id !== id),
     });
   };
 
@@ -1415,7 +1448,7 @@ export function App() {
         {
           ...vslaState,
           products: updatedProducts,
-          productSales: [...sales, ...(vslaState.productSales || [])],
+          productSales: [...sales, ...(vslaState.productSales || [])].slice(0, 200),
           boxCashBalance: vslaState.boxCashBalance + revenue,
           loanFundBalance: vslaState.loanFundBalance + profit,
         },
@@ -1549,7 +1582,7 @@ export function App() {
         {
           ...vslaState,
           products: updatedProducts,
-          productSales: [record, ...(vslaState.productSales || [])],
+          productSales: [record, ...(vslaState.productSales || [])].slice(0, 200),
           boxCashBalance: isGroup ? vslaState.boxCashBalance + revenue : vslaState.boxCashBalance,
           loanFundBalance: isGroup ? vslaState.loanFundBalance + profit : vslaState.loanFundBalance,
         },
@@ -1916,9 +1949,31 @@ export function App() {
         logoUrl={vslaState.groupProfile?.logoUrl}
       />
 
-      {/* Screen Router */}
+      {/* Screen Router — lazy screens show a light loader on slow phones */}
       <div className="flex-1 flex flex-col">
-        {currentScreen === 'home' && (
+        <Suspense
+          fallback={
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center space-y-2">
+                <span className="material-symbols-outlined text-4xl text-text-muted animate-pulse">hourglass_top</span>
+                <p className="text-xs text-text-muted font-bold">{language === 'LU' ? 'Kitegekebwa…' : 'Loading…'}</p>
+              </div>
+            </div>
+          }
+        >
+        {currentScreen === 'home' && currentUser.role === 'member' && !showGroupHome && myMember && (
+          <MemberHomeView
+            member={myMember}
+            requests={myRequests}
+            memberBusinesses={memberBusinesses}
+            groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
+            language={language}
+            onNavigate={handleNavigateScreen}
+            onOpenGroupHome={() => setShowGroupHome(true)}
+          />
+        )}
+
+        {currentScreen === 'home' && !(currentUser.role === 'member' && !showGroupHome && myMember) && (
           <HomeView
             onNavigate={handleNavigateScreen}
             pendingApprovalsCount={pendingApprovalsCount}
@@ -1967,6 +2022,7 @@ export function App() {
             onNavigate={handleNavigateScreen}
             onRestoreState={handleRestoreState}
             onCreateSnapshot={handleCreateSnapshot}
+            onDeleteSnapshot={handleDeleteSnapshot}
             onResetToBaseline={handleResetToBaseline}
             onRefreshFromServer={fetchStateFromServer}
             language={language}
@@ -2116,6 +2172,7 @@ export function App() {
             groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
             language={language}
             onNavigate={handleNavigateScreen}
+            onOpenGroupHome={currentUser.role === 'member' ? () => { setShowGroupHome(true); handleNavigateScreen('home'); } : undefined}
           />
         )}
 
@@ -2213,6 +2270,7 @@ export function App() {
             members={vslaState.members}
           />
         )}
+        </Suspense>
       </div>
 
       {/* Cash Discrepancy Modal */}
@@ -2300,6 +2358,12 @@ export function App() {
         onNavigateScreen={handleNavigateScreen}
         language={language}
         simpleMode={simpleMode}
+        role={currentUser.role}
+        permissions={{
+          canLockBox: currentUser.permissions.canLockBox,
+          canApproveLoans: currentUser.permissions.canApproveLoans,
+          canManageBackups: currentUser.permissions.canManageBackups,
+        }}
       />
     </div>
   );

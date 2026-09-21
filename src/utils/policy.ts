@@ -8,6 +8,9 @@
 /** UGX gap that stops a single officer from sealing the meeting. */
 export const GAP_TWO_KEY_THRESHOLD = 50_000;
 
+/** Standard late-payment fine (UGX). Proposed from Reports → Arrears Watch. */
+export const LATE_FINE_AMOUNT = 2000;
+
 /** UGX ceiling for single-key emergency welfare payouts. */
 export const WELFARE_FAST_TRACK_CAP = 100_000;
 

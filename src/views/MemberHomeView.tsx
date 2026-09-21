@@ -10,6 +10,8 @@ interface MemberHomeViewProps {
   groupName?: string;
   language?: Language;
   onNavigate: (screen: ScreenId) => void;
+  /** Officers' group home — members see this only via a quiet link. */
+  onOpenGroupHome?: () => void;
 }
 
 const statusStyle = (s: string) =>
@@ -31,6 +33,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
   groupName = 'Savings Group',
   language = 'EN',
   onNavigate,
+  onOpenGroupHome,
 }) => {
   const str = (en: string, lu: string) => (language === 'LU' ? lu : en);
   const eligible = Math.max(0, (member.maxBorrowLimit || 0) - (member.loanBalance || 0));
@@ -82,7 +85,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
     <main className="w-full max-w-lg mx-auto px-4 pt-4 pb-14 flex-1 space-y-4">
       <div className="flex items-center gap-3">
         <MemberAvatar name={member.name} initials={member.initials} photoUrl={member.photoUrl} sizeClass="w-12 h-12 text-sm" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="font-bold text-primary truncate">
             {str('Hi', 'Gyoli')} {member.name.split(' ')[0]}!
           </h1>
@@ -90,6 +93,15 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
             {groupName} · #{member.no}
           </p>
         </div>
+        {onOpenGroupHome && (
+          <button
+            type="button"
+            onClick={onOpenGroupHome}
+            className="text-[11px] font-bold text-text-muted underline shrink-0"
+          >
+            {str('Group home →', 'Ekibiina →')}
+          </button>
+        )}
       </div>
 
       {/* My savings */}

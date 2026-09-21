@@ -3,7 +3,7 @@
  * Photos are downscaled on-device so 30 members fit easily in localStorage
  * (target ≤ ~28KB each → under 1MB for a full group).
  */
-import type { Member } from '../types';
+import type { Member, VSLAState } from '../types';
 
 const MAX_BYTES = 28 * 1024;
 
@@ -54,12 +54,41 @@ export async function fileToAvatarDataUrl(file: File): Promise<string> {  if (!f
 }
 
 /**
+ * Cheap-phone survival: face photos (~28KB each) must never multiply inside
+ * snapshots. A snapshot stores the BOOKS (balances, loans, ledger) with faces
+ * stripped; restores merge the live faces back by member id.
+ */
+export function stripPhotosForSnapshot(state: VSLAState): VSLAState {
+  return {
+    ...state,
+    members: (state.members || []).map((m) => {
+      if (!m.photoUrl) return m;
+      const { photoUrl: _omit, ...rest } = m;
+      return rest;
+    }),
+  };
+}
+
+/** Merge live face photos into a restored state so snapshot restore never blanks faces. */
+export function mergePhotosIntoRestored(restored: VSLAState, live: VSLAState): VSLAState {
+  const livePhotos = new Map(
+    (live.members || []).filter((m) => m.photoUrl).map((m) => [m.id, m.photoUrl as string])
+  );
+  if (livePhotos.size === 0) return restored;
+  return {
+    ...restored,
+    members: (restored.members || []).map((m) =>
+      !m.photoUrl && livePhotos.has(m.id) ? { ...m, photoUrl: livePhotos.get(m.id) } : m
+    ),
+  };
+}
+
+/**
  * Shared member→photo lookup for approvals, fines and account lists, which
  * only carry memberNo/memberName (not the full Member). Prefers exact
  * memberNo match, falls back to case-insensitive name. Returns undefined
  * when nothing matches so callers render initials.
- */
-export function findMemberPhoto(
+ */export function findMemberPhoto(
   members: Pick<Member, 'no' | 'name' | 'photoUrl'>[],
   memberNo?: string,
   memberName?: string
