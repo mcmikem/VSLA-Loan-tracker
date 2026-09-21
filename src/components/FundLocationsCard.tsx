@@ -70,7 +70,7 @@ export const FundLocationsCard: React.FC<FundLocationsCardProps> = ({
         )}
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {loc(str('Cash in box', 'Cash'), cash, true)}
+        {loc(str('Cash in box', 'Nkalu'), cash, true)}
         {loc(str('MoMo float', 'MoMo'), momo, momo > 0)}
         {loc(str('Bank', 'Banka'), bank, bank > 0)}
       </div>

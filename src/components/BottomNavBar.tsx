@@ -57,13 +57,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
       }`}
       type="button"
     >
+      {activeTab === tab && (
+        <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-secondary" aria-hidden="true" />
+      )}
       <span
         className="material-symbols-outlined text-[24px]"
         style={{ fontVariationSettings: activeTab === tab ? "'FILL' 1" : "'FILL' 0" }}
       >
         {icon}
       </span>
-      <span className="font-semibold tracking-tight mt-0.5 text-[11px]">{label}</span>
+      <span className={`tracking-tight mt-0.5 text-[11px] ${activeTab === tab ? 'font-bold' : 'font-semibold'}`}>{label}</span>
       {badge !== undefined && badge > 0 && (
         <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-0.5 rounded-full bg-status-warn-bg text-status-warn-tx font-bold text-[10px] border border-[#FDE68A]">
           {badge}
@@ -85,8 +88,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           <div className="max-w-lg mx-auto flex justify-around items-center px-2 py-1.5">
             {tabBtn('members', 'member_home', 'account_circle', lu ? 'Akawunti kange' : 'My Account')}
             {tabBtn('more', 'shop', 'storefront', lu ? 'Kaduuka' : 'Shop')}
-            {tabBtn('loans', 'new_loan', 'add_card', lu ? 'Loan' : 'Loan')}
-            {tabBtn('more', 'help', 'help', lu ? 'Obuyambi' : 'Help')}
+            {tabBtn('loans', 'new_loan', 'add_card', lu ? 'Ebyewolo' : 'Loan')}
+            {tabBtn('more', 'help', 'help', lu ? 'Buyambi' : 'Help')}
           </div>
         </nav>
       );
@@ -156,7 +159,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                     {language === 'LU' ? 'Akawunti kange' : 'My Account'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Okutereka kwange, loan, bizinesi' : 'My savings, loans & ventures'}
+                    {language === 'LU' ? 'Enterekanya yange, ebyewolo, bizinesi' : 'My savings, loans & ventures'}
                   </span>
                 </div>
               </button>
@@ -196,7 +199,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                     {t.home.welfareFund}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Ensimbi z\'Obuyambi'  : 'Emergency fund'}
+                    {language === 'LU' ? "Enkoba y'Obuyambi"  : 'Emergency fund'}
                   </span>
                 </div>
               </button>
@@ -211,7 +214,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Constitution ne Bibonerezo'  : 'Constitution & Fines'}
+                    {language === 'LU' ? 'Ssemateeka n\'Engassi'  : 'Constitution & Fines'}
                   </span>
                   <span className="text-[11px] text-text-muted">
                     {language === 'LU' ? 'Amateeka n\'Emisoso'  : 'Bylaws & penalties'}
@@ -248,7 +251,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Amaloboozi ne Lukuŋŋaana'  : 'Audio Broadcast'}
+                    {language === 'LU' ? 'Amaloboozi n\'Olukuŋŋaana'  : 'Audio Broadcast'}
                   </span>
                   <span className="text-[11px] text-text-muted">
                     {language === 'LU' ? 'Omubazi Ayogera ku Ssimu'  : 'Voice summary'}
@@ -331,7 +334,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Obuyambi'  : 'Help & Support'}
+                    {language === 'LU' ? 'Buyambi'  : 'Help & Support'}
                   </span>
                   <span className="text-[11px] text-text-muted">
                     {language === 'LU' ? 'Ebyokuddamu ne WhatsApp'  : 'FAQs & WhatsApp'}
@@ -407,7 +410,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                     {language === 'LU' ? 'Enteekateeka y\'Ekibiina'  : 'Group Settings'}
                   </span>
                   <span className="text-[11px] text-text-muted">
-                    {language === 'LU' ? 'Erinnya, emigabo, obuyambi'  : 'Name, shares, welfare'}
+                    {language === 'LU' ? 'Erinya, emigabo, enkoba'  : 'Name, shares, welfare'}
                   </span>
                 </div>
               </button>
@@ -429,13 +432,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               onTabChange('home');
               onNavigateScreen('home');
             }}
-            className={`flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
               activeTab === 'home'
                 ? 'bg-primary-container text-white shadow-sm'
                 : 'text-text-muted hover:bg-surface-container-low'
             }`}
             type="button"
           >
+            {activeTab === 'home' && (
+              <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-secondary" aria-hidden="true" />
+            )}
             <span
               className="material-symbols-outlined text-[22px]"
               style={{ fontVariationSettings: activeTab === 'home' ? "'FILL' 1" : "'FILL' 0" }}
@@ -453,13 +459,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               onTabChange('meetings');
               onNavigateScreen('meeting_wizard');
             }}
-            className={`flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
               activeTab === 'meetings'
                 ? 'bg-primary-container text-white shadow-sm'
                 : 'text-text-muted hover:bg-surface-container-low'
             }`}
             type="button"
           >
+            {activeTab === 'meetings' && (
+              <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-secondary" aria-hidden="true" />
+            )}
             <span
               className="material-symbols-outlined text-[22px]"
               style={{ fontVariationSettings: activeTab === 'meetings' ? "'FILL' 1" : "'FILL' 0" }}
@@ -477,13 +486,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               onTabChange('members');
               onNavigateScreen('member_passbook');
             }}
-            className={`flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
               activeTab === 'members'
                 ? 'bg-primary-container text-white shadow-sm'
                 : 'text-text-muted hover:bg-surface-container-low'
             }`}
             type="button"
           >
+            {activeTab === 'members' && (
+              <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-secondary" aria-hidden="true" />
+            )}
             <span
               className="material-symbols-outlined text-[22px]"
               style={{ fontVariationSettings: activeTab === 'members' ? "'FILL' 1" : "'FILL' 0" }}
@@ -501,13 +513,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
               onTabChange('loans');
               onNavigateScreen('new_loan');
             }}
-            className={`flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
               activeTab === 'loans'
                 ? 'bg-primary-container text-white shadow-sm'
                 : 'text-text-muted hover:bg-surface-container-low'
             }`}
             type="button"
           >
+            {activeTab === 'loans' && (
+              <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-secondary" aria-hidden="true" />
+            )}
             <span
               className="material-symbols-outlined text-[22px]"
               style={{ fontVariationSettings: activeTab === 'loans' ? "'FILL' 1" : "'FILL' 0" }}
@@ -532,6 +547,9 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             }`}
             type="button"
           >
+            {activeTab === 'approvals' && (
+              <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-secondary" aria-hidden="true" />
+            )}
             <span
               className="material-symbols-outlined text-[22px]"
               style={{ fontVariationSettings: activeTab === 'approvals' ? "'FILL' 1" : "'FILL' 0" }}
@@ -551,7 +569,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           {/* Tab 6: More / Menu drawer */}
           <button
             onClick={handleMoreClick}
-            className={`flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
+            className={`relative flex flex-col items-center justify-center px-2 py-1 min-h-[44px] min-w-[44px] rounded-lg transition-colors active:scale-95 ${
               activeTab === 'more'
                 ? 'bg-primary-container text-white shadow-sm'
                 : 'text-text-muted hover:bg-surface-container-low'
@@ -559,6 +577,9 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             type="button"
             title={t.nav.more}
           >
+            {activeTab === 'more' && (
+              <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-secondary" aria-hidden="true" />
+            )}
             <span className="material-symbols-outlined text-[22px]">menu</span>
             <span className="text-label-sm font-label-sm font-semibold tracking-tight mt-0.5">
               {t.nav.more}

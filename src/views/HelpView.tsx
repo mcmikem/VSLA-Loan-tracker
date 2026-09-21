@@ -55,8 +55,8 @@ export const HelpView: React.FC<HelpViewProps> = ({
       a: str('Close the tab and reopen. Your records are saved on the phone. If it repeats, use Backup & Audit → Reset, then restore your last downloaded backup.', 'Ggalawo ttabu oddamu n\'ogiggulawo. Ebiwandiiko biri ku ssimu. Singa kiddamu, kozesa Backup → Reset.'),
     },
     {
-      q: str('How do I add a new member?', 'Nongerako ntya member omupya?'),
-      a: str('Share your group invite code (Home → Invite). The member opens the app, taps the group menu → Join with Invite Code, and enters their name and phone.', 'Gabana koodi y\'ekibiina (Awaka → Yita member). Member aggulawo app → Yegatte ku kibiina.'),
+      q: str('How do I add a new member?', 'Nyungiza ntya omukiise omupya?'),
+      a: str('Share your group invite code (Home → Invite). The member opens the app, taps the group menu → Join with Invite Code, and enters their name and phone.', "Gabana koodi y'ekibiina (Awaka → Yita). Omukiise aggulawo app → Yingirira ku Koodi."),
     },
     {
       q: str('Cash counted does not match the expected total?', 'Ssente ze mubaze teziringa?'),
@@ -68,7 +68,7 @@ export const HelpView: React.FC<HelpViewProps> = ({
     },
     {
       q: str('Is my data safe without internet?', 'Data yange eri mu bulambulukufu awatali yintaneeti?'),
-      a: str('Yes — the app is offline-first. Records live on the phone and sync when you are back online. Download a backup (JSON) after every meeting.', 'Yee — app ekola awatali yintaneeti. Wannula backup buli lukuŋŋaana.'),
+      a: str('Yes — the app is offline-first. Records live on the phone and sync when you are back online. Download a backup (JSON) after every meeting.', 'Yee — app ekola awatali yintaneeti. Koppa backup buli lukuŋŋaana.'),
     },
   ];
 
@@ -83,7 +83,7 @@ export const HelpView: React.FC<HelpViewProps> = ({
           <span className="material-symbols-outlined text-lg">arrow_back</span>
         </button>
         <div>
-          <h1 className="font-bold text-primary">{str('Help & Support', 'Obuyambi')}</h1>
+          <h1 className="font-bold text-primary">{str('Help & Support', 'Buyambi')}</h1>
           <p className="text-xs text-text-muted">{str('Answers in English & Luganda', 'Ebyokuddamu mu Luzungu n\'Oluganda')}</p>
         </div>
       </div>
@@ -110,7 +110,7 @@ export const HelpView: React.FC<HelpViewProps> = ({
         <p className="text-xs text-[#4B5563] leading-relaxed">
           {str(
             'New to apps? Open a fake 5-member group. Record shares, repay a loan, seal a meeting — nothing real moves. Your real group is saved and restored.',
-            'Omanyi ssimu omupya? Ggulawo ekibiina eky’ekigezo (members 5). Weeyigire okutereka n’okusiba — tewali ssente ddala ezikwatibwako. Ekibiina kyo ekiddu ekikuumibwa.'
+            'Omanyi ssimu omupya? Ggulawo ekibiina eky’ekigezo (abakiise 5). Weeyigire okutereka n’okusiba — tewali ssente ddala ezikwatibwako. Ekibiina kyo ekiddu ekikuumibwa.'
           )}
         </p>
         {isPractice ? (

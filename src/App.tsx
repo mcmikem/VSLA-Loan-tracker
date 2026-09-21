@@ -1912,7 +1912,7 @@ export function App() {
         </div>
       )}
       {showLocalOnlyBanner && (
-        <div className="bg-amber-100 border-b border-amber-300 text-amber-900 text-[11px] font-bold px-4 py-1.5 text-center">
+        <div className="bg-surface-container border-b border-border-line text-text-muted text-[11px] font-bold px-4 py-1.5 text-center">
           Records stay on this phone only — connect the shared database (DATABASE_URL) so all officers see the same ledger.
         </div>
       )}
@@ -2013,6 +2013,8 @@ export function App() {
             bankBalance={funds.bank}
             fundTransfers={vslaState.fundTransfers || []}
             onTransferFunds={handleTransferFunds}
+            isOnline={isServerConnected}
+            showLocalOnly={showLocalOnlyBanner}
           />
         )}
 

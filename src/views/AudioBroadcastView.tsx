@@ -43,7 +43,7 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
 
   const formattedCash = boxCashBalance.toLocaleString('en-US');
 
-  const lugandaText = `Lukuŋŋaana #${meetingNumber} lwa Bakwata luwedde. Ensimbi eziri mu Akasanduuko ziri UGX ${formattedCash}. Members ${membersCount} baabaddewo. Akasanduuko kasibiddwa.`;
+  const lugandaText = `Olukuŋŋaana #${meetingNumber} lwa Bakwata lufundikiddwa. Ssente eziri mu sanduuko ziri shillingi za Uganda emitwalo ${Math.round(boxCashBalance / 10000)} (UGX ${formattedCash}). Bammemba ${membersCount} beetabye. Sanduuko esibiddwa n'ekkufulu essatu ez'abakwasi b'ebisumuluzo.`;
 
   const englishText = `Bakwata Village Savings meeting number ${meetingNumber} has adjourned. The verified physical cash in the safe box is Uganda Shillings ${formattedCash}. All ${membersCount} members accounted for. The box has been locked with 3 padlocks by the appointed keyholders.`;
 

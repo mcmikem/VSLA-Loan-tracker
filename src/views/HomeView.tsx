@@ -43,6 +43,9 @@ interface HomeViewProps {
   bankBalance?: number;
   fundTransfers?: FundTransfer[];
   onTransferFunds?: (from: FundLocation, to: FundLocation, amount: number, note: string) => string | null;
+  /** Connectivity state for the one compact status card. */
+  isOnline?: boolean;
+  showLocalOnly?: boolean;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -79,17 +82,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
   bankBalance = 0,
   fundTransfers = [],
   onTransferFunds,
+  isOnline = true,
+  showLocalOnly = false,
 }) => {
   const formatUGX = (num: number) => num.toLocaleString('en-US');
   const t = getTranslations(language);
   const cyclePct = Math.min(100, Math.round((cycleMonth / Math.max(1, totalCycleMonths)) * 100));
-  // Bilingual safety net: every primary label carries the other language
-  // underneath, so a wrong Luganda string never strands anyone.
-  const tOther = getTranslations(language === 'LU' ? 'EN' : 'LU');
-  const dual = (primary: string, secondary: string) => (
+  // One language per label — the app language wins, no stacked second language.
+  const dual = (primary: string) => (
     <span className="text-left leading-tight">
       <span className="block">{primary}</span>
-      <span className="block text-xs font-normal opacity-70">{secondary}</span>
     </span>
   );
 
@@ -121,58 +123,104 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </button>
         </section>
 
-        {/* Pending approvals nudge */}
-        {pendingApprovalsCount > 0 && (
-          <button
-            type="button"
-            onClick={() => onNavigate('approvals')}
-            className="w-full rounded-xl bg-status-warn-bg border-2 border-[#FDE68A] p-4 text-left active:scale-[0.99] min-h-[56px]"
-          >
-            <p className="font-bold text-status-warn-tx">
-              {pendingApprovalsCount} {t.home.pendingApprovals}
-            </p>
-            <p className="text-xs text-status-warn-tx underline">{t.home.reviewQueue}</p>
-          </button>
+        {/* One compact status card: approvals + sync state, neutral — never red.
+            Red is reserved for money-at-risk (cash gaps, default PIN). */}
+        {(pendingApprovalsCount > 0 || !isOnline || showLocalOnly) && (
+          <section className="rounded-xl bg-surface-card border border-border-strong p-3 shadow-sm space-y-2">
+            {pendingApprovalsCount > 0 && (
+              <button
+                type="button"
+                onClick={() => onNavigate('approvals')}
+                className="w-full flex items-center gap-2.5 text-left active:scale-[0.99] min-h-[48px]"
+              >
+                <span className="w-9 h-9 rounded-full bg-[#00261b] text-[#EAB308] flex items-center justify-center font-bold text-sm shrink-0">
+                  {pendingApprovalsCount}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-sm text-primary">
+                    {pendingApprovalsCount} {t.home.pendingApprovals}
+                  </span>
+                  <span className="block text-[11px] text-secondary font-bold underline">{t.home.reviewQueue}</span>
+                </span>
+                <span className="material-symbols-outlined text-primary">arrow_forward</span>
+              </button>
+            )}
+            {(!isOnline || showLocalOnly) && (
+              <p className="flex items-center gap-1.5 text-[11px] text-text-muted border-t border-border-line pt-2">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${isOnline ? 'bg-secondary' : 'bg-status-warn-tx'}`} />
+                {!isOnline
+                  ? (language === 'LU' ? 'Tewali Mutimbagano — bikolebwa ku ssimu eno' : 'Offline — saved on this phone')
+                  : (language === 'LU' ? 'Zikolebwa ku ssimu eno yokka' : 'Saved on this phone only')}
+              </p>
+            )}
+          </section>
         )}
 
-        {/* Box cash, huge */}
+        {/* Box cash, huge — plain words: counted cash in the metal box */}
         <section className="bg-primary-container text-white rounded-xl p-5 shadow-md">
           <p className="text-xs text-primary-fixed uppercase tracking-wider font-semibold">
             {t.home.boxCashBalance}
           </p>
-          <p className="font-mono text-4xl font-bold tracking-tight">
-            {formatUGX(boxCashBalance)}
+          <p className="font-mono font-bold tracking-tight mt-1">
+            <span className="text-xl align-top mr-1">UGX</span>
+            <span className="text-4xl">{formatUGX(boxCashBalance)}</span>
           </p>
-          <p className="text-xs text-primary-fixed mt-1">
-            UGX · {t.home.welfareFund}: {formatUGX(welfareFundBalance)}
-            {(momoBalance > 0 || bankBalance > 0) && (
-              <span> · MoMo: {formatUGX(momoBalance)} · Bank: {formatUGX(bankBalance)}</span>
+          <p className="text-[11px] text-primary-fixed/80 mt-1">
+            {language === 'LU'
+              ? 'Ensimbi enkalu ezibaliddwa mu kasanduuko'
+              : 'Physical cash counted in the metal box'}
+            {recentMeetingsCount > 0 && (
+              <span> · {t.home.meetingNumber(recentMeetingsCount)}</span>
             )}
           </p>
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold">
+              {t.home.welfareFund}: <span className="font-mono">UGX {formatUGX(welfareFundBalance)}</span>
+            </span>
+            {(momoBalance > 0 || bankBalance > 0) && (
+              <>
+                {momoBalance > 0 && (
+                  <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold">
+                    MoMo: <span className="font-mono">UGX {formatUGX(momoBalance)}</span>
+                  </span>
+                )}
+                {bankBalance > 0 && (
+                  <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold">
+                    Bank: <span className="font-mono">UGX {formatUGX(bankBalance)}</span>
+                  </span>
+                )}
+              </>
+            )}
+          </div>
         </section>
 
         {/* My account — the member's own money first */}
         {onOpenMyAccount && myMemberName && (
-          <button
-            type="button"
-            onClick={onOpenMyAccount}
-            className="w-full rounded-xl bg-[#FFF8E1] border-2 border-[#EAB308] p-4 text-left active:scale-[0.99] flex items-center gap-3"
-          >
-            <span className="w-10 h-10 rounded-full bg-[#00261b] text-[#EAB308] flex items-center justify-center font-bold shrink-0">
-              {myMemberName.charAt(0)}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold text-sm text-primary truncate">
-                {myMemberName} · UGX {formatUGX(mySavings || 0)}
+          <section className="rounded-xl bg-[#FFF8E1] border-2 border-[#EAB308] p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-full bg-[#00261b] text-[#EAB308] flex items-center justify-center font-bold shrink-0">
+                {myMemberName.charAt(0)}
               </span>
-              <span className="block text-xs text-text-muted">
-                {(myLoanBalance || 0) > 0
-                  ? `${language === 'LU' ? 'Olina loan:' : 'Owe'} UGX ${formatUGX(myLoanBalance || 0)}`
-                  : (language === 'LU' ? 'Tewali loan — laba business' : 'Debt-free — see ventures')} · {language === 'LU' ? 'Akawunti kange →' : 'My account →'}
+              <span className="min-w-0 flex-1">
+                <span className="block font-bold text-sm text-primary truncate">
+                  {myMemberName} · UGX {formatUGX(mySavings || 0)}
+                </span>
+                <span className="block text-xs text-text-muted">
+                  {(myLoanBalance || 0) > 0
+                    ? `${language === 'LU' ? 'Obbanja:' : 'Owe'} UGX ${formatUGX(myLoanBalance || 0)}`
+                    : (language === 'LU' ? 'Tewali bbanja — laba bizinesi' : 'Debt-free — see ventures')}
+                </span>
               </span>
-            </span>
-            <span className="material-symbols-outlined text-primary">arrow_forward</span>
-          </button>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenMyAccount}
+              className="w-full min-h-[52px] bg-[#00261b] text-[#EAB308] rounded-lg font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.99]"
+            >
+              <span className="material-symbols-outlined">account_circle</span>
+              {language === 'LU' ? 'Ggulawo akawunti kange' : 'Open my account'}
+            </button>
+          </section>
         )}
 
         {/* Group market teaser — neighbours' ventures */}
@@ -187,7 +235,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-bold text-sm text-primary">
-                {marketCount} {language === 'LU' ? 'business za members ziriwo →' : 'neighbour ventures on sale →'}
+                {marketCount} {language === 'LU' ? 'bizinesi z’abakiise ziriwo →' : 'neighbour ventures on sale →'}
               </span>
               <span className="block text-xs text-text-muted">
                 {language === 'LU' ? 'Tundanagane — ekibiina kikule' : 'Buy from each other — grow together'}
@@ -206,7 +254,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-[#15803D] text-white rounded-xl font-bold text-lg shadow active:scale-[0.99]"
           >
             <span className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-xl shrink-0">1</span>
-            {dual(t.home.startMeeting, tOther.home.startMeeting)}
+            {dual(t.home.startMeeting)}
             <span className="material-symbols-outlined ml-auto">arrow_forward</span>
           </button>
           <button
@@ -215,7 +263,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-surface-card border-2 border-border-strong rounded-xl font-bold text-lg text-primary shadow-sm active:scale-[0.99]"
           >
             <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl shrink-0">2</span>
-            {dual(t.nav.members, tOther.nav.members)}
+            {dual(t.nav.members)}
             <span className="material-symbols-outlined ml-auto">arrow_forward</span>
           </button>
           <button
@@ -224,7 +272,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             className="w-full min-h-[72px] flex items-center gap-3 px-4 py-3 bg-surface-card border-2 border-border-strong rounded-xl font-bold text-lg text-primary shadow-sm active:scale-[0.99]"
           >
             <span className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl shrink-0">3</span>
-            {dual(t.nav.approvals, tOther.nav.approvals)}
+            {dual(t.nav.approvals)}
             {pendingApprovalsCount > 0 && (
               <span className="ml-1 px-2 py-0.5 rounded-full bg-status-warn-bg text-status-warn-tx text-xs font-bold border border-[#FDE68A]">
                 {pendingApprovalsCount}
@@ -241,7 +289,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <span className="text-left">
               <span className="block">{t.home.simpleSaveBackup}</span>
               <span className="block text-xs font-normal text-text-muted">{t.home.simpleSaveBackupSub}</span>
-              <span className="block text-xs font-normal opacity-70">{tOther.home.simpleSaveBackup}</span>
             </span>
           </button>
         </section>

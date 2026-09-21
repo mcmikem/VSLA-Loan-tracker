@@ -49,6 +49,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
 }) => {
   const [showBoxDropdown, setShowBoxDropdown] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showOverflow, setShowOverflow] = useState(false);
 
   const t = getTranslations(language);
   const currentLangObj = LANGUAGE_OPTIONS.find((l) => l.code === language) || LANGUAGE_OPTIONS[0];
@@ -86,6 +87,99 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
 
         {/* Trailing Actions: Active Account Avatar, Share Code, Language Switcher, Sync */}
         <div className="flex items-center gap-1 shrink-0">
+          {simpleMode ? (
+            <>
+              {/* Profile keeps its room: avatar + name */}
+              <button
+                type="button"
+                onClick={onOpenAccountModal}
+                title={`Logged in as ${currentUser?.name || 'Grace Akello'} (${currentUser?.roleTitle || 'Executive'}). Click to switch account.`}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-container hover:bg-surface-container-high rounded-full border border-border-strong text-primary transition active:scale-95 cursor-pointer shadow-xs"
+              >
+                <div
+                  className={`w-6 h-6 rounded-full ${currentUser?.avatarBg || 'bg-emerald-700'} text-white flex items-center justify-center font-bold text-[10px]`}
+                >
+                  {currentUser?.avatarInitials || 'GA'}
+                </div>
+                <span className="font-bold text-xs max-w-[90px] truncate">
+                  {currentUser?.name.split(' ')[0] || t.topBar.activeAccount}
+                </span>
+                <span className="material-symbols-outlined text-[14px] text-text-muted">
+                  arrow_drop_down
+                </span>
+              </button>
+              {/* One overflow for utilities: Invite, Backup, Language, Notifications */}
+              <div className="relative">
+                <button
+                  aria-label="More actions"
+                  onClick={() => setShowOverflow(!showOverflow)}
+                  className="min-h-[38px] min-w-[38px] flex items-center justify-center text-primary hover:bg-surface-container rounded-lg transition-colors active:scale-95"
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[22px]">more_vert</span>
+                  {pendingApprovalsCount > 0 && (
+                    <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-0.5 rounded-full bg-status-warn-bg text-status-warn-tx font-bold text-[10px] border border-[#FDE68A]">
+                      {pendingApprovalsCount}
+                    </span>
+                  )}
+                </button>
+                {showOverflow && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowOverflow(false)} />
+                    <div className="absolute right-0 top-full mt-1 w-56 bg-surface-card rounded-xl shadow-2xl border border-border-strong p-1.5 z-50 space-y-0.5">
+                      {onOpenShareInvite && (
+                        <button
+                          type="button"
+                          onClick={() => { setShowOverflow(false); onOpenShareInvite(); }}
+                          className="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-surface-container text-left active:scale-[0.99]"
+                        >
+                          <span className="material-symbols-outlined text-[20px] text-secondary">share</span>
+                          <span className="text-xs font-bold text-primary">{t.topBar.inviteBtn}</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setShowOverflow(false); onOpenBackup?.(); }}
+                        className="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-surface-container text-left active:scale-[0.99]"
+                      >
+                        <span className="material-symbols-outlined text-[20px] text-primary">cloud_sync</span>
+                        <span className="text-xs font-bold text-primary flex-1">{t.home.backupAudit}</span>
+                        <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-secondary' : 'bg-status-warn-tx'}`} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowOverflow(false);
+                          const other = language === 'LU' ? 'EN' : 'LU';
+                          if (onSelectLanguage) onSelectLanguage(other as typeof language);
+                          else onToggleLanguage();
+                        }}
+                        className="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-surface-container text-left active:scale-[0.99]"
+                      >
+                        <span className="text-[18px]">{currentLangObj.flag}</span>
+                        <span className="text-xs font-bold text-primary flex-1">{currentLangObj.nativeLabel}</span>
+                        <span className="text-[10px] font-bold text-text-muted">{language === 'LU' ? 'EN' : 'LU'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowOverflow(false); onOpenNotifications?.(); }}
+                        className="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-surface-container text-left active:scale-[0.99]"
+                      >
+                        <span className="material-symbols-outlined text-[20px] text-primary">notifications</span>
+                        <span className="text-xs font-bold text-primary flex-1">{t.home.reviewQueue.replace(' →', '')}</span>
+                        {pendingApprovalsCount > 0 && (
+                          <span className="min-w-4 h-4 px-1 rounded-full bg-status-warn-bg text-status-warn-tx font-bold text-[10px] border border-[#FDE68A]">
+                            {pendingApprovalsCount}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+          <>
           {/* Invite Kit Trigger */}
           {onOpenShareInvite && (
             <button
@@ -207,6 +301,8 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
               </span>
             )}
           </button>
+          </>
+          )}
         </div>
       </div>
 

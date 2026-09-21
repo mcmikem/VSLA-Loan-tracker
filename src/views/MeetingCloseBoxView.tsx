@@ -38,7 +38,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
 
   const [minutesText, setMinutesText] = useState(
     language === 'LU'
-      ? `Lukuŋŋaana #${meetingNumber} luwedde bulungi. Members bonna baabaddewo. Lukuŋŋaana oluddako ku Lwokutaano mu Kalerwe Community Hall.`
+      ? `Olukuŋŋaana #${meetingNumber} lwaggaddwa bulungi ku ssaawa 12:45 ez'emisana. Abakiise bonna babaddewo. Olukuŋŋaana oluddako ku Lwokutaano mu Kalerwe Community Hall.`
        : `Meeting #${meetingNumber} closed peacefully at 12:45 PM. All members present. Next meeting on Friday at Kalerwe Community Hall.`
   );
   const [isLocked, setIsLocked] = useState(false);
@@ -431,7 +431,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   {language === 'LU' ? 'Emitendera 7 gyonna egyakulembedde gikakasiddwa'  : 'All 7 prior steps verified & saved'}
                 </span>
                 <span className="text-[11px] text-text-muted">
-                  {language === 'LU' ? 'Okubala members, Emigabo, Obuyambi, Okusasula, Loan.'  : 'Attendance, Shares, Welfare, Repayments, Loans.'}
+                  {language === 'LU' ? "Okubala abakiise, Emigabo, Enkoba, Okusasula, Ebyewolo."  : 'Attendance, Shares, Welfare, Repayments, Loans.'}
                 </span>
               </div>
             </label>
@@ -502,7 +502,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                 <span className="material-symbols-outlined text-sm">warning</span>
                 <span>
                   {language === 'LU'
-                    ? `Kino kijja kusiba Lukuŋŋaana #${meetingNumber} era kikuume omugatte gw'ensimbi zonna.`
+                    ? `Kino kijja kusiba Olukuŋŋaana #${meetingNumber} era kikuume omugatte gwa ssente zonna eziri mu sanduuko.`
                      : `This will seal Meeting #${meetingNumber} and update total box cash.`}
                 </span>
               </div>
