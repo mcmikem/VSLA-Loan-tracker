@@ -4,6 +4,9 @@ import { Language, ScreenId } from '../types';
 interface HelpViewProps {
   onNavigate: (screen: ScreenId) => void;
   language?: Language;
+  isPractice?: boolean;
+  onEnterPractice?: () => void;
+  onExitPractice?: () => void;
 }
 
 const SUPPORT_WHATSAPP = '256772445566';
@@ -11,7 +14,7 @@ const SUPPORT_WHATSAPP = '256772445566';
 /**
  * Upgrade #18 — in-app Help & Support center.
  */
-export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' }) => {
+export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN', isPractice = false, onEnterPractice, onExitPractice }) => {
   const [open, setOpen] = useState<number | null>(0);
   const str = (en: string, lu: string) =>
     language === 'LU' ? lu  : en;
@@ -22,8 +25,8 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' 
       a: str('Close the tab and reopen. Your records are saved on the phone. If it repeats, use Backup & Audit → Reset, then restore your last downloaded backup.', 'Ggalawo ttabu oddamu n\'ogiggulawo. Ebiwandiiko biri ku ssimu. Singa kiddamu, kozesa Backup → Reset.'),
     },
     {
-      q: str('How do I add a new member?', 'Nyungiza ntya omukiise omupya?'),
-      a: str('Share your group invite code (Home → Invite). The member opens the app, taps the group menu → Join with Invite Code, and enters their name and phone.', 'Gabana koodi y\'ekibiina (Awaka → Yita). Omukiise aggulawo app → Yingirira ku Koodi.'),
+      q: str('How do I add a new member?', 'Nongerako ntya member omupya?'),
+      a: str('Share your group invite code (Home → Invite). The member opens the app, taps the group menu → Join with Invite Code, and enters their name and phone.', 'Gabana koodi y\'ekibiina (Awaka → Yita member). Member aggulawo app → Yegatte ku kibiina.'),
     },
     {
       q: str('Cash counted does not match the expected total?', 'Ssente ze mubaze teziringa?'),
@@ -35,7 +38,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' 
     },
     {
       q: str('Is my data safe without internet?', 'Data yange eri mu bulambulukufu awatali yintaneeti?'),
-      a: str('Yes — the app is offline-first. Records live on the phone and sync when you are back online. Download a backup (JSON) after every meeting.', 'Yee — app ekola awatali yintaneeti. Koppa backup buli lukuŋŋaana.'),
+      a: str('Yes — the app is offline-first. Records live on the phone and sync when you are back online. Download a backup (JSON) after every meeting.', 'Yee — app ekola awatali yintaneeti. Wannula backup buli lukuŋŋaana.'),
     },
   ];
 
@@ -50,7 +53,7 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' 
           <span className="material-symbols-outlined text-lg">arrow_back</span>
         </button>
         <div>
-          <h1 className="font-bold text-primary">{str('Help & Support', 'Buyambi')}</h1>
+          <h1 className="font-bold text-primary">{str('Help & Support', 'Obuyambi')}</h1>
           <p className="text-xs text-text-muted">{str('Answers in English & Luganda', 'Ebyokuddamu mu Luzungu n\'Oluganda')}</p>
         </div>
       </div>
@@ -67,6 +70,37 @@ export const HelpView: React.FC<HelpViewProps> = ({ onNavigate, language = 'EN' 
           <span className="block text-xs opacity-80">+256 772 445566 · {str('Mon–Sat, 8am–6pm', 'Muw–Muk, 8–18')}</span>
         </span>
       </a>
+
+      {/* Practice mode: safe play-money group for first-time smartphone users */}
+      <section className="bg-[#FFF8E1] border-2 border-[#EAB308] rounded-xl p-4 space-y-2">
+        <h2 className="font-bold text-sm text-[#00261b] flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[20px]">sports_esports</span>
+          {str('Try first with play money', 'Soooka ogezzeeko na ssente za kuzannya')}
+        </h2>
+        <p className="text-xs text-[#4B5563] leading-relaxed">
+          {str(
+            'New to apps? Open a fake 5-member group. Record shares, repay a loan, seal a meeting — nothing real moves. Your real group is saved and restored.',
+            'Omanyi ssimu omupya? Ggulawo ekibiina eky’ekigezo (members 5). Weeyigire okutereka n’okusiba — tewali ssente ddala ezikwatibwako. Ekibiina kyo ekiddu ekikuumibwa.'
+          )}
+        </p>
+        {isPractice ? (
+          <button
+            type="button"
+            onClick={onExitPractice}
+            className="w-full min-h-[52px] bg-[#00261b] text-white rounded-lg font-bold text-sm active:scale-[0.99]"
+          >
+            {str('Exit practice → back to my real group', 'Fuluma → ddayo mu kibiina kyange ekiddu')}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onEnterPractice}
+            className="w-full min-h-[52px] bg-[#EAB308] text-[#00261b] rounded-lg font-bold text-sm active:scale-[0.99]"
+          >
+            {str('Open practice group (free, safe)', 'Ggulawo ekibiina eky’ekigezo (mawa)')}
+          </button>
+        )}
+      </section>
 
       <section className="space-y-2">
         {faqs.map((f, i) => (

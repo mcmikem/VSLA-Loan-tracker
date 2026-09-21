@@ -58,7 +58,15 @@ export const LegalView: React.FC<LegalViewProps> = ({
       </div>
 
       <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm text-xs text-on-surface space-y-3 leading-relaxed">
-        {tab === 'terms' && (
+        {tab === 'terms' && language === 'LU' && (
+          <>
+            <h2 className="font-bold text-sm text-primary">Amateeka n’obukwakkulizo</h2>
+            <p>Soma era okkirize amateeka n’obukwakkulizo nga tonnakozesa VSLA UG.</p>
+            <p>Ebikwata ku kibiina n’ab members biterekebwa mu ngeri ey’obukuumi.</p>
+            <p>VSLA UG si bbanka. Kakasa nti ebisigadde mu kasanduuko ak’ensimbi bibaliddwa era bikakhasiddwa ku buli lukuŋŋaana.</p>
+          </>
+        )}
+        {tab === 'terms' && language !== 'LU' && (
           <>
             <h2 className="font-bold text-sm text-primary">Terms of Service</h2>
             <p>1. <strong>Group responsibility.</strong> Bakwata VSLA is a record-keeping tool. Cash custody, loan decisions and dispute resolution remain the responsibility of the savings group and its elected officers.</p>
@@ -69,7 +77,13 @@ export const LegalView: React.FC<LegalViewProps> = ({
             <p className="text-text-muted">Last updated September 2026 · Kampala, Uganda</p>
           </>
         )}
-        {tab === 'privacy' && (
+        {tab === 'privacy' && language === 'LU' && (
+          <>
+            <h2 className="font-bold text-sm text-primary">Enkola y’obukuumi bw’ebikwata ku bantu</h2>
+            <p>Ebikwata ku kibiina byo bisigala bya kyama era bikozesebwa ku lw’okukola omulimu gwa VSLA UG gwokka.</p>
+          </>
+        )}
+        {tab === 'privacy' && language !== 'LU' && (
           <>
             <h2 className="font-bold text-sm text-primary">Privacy Policy</h2>
             <p>1. <strong>What we store.</strong> Member names, phone numbers, savings, loans and meeting records you enter. No tracking cookies, no advertising profiles.</p>
@@ -80,7 +94,17 @@ export const LegalView: React.FC<LegalViewProps> = ({
             <p className="text-text-muted">Questions: ask your group secretary or chairperson.</p>
           </>
         )}
-        {tab === 'constitution' && (
+        {tab === 'constitution' && language === 'LU' && (
+          <>
+            <h2 className="font-bold text-sm text-primary">Constitution</h2>
+            <p>Article 1 — Erinnya n’ekigendererwa ky’ekibiina.</p>
+            <p>Article 2 — Ab members n’obuvunaanyizibwa bwabwe.</p>
+            <p>Article 3 — Okutereka, emigabo, ne loan.</p>
+            <p>Article 4 — Ensimbi z’obuyambi n’ebibonerezo.</p>
+            <p>Article 5 — Okukola enkyukakyuka mu Constitution.</p>
+          </>
+        )}
+        {tab === 'constitution' && language !== 'LU' && (
           <>
             <h2 className="font-bold text-sm text-primary">Model VSLA Constitution (adapt in a group vote)</h2>
             <p><strong>Article 1 — Name &amp; purpose.</strong> The group pools weekly savings, lends to members at agreed interest, and supports members in emergencies through the welfare fund.</p>

@@ -113,6 +113,22 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
             <div className="grid grid-cols-2 gap-2.5 pt-1">
               <button
+                onClick={() => handleSelectMoreOption('member_home', 'members')}
+                className="col-span-2 p-3 text-left rounded-lg bg-[#FFF8E1] border-2 border-[#EAB308] hover:border-[#006d30] active:bg-surface-container transition-all flex items-start gap-2.5 shadow-sm"
+              >
+                <div className="w-9 h-9 rounded-lg bg-[#00261b] text-[#EAB308] flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">account_circle</span>
+                </div>
+                <div>
+                  <span className="font-bold text-sm block text-primary">
+                    {language === 'LU' ? 'Akawunti kange' : 'My Account'}
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {language === 'LU' ? 'Okutereka kwange, loan, bizinesi' : 'My savings, loans & ventures'}
+                  </span>
+                </div>
+              </button>
+              <button
                 onClick={() => handleSelectMoreOption('backup', 'more')}
                 className="col-span-2 p-3 text-left rounded-lg bg-status-ok-bg/30 border-2 border-secondary/50 hover:border-secondary active:bg-surface-container transition-all flex items-start gap-2.5 shadow-sm"
               >
@@ -160,7 +176,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Ssemateeka n\'Engassi'  : 'Constitution & Fines'}
+                    {language === 'LU' ? 'Constitution ne Bibonerezo'  : 'Constitution & Fines'}
                   </span>
                   <span className="text-[11px] text-text-muted">
                     {language === 'LU' ? 'Amateeka n\'Emisoso'  : 'Bylaws & penalties'}
@@ -194,7 +210,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Amaloboozi n\'Olukuŋŋaana'  : 'Audio Broadcast'}
+                    {language === 'LU' ? 'Amaloboozi ne Lukuŋŋaana'  : 'Audio Broadcast'}
                   </span>
                   <span className="text-[11px] text-text-muted">
                     {language === 'LU' ? 'Omubazi Ayogera ku Ssimu'  : 'Voice summary'}
@@ -277,7 +293,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm block text-primary">
-                    {language === 'LU' ? 'Buyambi'  : 'Help & Support'}
+                    {language === 'LU' ? 'Obuyambi'  : 'Help & Support'}
                   </span>
                   <span className="text-[11px] text-text-muted">
                     {language === 'LU' ? 'Ebyokuddamu ne WhatsApp'  : 'FAQs & WhatsApp'}

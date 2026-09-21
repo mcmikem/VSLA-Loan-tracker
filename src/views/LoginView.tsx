@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScreenId, UserAccount } from '../types';
+import { Language, ScreenId, UserAccount } from '../types';
 import { setSessionToken } from '../utils/api';
 import { GroupLogo } from '../components/GroupLogo';
 
@@ -12,6 +12,7 @@ interface LoginViewProps {
   onLogin: (account: UserAccount) => void;
   onNavigate?: (screen: ScreenId) => void;
   logoUrl?: string;
+  language?: Language;
 }
 
 /** PIN gate shown when the server enforces auth (SESSION_SECRET set). */
@@ -23,6 +24,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   initialAccountId,
   onLogin,
   logoUrl,
+  language = 'EN',
 }) => {
   const [selectedId, setSelectedId] = useState(initialAccountId || accounts[0]?.id || '');
   const [pin, setPin] = useState('');
@@ -124,6 +126,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
         <p className="text-[11px] text-text-muted text-center">
           New member? Your secretary registers you — default PIN <span className="font-mono font-bold">1234</span>, change it after first sign-in.
+        </p>
+        <p className="text-[11px] text-text-muted text-center border-t border-border-line pt-2">
+          {language === 'LU'
+            ? 'Towa muntu yenna PIN yo. Bika PIN, koodi, ne ebikwata ku members mu bukuumi.'
+            : 'Never give anyone your PIN. Keep your PIN, codes and member details safe.'}
         </p>
       </form>
     </main>

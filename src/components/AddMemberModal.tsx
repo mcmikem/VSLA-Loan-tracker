@@ -74,7 +74,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-5 space-y-2.5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="font-bold text-[#00261b]">{str('Register new member', 'Wandiisa omukiise')}</h2>
+          <h2 className="font-bold text-[#00261b]">{str('Register new member', 'Yongerako member')}</h2>
           {(nextMemNumber || nextMemberNo) && (
             <span className="text-[10px] font-mono font-bold bg-[#0b3d2e] text-white px-2 py-1 rounded">
               {nextMemNumber || ''}{nextMemberNo ? ` · #${nextMemberNo}` : ''}
@@ -111,8 +111,8 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder={str('First name', 'Erinya')} className={inputCls} />
-          <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder={str('Last name', 'Erinya ly\'ekika')} className={inputCls} />
+          <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder={str('First name', 'Erinnya lyonna')} className={inputCls} />
+          <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder={str('Last name', 'Erinnya lya member ly\'ekika')} className={inputCls} />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <input value={form.phone} onChange={(e) => set('phone', e.target.value)} inputMode="tel" placeholder={str('07XX XXX XXX (optional)', '07XX XXX XXX (si kyetaagisa)')} className={inputCls} />
@@ -128,12 +128,12 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
         </div>
         <p className="text-[11px] font-bold text-[#4B5563] uppercase">{str('Next of kin', 'Ow\'oluganda')}</p>
         <div className="grid grid-cols-2 gap-2">
-          <input value={form.kinName} onChange={(e) => set('kinName', e.target.value)} placeholder={str('Kin name', 'Erinya')} className={inputCls} />
+          <input value={form.kinName} onChange={(e) => set('kinName', e.target.value)} placeholder={str('Kin name', 'Erinnya lya muganda wo')} className={inputCls} />
           <input value={form.kinPhone} onChange={(e) => set('kinPhone', e.target.value)} inputMode="tel" placeholder="07XX XXX XXX" className={inputCls} />
         </div>
         <p className="text-[11px] font-bold text-[#4B5563] uppercase">{str('Guarantor (member)', 'Omuyima')}</p>
         <div className="grid grid-cols-2 gap-2">
-          <input value={form.guarantorName} onChange={(e) => set('guarantorName', e.target.value)} placeholder={str('Guarantor name', 'Erinya ly\'omuyima')} className={inputCls} />
+          <input value={form.guarantorName} onChange={(e) => set('guarantorName', e.target.value)} placeholder={str('Guarantor name', 'Erinnya ly’omwimirira')} className={inputCls} />
           <input value={form.guarantorPhone} onChange={(e) => set('guarantorPhone', e.target.value)} inputMode="tel" placeholder="07XX XXX XXX" className={inputCls} />
         </div>
         {error && <p className="text-[11px] font-bold text-[#B91C1C]">{error}</p>}

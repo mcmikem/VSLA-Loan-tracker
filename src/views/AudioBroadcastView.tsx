@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
-import { ScreenId } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Language, Member, ScreenId } from '../types';
+import {
+  ReminderLang,
+  buildBalanceSnapshot,
+  buildMeetingReminder,
+  buildRepaymentReminder,
+  isSingleSms,
+  smsHref,
+  waHref,
+} from '../utils/smsReminders';
 
 interface AudioBroadcastViewProps {
   onNavigate: (screen: ScreenId) => void;
   boxCashBalance?: number;
   meetingNumber?: number;
   membersCount?: number;
+  members?: Member[];
+  groupName?: string;
+  language?: Language;
+  onReminderLogged?: (memberId: string, channel: 'SMS' | 'WhatsApp', kind: 'repayment' | 'balance' | 'meeting') => void;
 }
 
 export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
@@ -13,13 +26,24 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
   boxCashBalance = 1420000,
   meetingNumber = 28,
   membersCount = 30,
+  members = [],
+  groupName = 'Bakwata',
+  language = 'LU',
+  onReminderLogged,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'LU'>('LU');
+  const [selectedLanguage, setSelectedLanguage] = useState<'EN' | 'LU'>(language);
+  const [reminderKind, setReminderKind] = useState<'repayment' | 'balance'>('repayment');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [bulkCopied, setBulkCopied] = useState(false);
+
+  const debtors = useMemo(() => members.filter((m) => (m.loanBalance || 0) > 0), [members]);
+  const lang = selectedLanguage as ReminderLang;
+  const nextMeeting = meetingNumber + 1;
 
   const formattedCash = boxCashBalance.toLocaleString('en-US');
 
-  const lugandaText = `Olukuŋŋaana #${meetingNumber} lwa Bakwata lufundikiddwa. Ssente eziri mu sanduuko ziri shillingi za Uganda emitwalo ${Math.round(boxCashBalance / 10000)} (UGX ${formattedCash}). Bammemba ${membersCount} beetabye. Sanduuko esibiddwa n'ekkufulu essatu ez'abakwasi b'ebisumuluzo.`;
+  const lugandaText = `Lukuŋŋaana #${meetingNumber} lwa Bakwata luwedde. Ensimbi eziri mu Akasanduuko ziri UGX ${formattedCash}. Members ${membersCount} baabaddewo. Akasanduuko kasibiddwa.`;
 
   const englishText = `Bakwata Village Savings meeting number ${meetingNumber} has adjourned. The verified physical cash in the safe box is Uganda Shillings ${formattedCash}. All ${membersCount} members accounted for. The box has been locked with 3 padlocks by the appointed keyholders.`;
 
@@ -44,9 +68,37 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
     }
   };
 
-  const reminderText = `[BAKWATA VSLA] Reminder: Meeting #${meetingNumber + 1} is this Friday 4PM at Kalerwe Market. Bring your passbook + shares. Okujjukiza: Olukuŋŋaana lujja ku Lwokutaano 4pm.`;
-  const reminderSmsHref = `sms:?body=${encodeURIComponent(reminderText)}`;
-  const reminderWaHref = `https://wa.me/?text=${encodeURIComponent(reminderText)}`;
+  const reminderText = buildMeetingReminder({ groupName, meetingNo: nextMeeting, lang });
+  const reminderSmsHref = smsHref('', reminderText);
+  const reminderWaHref = waHref('', reminderText);
+
+  const messageFor = (m: Member) =>
+    reminderKind === 'repayment'
+      ? buildRepaymentReminder(m, { groupName, meetingNo: nextMeeting, lang })
+      : buildBalanceSnapshot(m, { groupName, lang });
+
+  const copyText = async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const copyAll = async () => {
+    if (debtors.length === 0) return;
+    const all = debtors.map((m) => `To ${m.phone} — ${m.name}:\n${messageFor(m)}`).join('\n\n---\n\n');
+    await copyText('__all__', all);
+    setBulkCopied(true);
+    setTimeout(() => setBulkCopied(false), 2500);
+  };
 
   return (
     <main className="w-full max-w-lg mx-auto px-4 pt-4 pb-14 flex-1 space-y-4">
@@ -160,6 +212,110 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
             <span>WhatsApp</span>
           </a>
         </div>
+      </section>
+
+      {/* Loan repayment reminders: per-debtor SMS, zero gateway cost */}
+      <section className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-secondary text-base">mark_as_unread</span>
+              Repayment Reminders ({debtors.length})
+            </h3>
+            <p className="text-[11px] text-text-muted mt-0.5">
+              {selectedLanguage === 'LU'
+                ? 'Buli bbanja lifuna SMS eyakyo — namba ne muwendo biggyiddwa mu kitabo. Tekikosa ssente.'
+                : 'Each debtor gets a personal SMS — number and balance pulled from the book. Costs you nothing extra.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex bg-canvas-bg p-1 rounded-lg border border-border-line text-[11px] font-bold">
+          <button
+            type="button"
+            onClick={() => setReminderKind('repayment')}
+            className={`flex-1 py-1.5 rounded-md transition ${reminderKind === 'repayment' ? 'bg-primary-container text-white shadow-sm' : 'text-text-muted'}`}
+          >
+            {selectedLanguage === 'LU' ? 'Okujjukiza bbanja' : 'Repayment nudge'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setReminderKind('balance')}
+            className={`flex-1 py-1.5 rounded-md transition ${reminderKind === 'balance' ? 'bg-primary-container text-white shadow-sm' : 'text-text-muted'}`}
+          >
+            {selectedLanguage === 'LU' ? 'Ekipimo kya ssente' : 'Balance snapshot'}
+          </button>
+        </div>
+
+        {debtors.length === 0 ? (
+          <p className="text-xs text-status-ok-tx bg-status-ok-bg rounded-lg p-3 font-semibold">
+            {selectedLanguage === 'LU' ? 'Tewali bbanja! Byonna birungi!' : 'No outstanding loans. All clean!'}
+          </p>
+        ) : (
+          <>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={copyAll}
+                className="px-2.5 py-1.5 bg-canvas-bg border border-border-strong rounded-lg text-[11px] font-bold text-primary active:scale-95"
+              >
+                {bulkCopied || copiedId === '__all__' ? '✓ Copied all!' : `Copy all ${debtors.length} reminders`}
+              </button>
+            </div>
+            <div className="space-y-2">
+              {debtors.map((m) => {
+                const text = messageFor(m);
+                const single = isSingleSms(text);
+                return (
+                  <div key={m.id} className="p-3 bg-canvas-bg rounded-lg border border-border-line space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold text-primary truncate">
+                        {m.name} <span className="font-mono text-text-muted">#{m.no}</span>
+                      </p>
+                      <p className="font-mono text-xs font-bold text-status-bad-tx shrink-0">
+                        UGX {(m.loanBalance || 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <p className="text-[11px] font-mono text-on-surface leading-relaxed">{text}</p>
+                    <p className="text-[10px] text-text-muted font-mono">
+                      To {m.phone || '— no number —'} · {text.length} chars · {single ? '1 SMS' : `${Math.ceil(text.length / 153)} SMS`}
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <a
+                        href={smsHref(m.phone || '', text)}
+                        onClick={() => onReminderLogged?.(m.id, 'SMS', reminderKind)}
+                        className="py-2 bg-primary-container text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">sms</span> SMS
+                      </a>
+                      <a
+                        href={waHref(m.phone || '', text)}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => onReminderLogged?.(m.id, 'WhatsApp', reminderKind)}
+                        className="py-2 bg-secondary text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">chat</span> WhatsApp
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => copyText(m.id, text)}
+                        className="py-2 bg-surface-card border border-border-strong rounded-lg font-bold text-[11px] text-primary active:scale-95"
+                      >
+                        {copiedId === m.id ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-text-muted leading-relaxed">
+              {selectedLanguage === 'LU'
+                ? 'SMS eggulawo app yo eya SMS ng’obubaka buwandiikiddwa dda — olonda n’osindika. Tewali gateway, tewali fee.'
+                : 'SMS opens your own SMS app with the text pre-written — you just hit send. No gateway, no fee, works offline.'}
+            </p>
+          </>
+        )}
       </section>
 
       {/* Village Meeting Protocol Guidelines */}

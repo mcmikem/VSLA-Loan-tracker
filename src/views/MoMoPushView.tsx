@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ScreenId } from '../types';
+import { Language, ScreenId } from '../types';
 import { feeNotice } from '../utils/momoFees';
 
 interface MoMoPushViewProps {
   onNavigate: (screen: ScreenId) => void;
   onSuccessTransaction?: (amount: number, desc: string) => void;
+  language?: Language;
 }
 
 export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
   onNavigate,
   onSuccessTransaction,
+  language = 'EN',
 }) => {
   const [network, setNetwork] = useState<'MTN' | 'Airtel'>('MTN');
   const [phoneNumber, setPhoneNumber] = useState('0772-123-456');
@@ -283,7 +285,7 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
             <p>Pay UGX {amount} to Bakwata Savings Group?</p>
             <p className="text-slate-400">Ref: {purpose.split(' ')[0]}</p>
             <div className="flex items-center justify-between pt-1 border-t border-slate-700 text-[11px]">
-              <span className="text-emerald-400">1. Enter PIN to Authorize</span>
+              <span className="text-emerald-400">{language === 'LU' ? 'Yingiza koodi' : '1. Enter PIN to Authorize'}</span>
               <button
                 onClick={() => {
                   setStatus('confirmed');
@@ -344,7 +346,7 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
           type="button"
         >
           <span className="material-symbols-outlined text-xl">send_to_mobile</span>
-          <span>{status === 'pushing' ? 'Contacting MoMo…' : `Send MoMo Push Prompt (${network === 'MTN' ? '*165#' : '*185#'})`}</span>
+          <span>{status === 'pushing' ? 'Contacting MoMo…' : (language === 'LU' ? 'Sindika ensimbi' : `Send MoMo Push Prompt (${network === 'MTN' ? '*165#' : '*185#'})`)}</span>
         </button>
       )}
 

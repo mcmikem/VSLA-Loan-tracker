@@ -7,7 +7,7 @@ const waLink = (text: string) => `https://wa.me/${SUPPORT_WHATSAPP}?text=${encod
 type Lang = 'EN' | 'LU';
 
 /**
- * VSLA UG marketing homepage — written for secretaries and chairpersons,
+ * VSLA UG marketing homepage — written for members AND secretaries,
  * not investors. Concrete Friday scenes (animated from the real app UI),
  * honest pricing, Luganda-first. No gradients, no hype verbs, no fake stats.
  */
@@ -35,6 +35,9 @@ export const LandingPage: React.FC = () => {
   const faqs: { q: string; a: string }[] = lu
     ? [
         { q: 'Ssente zaffe ziba wa?', a: 'Mu sanduuko yammwe ey\'ekyuma — bulijjo. VSLA UG ekuuma bbaluwa zokka: ani yatereka, ani yeewola, ssente mmeka eziri mu sanduuko. Tetukwata ku nsimbi zammwe n\'akamu.' },
+        { q: 'Nsobola okulaba nterekanya yange ku ssimu yange?', a: 'Yee. Buli mukiise alina Akawunti kange: nterekanya yo, bbanja lyo, ebyewolo byosabye (0/2, 1/2, kyakkiriziddwa) ne bizinesi z’abakiise banno. Saba ekyewolo okuva ku ssimu yo — abakulu babiri be bakkiriza.' },
+        { q: 'Ekibiina kisobola okutereka ssente ku MoMo oba banka?', a: 'Yee — kye kyetumeezza. App eraga awali ssente: nkalu mu sanduuko, MoMo float, banka. Buli kukyusa kuwandiikibwa n’akola audit. Ku lukuŋŋaana mubala nkalu zokka.' },
+        { q: 'Nsobola okutunda ebintu byange mu kibiina?', a: 'Yee. Wandiisa ebintu oba omulembe (kutunga, bodaboda, salon) mu kaduuka k’ekibiina. Abakiise bakugulako ne SMS oba WhatsApp — ssente zijja gyoli, ekibiina kikula.' },
         { q: 'Ekola awatali yintaneeti?', a: 'Yee. Ebiwandiiko bibeera ku ssimu era bisinkana bw\'odda ku mutimbagano. Koppa backup (fayiro) oluvannyuma lwa buli lukuŋŋaana.' },
         { q: 'Mmewendo gwa mmeka?', a: 'Mawa mu pilot okutuuka ku bakiise 30. Pro (abakiise 500, database emu, MoMo) ejja — yingira ku lukalala lwa WhatsApp.' },
         { q: 'Ssimu ki ezikola?', a: 'Android yonna ne Chrome oba iPhone ne Safari. Nyiga “Add to Home Screen” n\'eggulawo nga app entuufu. Oluzungu n\'Oluganda munda.' },
@@ -42,6 +45,9 @@ export const LandingPage: React.FC = () => {
       ]
     : [
         { q: 'Ssente zaffe ziba wa? Where does our money stay?', a: 'In your physical strongbox — always. VSLA UG only keeps the books: who saved, who borrowed, what is in the box. We never touch your cash.' },
+        { q: 'Can I see my own savings on my phone?', a: 'Yes. Every member gets My account: your savings, your loan, your requests (0/2, 1/2, approved) and neighbours’ businesses. Request a loan from your own phone — two officers still approve it.' },
+        { q: 'Can the group keep money on MoMo or a bank?', a: 'Yes — your choice. The app shows where money sits: box cash, MoMo float, bank. Every move is recorded and audited. At meetings you count physical cash only.' },
+        { q: 'Can I sell my goods in the group?', a: 'Yes. List products or services (tailoring, bodaboda, salon) in the group shop. Members buy from you over SMS or WhatsApp — money comes to you, the group grows.' },
         { q: 'Does it work without internet?', a: 'Yes. Records live on the phone and sync when you are back online. Download a backup after every meeting.' },
         { q: 'How much does it cost?', a: 'Free during the pilot for groups up to 30 members. Pro (500 members, shared cloud database, mobile-money collection) is coming — join the waitlist on WhatsApp.' },
         { q: 'Which phones work?', a: 'Any Android with Chrome or iPhone with Safari. Tap “Add to Home Screen” and it opens like a normal app. English and Luganda inside.' },
@@ -60,6 +66,32 @@ export const LandingPage: React.FC = () => {
         { n: '03', title: 'Two keys approve', body: '600,000 moves only when two different officers sign — each with their own PIN.' },
       ];
 
+  const memberCards = lu
+    ? [
+        { icon: 'savings', t: 'Enterekanya yange', b: 'Sarah alaba UGX 450,000 ze yatereka — awatali kusaba muwandiisi amusomere.' },
+        { icon: 'add_card', t: 'Saba ku ssimu yo', b: 'Joseph asaba 600,000 ku ssimu ye. Alondoola 0/2 → 1/2 → kyakkiriziddwa.' },
+        { icon: 'storefront', t: 'Gula eri munno', b: 'Prossy atunga; Kato avuga bodaboda. Nyiga, weereza SMS, ssente zijja.' },
+      ]
+    : [
+        { icon: 'savings', t: 'My savings, visible', b: 'Sarah sees her UGX 450,000 saved — no begging the secretary to read.' },
+        { icon: 'add_card', t: 'Request on my phone', b: 'Joseph requests 600,000 from his phone. Tracks 0/2 → 1/2 → approved.' },
+        { icon: 'storefront', t: 'Buy from neighbours', b: 'Prossy tailors; Kato rides bodaboda. Tap, send SMS, money moves.' },
+      ];
+
+  const officerTools = lu
+    ? [
+        { icon: 'print', t: 'Olupapula lw’okukunganyiza', b: 'Kuba ng’olukuŋŋaana tekunnatandika; jjuza ne kalamu. Amabanja n’engassi biggyiddwa mu kitabo.' },
+        { icon: 'sms', t: 'SMS eri abeebbanja', b: 'Buli bbanja lifuna SMS eyakyo mu Luganda — namba ne muwendo biggyiddwa mu kitabo. Mawa.' },
+        { icon: 'account_balance', t: 'Nkalu · MoMo · Banka', b: 'Ssente we ziri zirabika. Buli kukyusa kuwandiikibwa. Mubala nkalu zokka.' },
+        { icon: 'sports_esports', t: 'Yiga na ssente za kuzannya', b: 'Ekibiina eky’ekigezo (abakiise 5). Weeyigire — tewali ddala ekikwatibwako.' },
+      ]
+    : [
+        { icon: 'print', t: 'Printable collection sheet', b: 'Print before the meeting; fill by pen. Debts and fines pulled from the book.' },
+        { icon: 'sms', t: 'SMS to debtors', b: 'Each debtor gets a personal SMS in Luganda — number and balance from the book. Free.' },
+        { icon: 'account_balance', t: 'Cash · MoMo · Bank', b: 'Every shilling located. Every move audited. Count physical cash only.' },
+        { icon: 'sports_esports', t: 'Practice with play money', b: 'Fake 5-member group. Learn safely — nothing real moves.' },
+      ];
+
   return (
     <div className="min-h-screen bg-[#F6F7F6] text-[#141b2b] font-sans pb-20 md:pb-0">
       {/* Nav */}
@@ -75,7 +107,8 @@ export const LandingPage: React.FC = () => {
             </span>
           </a>
           <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-white/80">
-            <a href="#demos" className="hover:text-white">{lu ? 'Laba bw’ekola' : 'See it work'}</a>
+            <a href="#members" className="hover:text-white">{lu ? 'Abakiise' : 'Members'}</a>
+            <a href="#market" className="hover:text-white">{lu ? 'Akatuuka' : 'Market'}</a>
             <a href="#how" className="hover:text-white">{lu ? 'Lwokutaano' : 'Friday flow'}</a>
             <a href="#pricing" className="hover:text-white">{lu ? 'Emiwendo' : 'Pricing'}</a>
             <a href="#faq" className="hover:text-white">{lu ? 'Ebibuuzo' : 'Questions'}</a>
@@ -119,8 +152,8 @@ export const LandingPage: React.FC = () => {
             </h1>
             <p className="text-white/75 mt-4 leading-relaxed max-w-md">
               {lu
-                ? 'VSLA UG ekuuma bbaluwa z’ekibiina kyammwe: ppaasibuku, ebyewolo n’okubala kwa sanduuko — ku ssimu emu, n’awatali yintaneeti.'
-                : 'VSLA UG keeps the books for your savings group: passbooks, loans and the strongbox count — on one phone, even offline.'}
+                ? 'Buli mukiise alaba nterekanya ye ku ssimu ye; omuwandiisi akuuma bbaluwa — ku ssimu emu, n’awatali yintaneeti.'
+                : 'Every member sees their savings on their phone; the secretary keeps the books — on one phone, even offline.'}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mt-6">
               <a
@@ -159,11 +192,102 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Friday flow */}
+      {/* For every member — not just the secretary */}
+      <section id="members" className="max-w-5xl mx-auto px-4 py-12 md:py-16">
+        <Reveal className="text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#006d30]">
+            {lu ? 'Si muwandiisi yekka' : 'Not just the secretary'}
+          </p>
+          <h2 className="text-2xl md:text-4xl font-bold text-[#00261b] mt-2">
+            {lu ? 'Buli mukiise alina akawunti ke' : 'Every member gets an account'}
+          </h2>
+          <p className="text-[#4B5563] text-sm mt-2 max-w-xl mx-auto">
+            {lu
+              ? 'Tewakyali kusaba muwandiisi akusomere. Ggulawo ssimu yo: nterekanya, bbanja, ebyewolo byosabye.'
+              : 'No more begging the secretary to read for you. Open your phone: savings, loan, requested loans.'}
+          </p>
+        </Reveal>
+        <div className="grid md:grid-cols-3 gap-4 mt-8">
+          {memberCards.map((c, i) => (
+            <Reveal key={c.t} delay={i * 100}>
+              <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6 h-full hover:-translate-y-1 transition-transform">
+                <span className="w-11 h-11 rounded-xl bg-[#00261b] text-[#EAB308] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[24px]">{c.icon}</span>
+                </span>
+                <h3 className="font-bold mt-3 text-lg text-[#00261b]">{c.t}</h3>
+                <p className="text-sm text-[#4B5563] mt-1 leading-relaxed">{c.b}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* Group market — buy from each other */}
+      <section id="market" className="bg-[#FFF8E1] border-y border-[#F5D67B]">
+        <div className="max-w-5xl mx-auto px-4 py-12 md:py-16 grid md:grid-cols-2 gap-8 items-center">
+          <Reveal>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#854D0E]">
+              {lu ? 'Akatuuka k’ekibiina' : 'The group market'}
+            </p>
+            <h2 className="text-2xl md:text-4xl font-bold text-[#00261b] mt-2 leading-tight">
+              {lu ? 'Tundanagane — ekibiina kikule.' : 'Buy from each other — grow together.'}
+            </h2>
+            <p className="text-sm text-[#4B5563] mt-3 leading-relaxed">
+              {lu
+                ? 'Wandiisa ebyobulimi, emmere, okutunga, bodaboda oba salon. Abakiise bakugulako ne SMS oba WhatsApp — ssente zijja gyoli, so si mu kibiina.'
+                : 'List farm produce, cooked food, tailoring, bodaboda or salon services. Members buy from you over SMS or WhatsApp — money comes to you, not the group.'}
+            </p>
+            <div className="space-y-3 mt-6">
+              {[
+                { t: lu ? 'Ebintu n’omulembe' : 'Goods and services', b: lu ? 'Kasava, obutunda, kutunga, bodaboda — byonna bisoboka.' : 'Cassava, flour, tailoring, rides — all welcome.' },
+                { t: lu ? 'Okugula kwa taps ibiri' : 'Two-tap buying', b: lu ? 'Nyiga, weereza SMS etegerekeddwa dda. Tewali app empya.' : 'Tap, send a pre-written SMS. No new app to learn.' },
+                { t: lu ? 'Ssente zijja gyoli' : 'Money comes to you', b: lu ? 'Okutunda kw’abakiise tekukwata ku sanduuko — kwa bizinesi yo.' : 'Member sales never touch the box — they feed your business.' },
+              ].map((r) => (
+                <div key={r.t} className="flex gap-3 bg-white/70 rounded-xl p-3.5 border border-[#EAD9A0]">
+                  <span className="w-10 h-10 rounded-lg bg-[#00261b] text-[#EAB308] flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[22px]">storefront</span>
+                  </span>
+                  <div>
+                    <p className="font-bold text-sm text-[#00261b]">{r.t}</p>
+                    <p className="text-xs text-[#4B5563] mt-0.5">{r.b}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+          <Reveal delay={120}>
+            <div className="bg-[#00261b] text-white rounded-2xl p-6 md:p-8 shadow-xl space-y-3">
+              {[
+                ['Kasava 10kg', 'Nakato · UGX 25,000', '🌾'],
+                [lu ? 'Okutunga (gomesi)' : 'Tailoring (gomesi)', 'Prossy · UGX 15,000/session', '✂️'],
+                ['Bodaboda — Kalerwe', 'Kato · UGX 3,000/trip', '🏍️'],
+              ].map(([name, seller, emoji]) => (
+                <div key={name} className="flex items-center gap-3 bg-white/10 rounded-xl p-3.5 border border-white/10">
+                  <span className="text-2xl">{emoji}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm truncate">{name}</p>
+                    <p className="text-[11px] text-white/60 font-mono">{seller}</p>
+                  </div>
+                  <span className="px-3 py-1.5 bg-[#EAB308] text-[#00261b] rounded-lg text-xs font-bold shrink-0">
+                    {lu ? 'Gula' : 'Buy'}
+                  </span>
+                </div>
+              ))}
+              <p className="text-[11px] text-white/60 leading-relaxed pt-1">
+                {lu
+                  ? 'Bino byonna biva mu kaduuka k’ekibiina — abakiise bennyini.'
+                  : 'All of this lives in the group shop — listed by members themselves.'}
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Friday flow — for officers */}
       <section id="how" className="max-w-5xl mx-auto px-4 py-12 md:py-16">
         <Reveal className="text-center">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#006d30]">
-            {lu ? 'Lwokutaano lumu, emitendera esatu' : 'One Friday, three moves'}
+            {lu ? 'Abakulu: Lwokutaano lumu, emitendera esatu' : 'Officers: one Friday, three moves'}
           </p>
           <h2 className="text-2xl md:text-4xl font-bold text-[#00261b] mt-2">
             {lu ? 'Bw’ekola ku lukuŋŋaana' : 'How a meeting runs on it'}
@@ -176,6 +300,20 @@ export const LandingPage: React.FC = () => {
                 <span className="font-mono text-4xl font-bold text-[#EAB308]">{s.n}</span>
                 <h3 className="font-bold mt-2 text-lg">{s.title}</h3>
                 <p className="text-sm text-white/75 mt-1 leading-relaxed">{s.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+        {/* Officer toolkit */}
+        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+          {officerTools.map((c, i) => (
+            <Reveal key={c.t} delay={i * 80}>
+              <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 h-full">
+                <span className="w-10 h-10 rounded-lg bg-[#DCFCE7] text-[#006d30] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">{c.icon}</span>
+                </span>
+                <h3 className="font-bold mt-2.5 text-sm text-[#00261b]">{c.t}</h3>
+                <p className="text-xs text-[#4B5563] mt-1 leading-relaxed">{c.b}</p>
               </div>
             </Reveal>
           ))}
@@ -233,8 +371,8 @@ export const LandingPage: React.FC = () => {
               </div>
               <p className="text-[11px] text-white/60 mt-4 leading-relaxed">
                 {lu
-                  ? 'Bino byonna birabikira abakiise bonna ku ssimu emu — nga ssente enkalu ziri ku meeza.'
-                  : 'Everyone sees the same figures on one phone — while the physical cash sits on the mat.'}
+                  ? 'Ekibiina bwe kisalawo, ssente zisobola okubeera ku MoMo oba banka — nga buli kukyusa kuwandiikiddwa.'
+                  : 'When the group chooses, money can sit on MoMo or a bank — every move recorded.'}
               </p>
             </div>
           </Reveal>
@@ -268,8 +406,8 @@ export const LandingPage: React.FC = () => {
               <p className="font-bold text-[#006d30] uppercase text-xs tracking-wider mb-4">VSLA UG</p>
               <ul className="space-y-3 font-medium text-[#00261b]">
                 {(lu
-                  ? ['Koppa backup buli lukuŋŋaana; wandika n’okuggya', 'Buli mukiise alaba ppaasibuku ye — oba ekifaananyi kye', 'Share-out emu n’okuggyamu amabanja', 'Buli shiringi erina akabonero k’omukulu']
-                  : ['Backed up after every meeting, exportable anytime', 'Each member sees their own passbook — or their face', 'One-tap share-out with loan deductions', 'Every shilling stamped by an officer']
+                  ? ['Buli mukiise alaba akawunti ke ku ssimu ye', 'Tundanagane: ebintu n’omulembe mu kaduuka', 'Share-out emu n’okuggyamu amabanja', 'Buli shiringi erina akabonero k’omukulu']
+                  : ['Each member sees their own account on their phone', 'Trade together: goods and services in the shop', 'One-tap share-out with loan deductions', 'Every shilling stamped by an officer']
                 ).map((li) => (
                   <li key={li} className="flex gap-2.5"><span className="text-[#006d30] font-bold">✓</span>{li}</li>
                 ))}
@@ -292,7 +430,7 @@ export const LandingPage: React.FC = () => {
                 <p className="font-mono text-4xl font-bold mt-2">UGX 0</p>
                 <p className="text-xs text-[#4B5563]">{lu ? 'bul i kibiina, mu pilot' : 'per group, all through pilot'}</p>
                 <ul className="text-sm space-y-2 mt-4 text-[#4B5563]">
-                  {(lu ? ['Abakiise 30', 'Ppaasibuku, ebyewolo, obuyambi n’engassi', 'Risiti, lipoota n’ebyafaayo', 'Etekeddwa awatali yintaneeti + backup'] : ['Up to 30 members', 'Passbooks, loans, welfare & fines', 'Receipts, reports & audit trail', 'Offline-first + backups']).map((li) => (
+                  {(lu ? ['Abakiise 30', 'Akawunti za buli mukiise + akatuuka', 'Ppaasibuku, ebyewolo, obuyambi n’engassi', 'Etekeddwa awatali yintaneeti + backup'] : ['Up to 30 members', 'Member accounts + group market', 'Passbooks, loans, welfare & fines', 'Offline-first + backups']).map((li) => (
                     <li key={li}>✓ {li}</li>
                   ))}
                 </ul>

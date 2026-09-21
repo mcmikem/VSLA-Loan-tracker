@@ -22,9 +22,9 @@ export const AboutView: React.FC<AboutViewProps> = ({
     language === 'LU' ? lu  : en;
 
   const features = [
-    { icon: 'menu_book', t: str('Digital passbooks for every saver', 'Ppaasibuku ya buli mukiise') },
+    { icon: 'menu_book', t: str('Digital passbooks for every saver', 'Passbook ya buli member') },
     { icon: 'lock', t: str('3-key strongbox reconciliation', 'Okusiba sanduuko n\'ebisumuluzo 3') },
-    { icon: 'payments', t: str('Loans, welfare grants & fines', 'Ebyewolo, obuyambi n\'engassi') },
+    { icon: 'payments', t: str('Loans, welfare grants & fines', 'Loan, obuyambi ne bibonerezo') },
     { icon: 'cloud_sync', t: str('Offline-first with safe backups', 'Ekola awatali yintaneeti') },
     { icon: 'receipt_long', t: str('Receipts, reports & full audit trail', 'Risiti, lipoota n\'okukebera') },
     { icon: 'translate', t: str('English & Luganda', 'Oluzungu n\'Oluganda') },
@@ -54,7 +54,7 @@ export const AboutView: React.FC<AboutViewProps> = ({
           {str('The digital strongbox for village savings', 'Sanduuko ya digito')}
         </p>
         <p className="text-sm mt-1.5 leading-relaxed text-white/90">
-          {str('Built with Kampala savings groups: stamp shares, approve loans, seal the box with 3 keys — all from one phone, even offline.', 'Kyakolebwa n\'ebibiina by\'e Kampala: teeka sitampu, kiriza ebyewolo, siba sanduuko n\'ebisumuluzo 3 — byonna ku ssimu emu.')}
+          {str('Built with Kampala savings groups: stamp shares, approve loans, seal the box with 3 keys — all from one phone, even offline.', 'Kyakolebwa n\'ebibiina by\'e Kampala: gula omugabo, kkiriza loan, ggalawo akasanduuko — byonna ku ssimu emu, wadde tewali yintaneeti.')}
         </p>
       </section>
 

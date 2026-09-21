@@ -58,7 +58,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
     try {
       onUpdatePhoto(member.id, await fileToAvatarDataUrl(file));
     } catch (e: any) {
-      setPhotoError(e.message || 'Photo failed.');
+      setPhotoError(language === 'LU' ? 'Waliwo ekikyamu' : (e.message || 'Photo failed.'));
     } finally {
       setPhotoBusy(false);
     }
@@ -126,7 +126,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
     });
     const msg =
       language === 'LU'
-        ? `Okusasula kwa cash kwa UGX ${repaymentAmount.toLocaleString()} kuweereddwa ${member.name}!`
+        ? `Okusasula loan kuwandiikiddwa: UGX ${repaymentAmount.toLocaleString()} — ${member.name}. Webale!`
          : `Cash repayment of UGX ${repaymentAmount.toLocaleString()} recorded for ${member.name}!`;
     setFeedbackNotice(msg);
     setTimeout(() => setFeedbackNotice(null), 4000);
@@ -151,7 +151,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
     });
     const msg =
       language === 'LU'
-        ? `Emigabo ${sharesToBuy} mipya (UGX ${(sharesToBuy * 10000).toLocaleString()}) gisimbiddwa kyetemba kya ${member.name}!`
+        ? `Emigabo ${sharesToBuy} giwandiikiddwa (UGX ${(sharesToBuy * 10000).toLocaleString()}) — ${member.name}. Webale!`
          : `Successfully stamped ${sharesToBuy} new shares (UGX ${(sharesToBuy * 10000).toLocaleString()}) for ${member.name}!`;
     setFeedbackNotice(msg);
     setTimeout(() => setFeedbackNotice(null), 4000);
@@ -197,7 +197,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
               className="px-2.5 py-1.5 bg-[#006d30] text-white rounded-lg text-[11px] font-bold flex items-center gap-1 active:scale-95"
             >
               <span className="material-symbols-outlined text-[14px]">person_add</span>
-              {language === 'LU' ? 'Wandiisa'  : 'Register'}
+              {language === 'LU' ? 'Yongerako member'  : 'Register'}
             </button>
           )}
         </div>
@@ -347,7 +347,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
             {member.isKeyholder && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-status-warn-bg text-status-warn-tx text-[11px] font-bold">
                 <span className="material-symbols-outlined text-[14px]">key</span>
-                {member.keyholderTitle || (language === 'LU' ? 'Mukwasi w\'Ebisumuluzo' : 'Keyholder')}
+                {member.keyholderTitle || (language === 'LU' ? 'Omukwata ekisumuluzo' : 'Keyholder')}
               </span>
             )}
             {photoError && (
@@ -417,8 +417,8 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
               </div>
               <p className="text-[11px] text-status-bad-tx font-semibold mt-0.5">
                 {member.loanBalance > 0
-                  ? (language === 'LU' ? 'Alina ebanja erikola'  : 'Active Loan Obligation')
-                  : (language === 'LU' ? 'Talina Banja'  : 'No Active Debt')}
+                  ? (language === 'LU' ? 'Alina loan erikola'  : 'Active Loan Obligation')
+                  : (language === 'LU' ? 'Tewali loan'  : 'No Active Debt')}
               </p>
             </div>
 
@@ -434,7 +434,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                 UGX {member.welfareBalance.toLocaleString('en-US')}
               </div>
               <p className="text-[11px] text-status-ok-tx font-semibold mt-0.5">
-                {language === 'LU' ? 'Asasudde bulungi'  : 'Fully up to date'}
+                {language === 'LU' ? 'Bulungi'  : 'Fully up to date'}
               </p>
             </div>
           </div>
@@ -530,22 +530,22 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <span className="text-xs font-bold text-secondary">
-                {language === 'LU' ? 'Ebanja Eriwo'  : 'Active Loan'}
+                {language === 'LU' ? 'Loan eriwo'  : 'Active Loan'}
               </span>
               <h4 className="text-headline-sm font-headline-sm text-primary font-bold">
                 {member.loanBalance > 0
-                  ? `${language === 'LU' ? 'Ebanja erikyaliwo'  : 'Active Balance'}: UGX ${member.loanBalance.toLocaleString()}`
-                  : (language === 'LU' ? 'Talina Banja Liriko'  : 'No Active Loan Debt')}
+                  ? `${language === 'LU' ? 'Loan erikyaliwo'  : 'Active Balance'}: UGX ${member.loanBalance.toLocaleString()}`
+                  : (language === 'LU' ? 'Tewali loan Liriko'  : 'No Active Loan Debt')}
               </h4>
             </div>
             {member.loanBalance > 0 ? (
               <span className="px-2 py-1 rounded bg-status-ok-bg text-status-ok-tx text-xs font-bold flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                {language === 'LU' ? 'Liriko'  : 'Active'}
+                {language === 'LU' ? 'Eriwo'  : 'Active'}
               </span>
             ) : (
               <span className="px-2 py-1 rounded bg-surface-container text-text-muted text-xs font-semibold">
-                {language === 'LU' ? 'Lyaggwako'  : 'Clear'}
+                {language === 'LU' ? 'Tewali'  : 'Clear'}
               </span>
             )}
           </div>
@@ -560,7 +560,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
               </div>
               <div className="text-right">
                 <span className="text-text-muted block text-[11px]">
-                  {language === 'LU' ? 'Olukuŋŋaana oluddako'  : 'Next Due Meeting'}
+                  {language === 'LU' ? 'Lukuŋŋaana oluddako'  : 'Next Due Meeting'}
                 </span>
                 <span className="font-bold text-on-surface">Meeting #29 (Next Wk)</span>
               </div>
@@ -608,14 +608,14 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                 {t.passbook.passbookLedger}
               </h4>
               <p className="text-xs text-text-muted">
-                {language === 'LU' ? 'Ebiwandiiko ebyakasiddwa mu nkuŋŋaana'  : 'Signed Field Meeting Entries'}
+                {language === 'LU' ? 'Ebyawandiikibwa'  : 'Signed Field Meeting Entries'}
               </p>
             </div>
           </div>
 
           {member.ledger.length === 0 ? (
             <div className="text-center py-4 text-xs text-text-muted">
-              {language === 'LU' ? 'Tewali biwandiiko biweddeko eri mmemba ono.'  : 'No recent ledger entries for this member yet.'}
+              {language === 'LU' ? 'Tewali byawandiikibwa bya member ono.'  : 'No recent ledger entries for this member yet.'}
             </div>
           ) : (
             <div className="space-y-2">
@@ -688,7 +688,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                   <p className="text-[11px] font-bold text-status-warn-tx bg-status-warn-bg border border-[#FDE68A] rounded-lg p-2 mt-1.5">
                     {language === 'LU'
                       ? `Okuwandiika okusukka: zzaayo UGX ${(repaymentAmount - member.loanBalance).toLocaleString()} eri ${member.name} ng'enzizo. Ekitabo kijja kuwandiika UGX ${member.loanBalance.toLocaleString()} yokka.`
-                      : `Overpayment: hand back UGX ${(repaymentAmount - member.loanBalance).toLocaleString()} change to ${member.name}. Only UGX ${member.loanBalance.toLocaleString()} will be recorded.`}
+                      : `Ssente zisukkiridde: zzaayo UGX ${(repaymentAmount - member.loanBalance).toLocaleString()} eri ${member.name}. Kiwandiikibwa: UGX ${member.loanBalance.toLocaleString()} yokka.`}
                   </p>
                 )}
               </div>
@@ -714,7 +714,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                   type="submit"
                   className="flex-1 py-2.5 bg-secondary hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow transition"
                 >
-                  {language === 'LU' ? 'Kakasa Ssente Ezisasuddwa'  : 'Confirm Cash Receipt'}
+                  {language === 'LU' ? 'Wandiika ensasula'  : 'Confirm Cash Receipt'}
                 </button>
                 <button
                   type="button"
@@ -747,7 +747,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
             </div>
             <p className="text-xs text-text-muted">
               {language === 'LU'
-                ? 'Buli mugabo gwa UGX 10,000. Wandiika omuwendo gw\'emigabo egiguze olwaleero.'
+                ? 'Omuwendo gw\'okugula: UGX 10,000. Emigabo mmeka?'
                  : 'Each share costs UGX 10,000. Enter number of shares purchased in today\'s meeting.'}
             </p>
 

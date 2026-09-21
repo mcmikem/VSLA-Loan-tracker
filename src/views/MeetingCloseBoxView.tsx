@@ -38,7 +38,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
 
   const [minutesText, setMinutesText] = useState(
     language === 'LU'
-      ? `Olukuŋŋaana #${meetingNumber} lwaggaddwa bulungi ku ssaawa 12:45 ez'emisana. Abakiise bonna babaddewo. Olukuŋŋaana oluddako ku Lwokutaano mu Kalerwe Community Hall.`
+      ? `Lukuŋŋaana #${meetingNumber} luwedde bulungi. Members bonna baabaddewo. Lukuŋŋaana oluddako ku Lwokutaano mu Kalerwe Community Hall.`
        : `Meeting #${meetingNumber} closed peacefully at 12:45 PM. All members present. Next meeting on Friday at Kalerwe Community Hall.`
   );
   const [isLocked, setIsLocked] = useState(false);
@@ -58,7 +58,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
     if (!step1Checked || !step2Checked) {
       alert(
         language === 'LU'
-          ? 'Banza okakase emitendera gyonna egy\'okwekebejja nga tonnasiba sanduuko.'
+          ? 'Banza okakase byonna nga tonnaggalawo akasanduuko.'
            : 'Please complete all verification checklist items before locking the strongbox.'
       );
       return;
@@ -66,7 +66,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
     if (!keyholder1Signed || !keyholder2Signed || !keyholder3Signed) {
       alert(
         language === 'LU'
-          ? 'Abakwasi b\'ebisumuluzo bonna 3 balina okussaako emikono era bakakase ebisumuluzo.'
+          ? 'Abakwata ekisumuluzo bonna 3 balina okussaako emikono.'
            : 'All 3 keyholders must countersign and verify padlock keys before locking.'
       );
       return;
@@ -88,7 +88,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
               </h1>
               <p className="font-label-sm text-label-sm text-text-muted text-xs">
                 {language === 'LU'
-                  ? 'Omutendera 8 ku 8 — Okubala Ssente n\'Okusiba Sanduuko'
+                  ? 'Omutendera 8 ku 8 — Bala ensimbi era ggalawo akasanduuko'
                    : 'Step 8 of 8 — Physical Reconciliation & Padlocking'}
               </p>
             </div>
@@ -340,7 +340,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
           </div>
           <p className="text-xs text-text-muted">
             {language === 'LU'
-              ? 'Sanduuko tesobola kusibwa nga tewali ebisumuluzo byonna 3 eby\'abakwasi abalondeddwa.'
+              ? 'Akasanduuko tekasobola kuggalwa nga tewali abakwata ekisumuluzo bonna 3.'
                : 'The box cannot be locked without the physical key turn of all 3 elected keyholders.'}
           </p>
 
@@ -416,7 +416,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
         {/* PRE-LOCK VERIFICATION CHECKLIST */}
         <section className="bg-surface-card rounded-xl border border-border-strong shadow-[0px_1px_3px_rgba(0,0,0,0.08)] p-4 space-y-2">
           <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
-            {language === 'LU' ? 'Okukakasa Nga Tonnasiba Sanduuko'  : 'Pre-Lock Verification Checklist'}
+            {language === 'LU' ? 'Okukakasa nga tonnaggalawo akasanduuko'  : 'Pre-Lock Verification Checklist'}
           </h3>
           <div className="space-y-2">
             <label className="flex items-start gap-2.5 p-2 rounded-lg bg-canvas-bg border border-border-line cursor-pointer">
@@ -431,7 +431,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   {language === 'LU' ? 'Emitendera 7 gyonna egyakulembedde gikakasiddwa'  : 'All 7 prior steps verified & saved'}
                 </span>
                 <span className="text-[11px] text-text-muted">
-                  {language === 'LU' ? 'Okubala abakiise, Emigabo, Enkoba, Okusasula, Ebyewolo.'  : 'Attendance, Shares, Welfare, Repayments, Loans.'}
+                  {language === 'LU' ? 'Okubala members, Emigabo, Obuyambi, Okusasula, Loan.'  : 'Attendance, Shares, Welfare, Repayments, Loans.'}
                 </span>
               </div>
             </label>
@@ -445,7 +445,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
               />
               <div className="text-xs">
                 <span className="font-bold text-on-surface block">
-                  {language === 'LU' ? 'Sanduuko ekebejjebwa era ebisawo ebikalu biggiddwamu'  : 'Physical box inspected & empty bags removed'}
+                  {language === 'LU' ? 'Akasanduuko kakebeddwa'  : 'Physical box inspected & empty bags removed'}
                 </span>
                 <span className="text-[11px] text-text-muted">
                   {language === 'LU' ? 'Kkaada zokka ezzikkirizibwa ne ttereeyi ya ssente bye bisigaddemu.'  : 'Only authorized ledger cards and cash tray remain.'}
@@ -467,7 +467,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
               </h4>
               <p className="text-xs text-[#14532d]">
                 {language === 'LU'
-                  ? `Ssente eziri mu sanduuko UGX ${countedTotal.toLocaleString('en-US')} zikaziddwa mu mutimbagano n'etterekero.`
+                  ? `Ensimbi ezibaliddwa: UGX ${countedTotal.toLocaleString('en-US')}.`
                    : `Box cash balance of UGX ${countedTotal.toLocaleString('en-US')} committed to durable backend storage.`}
               </p>
               <div className="flex gap-2 pt-1">
@@ -502,7 +502,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                 <span className="material-symbols-outlined text-sm">warning</span>
                 <span>
                   {language === 'LU'
-                    ? `Kino kijja kusiba Olukuŋŋaana #${meetingNumber} era kikuume omugatte gwa ssente zonna eziri mu sanduuko.`
+                    ? `Kino kijja kusiba Lukuŋŋaana #${meetingNumber} era kikuume omugatte gw'ensimbi zonna.`
                      : `This will seal Meeting #${meetingNumber} and update total box cash.`}
                 </span>
               </div>

@@ -4,6 +4,7 @@ export type MainTab = 'home' | 'meetings' | 'members' | 'loans' | 'approvals' | 
 
 export type ScreenId =
   | 'home'
+  | 'member_home'
   | 'meeting_close'
   | 'meeting_wizard'
   | 'approvals'
@@ -139,6 +140,10 @@ export interface ShopProduct {
   name: string;
   sellerType: 'group' | 'member';
   sellerName?: string;
+  /** Member seller contact — buyers tap to SMS/WhatsApp. */
+  sellerPhone?: string;
+  /** Products have stock; services (tailoring, bodaboda, salon) sell slots/sessions. */
+  kind?: 'product' | 'service';
   costPrice: number;
   salePrice: number;
   stockQty: number;
@@ -268,6 +273,16 @@ export interface JoinGroupPayload {
   pin: string;
 }
 
+export interface FundTransfer {
+  id: string;
+  timestamp: string;
+  from: 'cash' | 'momo' | 'bank';
+  to: 'cash' | 'momo' | 'bank';
+  amount: number;
+  actorName: string;
+  note: string;
+}
+
 export interface VSLAState {
   groupId?: string;
   groupProfile?: GroupProfile;
@@ -278,6 +293,12 @@ export interface VSLAState {
   cycleMonth: number;
   totalCycleMonths: number;
   boxCashBalance: number;
+  /** Group MoMo float — money received via mobile money, not in the metal box. */
+  momoBalance?: number;
+  /** Bank account float — for groups that graduate to bank storage. */
+  bankBalance?: number;
+  /** Cash ↔ MoMo ↔ bank movement log for reconciliation. */
+  fundTransfers?: FundTransfer[];
   loanFundBalance: number;
   welfareFundBalance: number;
   members: Member[];

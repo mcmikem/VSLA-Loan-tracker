@@ -1,6 +1,8 @@
 import React from 'react';
-import { Language, ScreenId, UserAccount } from '../types';
+import { FundTransfer, Language, ScreenId, UserAccount } from '../types';
 import { getTranslations } from '../i18n/translations';
+import { FundLocationsCard } from '../components/FundLocationsCard';
+import { FundLocation } from '../utils/fundLocations';
 
 interface HomeViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -28,6 +30,19 @@ interface HomeViewProps {
   totalCycleMonths?: number;
   sharePrice?: number;
   totalShares?: number;
+  /** Member-first entry: the signed-in member's own figures. */
+  myMemberName?: string;
+  mySavings?: number;
+  myLoanBalance?: number;
+  onOpenMyAccount?: () => void;
+  /** Group market teaser: neighbours' ventures on sale. */
+  marketCount?: number;
+  onOpenShop?: () => void;
+  /** Fund locations: cash vs MoMo float vs bank. */
+  momoBalance?: number;
+  bankBalance?: number;
+  fundTransfers?: FundTransfer[];
+  onTransferFunds?: (from: FundLocation, to: FundLocation, amount: number, note: string) => string | null;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -54,6 +69,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
   totalCycleMonths = 10,
   sharePrice = 10000,
   totalShares = 0,
+  myMemberName,
+  mySavings,
+  myLoanBalance,
+  onOpenMyAccount,
+  marketCount = 0,
+  onOpenShop,
+  momoBalance = 0,
+  bankBalance = 0,
+  fundTransfers = [],
+  onTransferFunds,
 }) => {
   const formatUGX = (num: number) => num.toLocaleString('en-US');
   const t = getTranslations(language);
@@ -120,8 +145,57 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </p>
           <p className="text-xs text-primary-fixed mt-1">
             UGX · {t.home.welfareFund}: {formatUGX(welfareFundBalance)}
+            {(momoBalance > 0 || bankBalance > 0) && (
+              <span> · MoMo: {formatUGX(momoBalance)} · Bank: {formatUGX(bankBalance)}</span>
+            )}
           </p>
         </section>
+
+        {/* My account — the member's own money first */}
+        {onOpenMyAccount && myMemberName && (
+          <button
+            type="button"
+            onClick={onOpenMyAccount}
+            className="w-full rounded-xl bg-[#FFF8E1] border-2 border-[#EAB308] p-4 text-left active:scale-[0.99] flex items-center gap-3"
+          >
+            <span className="w-10 h-10 rounded-full bg-[#00261b] text-[#EAB308] flex items-center justify-center font-bold shrink-0">
+              {myMemberName.charAt(0)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-bold text-sm text-primary truncate">
+                {myMemberName} · UGX {formatUGX(mySavings || 0)}
+              </span>
+              <span className="block text-xs text-text-muted">
+                {(myLoanBalance || 0) > 0
+                  ? `${language === 'LU' ? 'Olina loan:' : 'Owe'} UGX ${formatUGX(myLoanBalance || 0)}`
+                  : (language === 'LU' ? 'Tewali loan — laba business' : 'Debt-free — see ventures')} · {language === 'LU' ? 'Akawunti kange →' : 'My account →'}
+              </span>
+            </span>
+            <span className="material-symbols-outlined text-primary">arrow_forward</span>
+          </button>
+        )}
+
+        {/* Group market teaser — neighbours' ventures */}
+        {onOpenShop && marketCount > 0 && (
+          <button
+            type="button"
+            onClick={onOpenShop}
+            className="w-full rounded-xl bg-surface-card border border-border-strong p-4 text-left active:scale-[0.99] flex items-center gap-3 shadow-sm"
+          >
+            <span className="w-10 h-10 rounded-lg bg-[#FEF3C7] text-status-warn-tx flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined">storefront</span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-bold text-sm text-primary">
+                {marketCount} {language === 'LU' ? 'business za members ziriwo →' : 'neighbour ventures on sale →'}
+              </span>
+              <span className="block text-xs text-text-muted">
+                {language === 'LU' ? 'Tundanagane — ekibiina kikule' : 'Buy from each other — grow together'}
+              </span>
+            </span>
+            <span className="material-symbols-outlined text-primary">arrow_forward</span>
+          </button>
+        )}
 
         {/* 3 giant Friday steps */}
         <section className="space-y-3">
@@ -180,7 +254,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             onClick={() => onNavigate('help')}
             className="w-full min-h-[52px] bg-primary text-white rounded-lg font-bold active:scale-[0.99]"
           >
-            {language === 'LU' ? 'Buyambi' : 'Help & Support'}
+            {language === 'LU' ? 'Obuyambi' : 'Help & Support'}
           </button>
         </section>
       </main>
@@ -386,6 +460,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Where money sits: box cash vs MoMo float vs bank + audited moves */}
+      <FundLocationsCard
+        cash={boxCashBalance}
+        momo={momoBalance}
+        bank={bankBalance}
+        recentTransfers={fundTransfers}
+        language={language}
+        onTransfer={onTransferFunds}
+      />
 
       {/* Operating Cycle Status Card */}
       <section

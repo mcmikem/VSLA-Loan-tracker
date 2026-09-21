@@ -52,6 +52,9 @@ interface MeetingWizardViewProps {
   onAdjustDiscrepancy: (amount: number, reason: string, method: string) => void;
   /** Name on the current account — enforces the 2-key gap rule. */
   currentUserName?: string;
+  /** Floats excluded from the physical count — shown so nobody recounts them. */
+  momoBalance?: number;
+  bankBalance?: number;
 }
 
 type AttStatus = 'present' | 'late' | 'absent' | 'excused';
@@ -129,6 +132,8 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   onDownloadBackup,
   onAdjustDiscrepancy,
   currentUserName = 'Officer',
+  momoBalance = 0,
+  bankBalance = 0,
 }) => {
   const [draft, setDraft] = useState<Draft>(loadDraft);
   const [repayInputs, setRepayInputs] = useState<Record<string, string>>({});
@@ -162,12 +167,12 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
     language === 'LU' ? lu  : en;
 
   const steps = [
-    str('Attendance', 'Abakiise'),
+    str('Attendance', 'Okubeerawo'),
     str('Shares', 'Emigabo'),
     str('Welfare', 'Obuyambi'),
     str('Repayments', 'Okusasula'),
-    str('New Loans', 'Ebyewolo'),
-    str('Fines', 'Engassi'),
+    str('New Loans', 'Loan'),
+    str('Fines', 'Bibonerezo'),
     str('Sales', 'Okutunda'),
     str('Close & Seal', 'Ggala & Siba'),
   ];
@@ -351,7 +356,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </button>
           <div>
             <h1 className="font-bold text-[#00261b]">
-              {str(`Meeting #${meetingNo} Wizard`, `Olukuŋŋaana #${meetingNo}`)}
+              {str(`Meeting #${meetingNo} Wizard`, `Lukuŋŋaana #${meetingNo}`)}
             </h1>
             <p className="text-xs text-[#4B5563]">{str('Complete in one sitting — draft auto-saves', 'Maliriza omulundi gumu')}</p>
           </div>
@@ -583,7 +588,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             <MemberFaceGrid members={members} value={loanForm.memberId} onChange={(memberId) => setLoanForm({ ...loanForm, memberId })} layout="row" />
             {loanMember && (
               <p className="text-[11px] text-[#4B5563]">
-                {str('Saved', 'Enterekanya')} UGX {loanMember.sharesTotal.toLocaleString()} · {str('Max', 'Ekkomo')} UGX {(loanMember.maxBorrowLimit || 0).toLocaleString()}
+                {str('Saved', 'Okutereka')} UGX {loanMember.sharesTotal.toLocaleString()} · {str('Max', 'Ekkomo')} UGX {(loanMember.maxBorrowLimit || 0).toLocaleString()}
                 {(loanMember.loanBalance || 0) > 0 && <span className="text-[#B91C1C] font-bold"> · {str('has active loan — must clear first', 'alina bbanja')}</span>}
               </p>
             )}
@@ -622,7 +627,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                 {finePaid ? str('Paid now → welfare', 'Asasudde → obuyambi') : str('Pending', 'Kyakulinda')}
               </button>
             </div>
-            {stepBtn(str('Add fine to list', 'Teekamu engassi'), stageFine, false)}
+            {stepBtn(str('Add fine to list', 'Teekamu ekibonerezo'), stageFine, false)}
           </div>
           {stagedFines.map((f, i) => (
             <div key={i} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 flex items-center justify-between gap-2 text-xs">
@@ -632,7 +637,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           ))}
           {draft.finesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa')}</p>}
           {stepBtn(
-            draft.finesRecorded ? str('Continue to Sales →', 'Weeyongereyo →') : `${str('Record', 'Kaza')} ${stagedFines.length} ${str('fine(s)', 'engassi')}`,
+            draft.finesRecorded ? str('Continue to Sales →', 'Weeyongereyo →') : `${str('Record', 'Kaza')} ${stagedFines.length} ${str('fine(s)', 'ekibonerezo')}`,
             () => {
               if (!draft.finesRecorded) commitFines();
               else patch({ step: 6 });
@@ -702,6 +707,14 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               <span className="text-xs text-white/70">{str('Expected in box:', 'Ezisuubirwa:')}</span>
               <span className="font-mono text-xl font-bold">UGX {expectedCash.toLocaleString()}</span>
             </div>
+            {(momoBalance > 0 || bankBalance > 0) && (
+              <p className="text-[11px] text-[#bcedd7] mt-1">
+                {str(
+                  `Count cash only — MoMo UGX ${momoBalance.toLocaleString()} + bank UGX ${bankBalance.toLocaleString()} stay where they are.`,
+                  `Bala nkalu zokka — MoMo UGX ${momoBalance.toLocaleString()} ne banka UGX ${bankBalance.toLocaleString()} bisigala we biri.`
+                )}
+              </p>
+            )}
           </div>
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
             <label className="text-xs font-bold text-[#00261b] block">{str('Physical cash counted', 'Ssente ezibaliddwa')} (UGX)</label>
@@ -727,18 +740,24 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                   : str(`Big gap (≥ UGX ${GAP_TWO_KEY_THRESHOLD.toLocaleString()}): sealing needs 2 different officers. Your tap counts as key 1/2.`, `Enjawulo ennene: okusiba kwetaaga abakulu babiri. Okunyiga kwo kye kisumuluzo 1/2.`)}
               </div>
             )}
-            <textarea value={draft.minutes} onChange={(e) => patch({ minutes: e.target.value })} placeholder={str('Meeting minutes / resolutions (optional)', 'Ebiwandiiko by\'olukuŋŋaana')} rows={2} className="w-full border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm" />
+            <textarea value={draft.minutes} onChange={(e) => patch({ minutes: e.target.value })} placeholder={str('Meeting minutes / resolutions (optional)', 'Wandiika ebyesaliddwawo wano...')} rows={2} className="w-full border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm" />
           </div>
           {draft.completed
             ? (
               <div className="bg-[#DCFCE7] border border-[#006d30] rounded-xl p-4 text-center space-y-2">
-                <p className="font-bold text-[#166534] text-sm">{str(`Meeting #${meetingNo} sealed!`, 'Olukuŋŋaana luggaddwa!')}</p>
+                <p className="font-bold text-[#166534] text-sm">{str(`Meeting #${meetingNo} sealed!`, 'Lukuŋŋaana luggaddwa!')}</p>
+                <p className="text-[11px] text-[#166534] leading-relaxed">
+                  {str(
+                    'Paper still counts: stamp the paper passbooks, then keep the downloaded backup + recovery sheet INSIDE the metal box.',
+                    'Ekitabo ky’empapula kikyalina amakulu: temamu sitampu, oteeke fayiro ekoppebwa mu sanduuko ey’ekyuma.'
+                  )}
+                </p>
                 {!backupDone && (
                   <>
                     <p className="text-[11px] font-bold text-[#92400E]">
                       {str('The backup file did not download. The books live on this phone only until you save a copy.', 'Fayiro tekoppebwa. Kozesa wansi.')}
                     </p>
-                    {stepBtn(str('Download backup file (required)', 'Koppa fayiro (kyetaagisa)'), () => {
+                    {stepBtn(str('Download backup file (required)', 'Wannula fayiro (kyetaagisa)'), () => {
                       if (lastSealed) {
                         try {
                           onDownloadBackup(lastSealed);
@@ -756,12 +775,21 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                   true,
                   !backupDone
                 )}
+                {backupDone && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('audio_broadcast')}
+                    className="w-full min-h-[48px] rounded-lg font-bold text-sm bg-white border border-[#006d30] text-[#006d30] active:scale-[0.99]"
+                  >
+                    {str('Send SMS reminders to debtors →', 'Weereza SMS eri abeebbanja →')}
+                  </button>
+                )}
               </div>
             )
             : stepBtn(
               draft.gapFirstBy && difference !== 0 && gapNeedsSecondKey(Math.abs(difference))
                 ? str(`Seal with 2nd officer key`, `Siba n'ekisumuluzo eky'okubiri`)
-                : str(`Seal Meeting #${meetingNo}`, `Siba Olukuŋŋaana #${meetingNo}`),
+                : str(`Seal Meeting #${meetingNo}`, `Siba Lukuŋŋaana #${meetingNo}`),
               finishMeeting,
               true,
               draft.counted === '' || (difference !== 0 && !discrepancyNote.trim())
@@ -776,7 +804,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         </button>
       )}
       <button type="button" onClick={() => onNavigate('member_passbook')} className="w-full text-xs font-bold text-[#4B5563] underline">
-        {str('View passbooks', 'Laba ppaasibuku')}
+        {str('View passbooks', 'Laba passbook')}
       </button>
     </main>
   );

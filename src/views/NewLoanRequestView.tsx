@@ -4,6 +4,8 @@ import { Member, ScreenId } from '../types';
 interface NewLoanRequestViewProps {
   members?: Member[];
   onNavigate: (screen: ScreenId) => void;
+  /** When a member requests on their own phone, lock the form to them. */
+  requestAsMemberNo?: string;
   onSubmitLoan: (loan: {
     memberName: string;
     memberNo: string;
@@ -18,6 +20,7 @@ interface NewLoanRequestViewProps {
 export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
   members = [],
   onNavigate,
+  requestAsMemberNo,
   onSubmitLoan,
 }) => {
   const fallbackList: Member[] = [
@@ -27,7 +30,8 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
   ];
   const roster = members.length > 0 ? members : fallbackList;
 
-  const initialNo = roster[1]?.no || roster[0]?.no || '02';
+  const lockedNo = requestAsMemberNo && roster.some((m) => m.no === requestAsMemberNo) ? requestAsMemberNo : undefined;
+  const initialNo = lockedNo || roster[1]?.no || roster[0]?.no || '02';
   const [selectedNo, setSelectedNo] = useState(initialNo);
   const fullMember: Member =
     roster.find((m) => m.no === selectedNo) || roster[1] || roster[0];
@@ -116,6 +120,7 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
           <h2 className="text-headline-md font-bold text-status-ok-tx">Loan Request Submitted!</h2>
           <p className="text-xs text-emerald-800">
             Request for UGX {requestedAmount.toLocaleString('en-US')} forwarded to Executive Approvals Queue.
+            Two different officers must each turn a key (0/2 → 1/2 → approved) — track it in My account.
           </p>
           <div className="pt-2 flex gap-2">
             <button
@@ -140,6 +145,11 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
               <span className="text-xs font-bold text-primary uppercase tracking-wider">
                 Applying Member
               </span>
+              {lockedNo ? (
+                <span className="px-2 py-0.5 rounded bg-status-ok-bg text-status-ok-tx text-xs font-bold">
+                  You — #{lockedNo}
+                </span>
+              ) : (
               <div className="flex gap-1 overflow-x-auto max-w-[200px] no-scrollbar">
                 {roster.map((m) => (
                   <button
@@ -156,6 +166,7 @@ export const NewLoanRequestView: React.FC<NewLoanRequestViewProps> = ({
                   </button>
                 ))}
               </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between p-3 bg-canvas-bg rounded-lg border border-border-line">

@@ -24,6 +24,8 @@ import { HomeView } from './views/HomeView';
 import { MeetingCloseBoxView } from './views/MeetingCloseBoxView';
 import { ApprovalsQueueView } from './views/ApprovalsQueueView';
 import { MemberPassbookView } from './views/MemberPassbookView';
+import { MemberHomeView } from './views/MemberHomeView';
+import { fundBalances, totalFunds, transferError, applyTransfer, FundLocation } from './utils/fundLocations';
 import { MoMoPushView } from './views/MoMoPushView';
 import { NewLoanRequestView } from './views/NewLoanRequestView';
 import { CycleShareOutView } from './views/CycleShareOutView';
@@ -54,6 +56,7 @@ import {
   savePendingGroup,
 } from './utils/offlineGroup';
 import { ShareOutResult } from './utils/shareout';
+import { buildPracticeState, isPracticeGroup, popStashedGroup, PRACTICE_GROUP_ID, stashRealGroup } from './utils/practiceGroup';
 import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
 import { isDefaultPin } from './utils/pin';
 import { PublicDisplayModal } from './components/PublicDisplayModal';
@@ -196,6 +199,11 @@ export function App() {
   // Fetch state for a specific group from server
   const fetchStateFromServer = useCallback(async (targetGroupId?: string) => {
     const gid = targetGroupId || currentGroupId || 'bakwata-01';
+    // Practice group lives only on this phone — never fetch/overwrite from server.
+    if (isPracticeGroup(gid)) {
+      setIsSyncing(false);
+      return;
+    }
     // Never let the server clobber an offline-created group the server
     // doesn't know yet — its only copy lives on this phone.
     try {
@@ -238,9 +246,15 @@ export function App() {
     nextState.groupId = currentGroupId;
     setVslaState(nextState);
     try {
-      localStorage.setItem('bakwata_vsla_state', JSON.stringify(nextState));
+      localStorage.setItem(isPracticeGroup(currentGroupId) ? 'vsla_practice_state_v1' : 'bakwata_vsla_state', JSON.stringify(nextState));
     } catch (e) {
       console.warn('LocalStorage write error:', e);
+    }
+
+    // Practice group never touches the server — play money stays on this phone.
+    if (isPracticeGroup(currentGroupId)) {
+      setIsSyncing(false);
+      return;
     }
 
     try {
@@ -522,6 +536,42 @@ export function App() {
   }, [fetchGroupsList, fetchStateFromServer, currentGroupId]);
 
   const pendingApprovalsCount = vslaState.approvals.filter((a) => a.status === 'pending').length;
+  const isPractice = isPracticeGroup(currentGroupId);
+
+  const handleEnterPractice = () => {
+    if (isPractice) return;
+    stashRealGroup(vslaState, currentGroupId);
+    const p = buildPracticeState();
+    setVslaState(p);
+    setCurrentGroupId(PRACTICE_GROUP_ID);
+    setSelectedMemberId('p-m1');
+    try {
+      localStorage.setItem('bakwata_vsla_state', JSON.stringify(p));
+      localStorage.setItem('bakwata_active_group_id', PRACTICE_GROUP_ID);
+    } catch {}
+    setCurrentScreen('home');
+    setActiveTab('home');
+  };
+
+  const handleExitPractice = () => {
+    const restored = popStashedGroup();
+    if (restored) {
+      setVslaState(restored.state);
+      setCurrentGroupId(restored.groupId);
+      try {
+        localStorage.setItem('bakwata_vsla_state', JSON.stringify(restored.state));
+        localStorage.setItem('bakwata_active_group_id', restored.groupId);
+      } catch {}
+      if (restored.state.members?.[0]) setSelectedMemberId(restored.state.members[0].id);
+    } else {
+      fetchStateFromServer('bakwata-01');
+    }
+    try {
+      localStorage.removeItem('vsla_practice_state_v1');
+    } catch {}
+    setCurrentScreen('home');
+    setActiveTab('home');
+  };
 
   // Retry pending offline-group sync whenever we (re)connect.
   useEffect(() => {
@@ -554,7 +604,7 @@ export function App() {
     setCurrentScreen(screen);
     if (screen === 'home') setActiveTab('home');
     else if (screen === 'meeting_close' || screen === 'meeting_wizard' || screen === 'audio_broadcast') setActiveTab('meetings');
-    else if (screen === 'member_passbook') setActiveTab('members');
+    else if (screen === 'member_passbook' || screen === 'member_home') setActiveTab('members');
     else if (screen === 'new_loan') setActiveTab('loans');
     else if (screen === 'approvals') setActiveTab('approvals');
     else setActiveTab('more');
@@ -570,26 +620,28 @@ export function App() {
     key?: { officerId: string; pin: string }
   ): string | null => {
     const targetItem = vslaState.approvals.find((a) => a.id === id);
-    if (!targetItem) return 'Request not found.';
-    if (targetItem.status !== 'pending') return 'Already decided.';
+    if (!targetItem) return language === 'LU' ? 'Request tewali.' : 'Request not found.';
+    if (targetItem.status !== 'pending') return language === 'LU' ? 'Kiwedde.' : 'Already decided.';
 
     // Verify the officer holding the phone — not whoever is logged in.
     let officerName = currentUser.name;
     if (key) {
       const acct = (vslaState.availableAccounts || []).find((a) => a.id === key.officerId);
-      if (!acct) return 'Unknown officer. Pick a name from the list.';
+      if (!acct) return language === 'LU' ? 'Londa omukulu mu list.' : 'Unknown officer. Pick a name from the list.';
       if (String(acct.pin || '').startsWith('hash:')) {
         return 'This account uses secure sign-in — switch to it from Users (PIN gate) so its key is verified, then approve.';
       }
       if (!key.pin || key.pin !== String(acct.pin)) {
-        return `Wrong PIN for ${acct.name}. Hand the phone to that officer.`;
+        return language === 'LU' ? `PIN si ntuufu — wa ssimu eri ${acct.name}.` : `Wrong PIN for ${acct.name}. Hand the phone to that officer.`;
       }
       if (String(acct.pin) === '1234') {
-        return `${acct.name} still uses default PIN 1234 — change it (Account → Change PIN) before turning keys.`;
+        return language === 'LU'
+          ? `${acct.name} akyakozesa PIN 1234 — Kyuusa PIN esooke.`
+          : `${acct.name} still uses default PIN 1234 — change it (Account → Change PIN) before turning keys.`;
       }
       officerName = acct.name;
     } else if (isDefaultPin(currentUser.pin)) {
-      return 'Change your default PIN 1234 first (Account → Change PIN). Money cannot move on a default PIN.';
+      return language === 'LU' ? 'Kyuusa PIN (1234) esooke.' : 'Change your default PIN 1234 first (Account → Change PIN). Money cannot move on a default PIN.';
     }
     const method = payoutMethod || targetItem.provider || 'Cash';
     const nowIso = new Date().toISOString();
@@ -613,7 +665,9 @@ export function App() {
 
     // Same officer cannot turn both keys.
     if (isSameOfficer(targetItem, officerName)) {
-      return `${officerName} already turned key 1/2. A DIFFERENT officer must turn key 2/2.`;
+      return language === 'LU'
+        ? `${officerName} yakkirizza dda. Omukulu omulala yeetaagisa.`
+        : `${officerName} already turned key 1/2. A DIFFERENT officer must turn key 2/2.`;
     }
 
     // Key 2/2 by a different officer: move money now.
@@ -823,20 +877,53 @@ export function App() {
     );
   };
 
-  // Mobile Money Success
+  // Mobile Money collection lands in the MoMo float — NOT the metal box.
+  // The group reconciles where money sits in Home → Where money sits.
   const handleMoMoSuccess = (amount: number, desc: string) => {
     persistState(
       withAudit(
         {
           ...vslaState,
-          boxCashBalance: vslaState.boxCashBalance + amount,
+          momoBalance: (vslaState.momoBalance || 0) + amount,
         },
         currentUser.name,
-        'Mobile Money collection confirmed',
-        desc,
+        'Mobile Money collection confirmed (MoMo float)',
+        `${desc} · now MoMo UGX ${((vslaState.momoBalance || 0) + amount).toLocaleString()}, cash UGX ${vslaState.boxCashBalance.toLocaleString()}`,
         amount
       )
     );
+  };
+
+  // Move group money between box cash ↔ MoMo float ↔ bank. Audited, no
+  // money leaves the group — only the storage place changes.
+  const handleTransferFunds = (from: FundLocation, to: FundLocation, amount: number, note: string): string | null => {
+    const err = transferError(vslaState, from, to, amount);
+    if (err) return err;
+    const amt = Math.floor(amount);
+    const balances = applyTransfer(vslaState, from, to, amt);
+    const record = {
+      id: 'ft-' + Date.now().toString(36),
+      timestamp: new Date().toISOString(),
+      from,
+      to,
+      amount: amt,
+      actorName: currentUser.name,
+      note: note.trim() || 'Fund move',
+    };
+    persistState(
+      withAudit(
+        {
+          ...vslaState,
+          ...balances,
+          fundTransfers: [record, ...(vslaState.fundTransfers || [])].slice(0, 100),
+        },
+        currentUser.name,
+        `Moved UGX ${amt.toLocaleString()} ${from} → ${to}`,
+        record.note,
+        amt
+      )
+    );
+    return null;
   };
 
   // Submit New Loan Application
@@ -885,9 +972,9 @@ export function App() {
   // Disburse Welfare Grant — blocked on default PIN like approvals
   const handleDisburseWelfareGrant = (grant: WelfareGrant): string | null => {
     if (isDefaultPin(currentUser.pin)) {
-      alert('Change your default PIN 1234 first. Welfare money cannot move on a default PIN.');
+      alert(language === 'LU' ? 'Kyuusa PIN (1234) esooke — obuyambi tebufuluma ku PIN 1234.' : 'Change your default PIN 1234 first. Welfare money cannot move on a default PIN.');
       setIsAccountModalOpen(true);
-      return 'Change your default PIN first.';
+      return language === 'LU' ? 'Kyuusa PIN esooke.' : 'Change your default PIN first.';
     }
     // Gap 4b: one rule, two doors. Direct payout is the emergency fast-track:
     // capped single-key; anything bigger must pass the 2-key approvals queue.
@@ -1044,7 +1131,7 @@ export function App() {
   // Execute Cycle Share-Out: post payouts to ledgers, clear debts, start new cycle
   const handleExecuteShareOut = (result: ShareOutResult) => {
     if (isDefaultPin(currentUser.pin)) {
-      alert('Change your default PIN 1234 first. Share-out cannot run on a default PIN.');
+      alert(language === 'LU' ? 'Kyuusa PIN (1234) esooke — share-out tekola ku PIN 1234.' : 'Change your default PIN 1234 first. Share-out cannot run on a default PIN.');
       setIsAccountModalOpen(true);
       return;
     }
@@ -1359,6 +1446,8 @@ export function App() {
       name: input.name,
       sellerType: input.sellerType,
       sellerName: input.sellerName,
+      sellerPhone: input.sellerPhone?.trim() || (input.sellerName === currentUser.name ? currentUser.phone : undefined),
+      kind: input.sellerType === 'member' ? (input.kind || 'product') : 'product',
       costPrice: input.costPrice,
       salePrice: input.salePrice,
       stockQty: input.stockQty,
@@ -1594,6 +1683,21 @@ export function App() {
   const selectedMember =
     vslaState.members.find((m) => m.id === selectedMemberId) || vslaState.members[0];
 
+  // Member-first resolution: the signed-in account linked to a member record
+  // sees their own dashboard, loan form, and requests. Falls back to the
+  // secretary's browsed member so officer flows keep working.
+  const myMember =
+    vslaState.members.find((m) => m.id === currentUser.memberId) ||
+    vslaState.members.find((m) => m.no === currentUser.memberNo) ||
+    selectedMember;
+  const myRequests = myMember
+    ? vslaState.approvals.filter((a) => a.memberNo === myMember.no).slice().reverse()
+    : [];
+  const memberBusinesses = (vslaState.products || []).filter((p) => p.sellerType === 'member');
+  const funds = fundBalances(vslaState);
+  const fundsTotal = totalFunds(vslaState);
+  const isMemberSelfService = currentUser.role === 'member' && !!myMember;
+
   // PIN gate: when the server enforces auth, no app content without a session.
   if (authEnforced && !sessionToken) {
     return (
@@ -1607,6 +1711,7 @@ export function App() {
           initialAccountId={loginPreselectId}
           onLogin={handleLogin}
           logoUrl={vslaState.groupProfile?.logoUrl}
+          language={language}
         />
       </div>
     );
@@ -1617,6 +1722,21 @@ export function App() {
 
   return (
     <div className={`min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans selection:bg-secondary/20 ${elderMode ? 'elder-mode' : ''} ${sunlightMode ? 'sunlight-mode' : ''}`}>
+      {isPractice && (
+        <div className="bg-[#EAB308] text-[#00261b] text-xs font-bold px-3 py-2 flex items-center justify-between gap-2 no-print sticky top-0 z-50">
+          <span className="flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[18px]">sports_esports</span>
+            {language === 'LU' ? 'PRACTICE — Ssente za kuzannya, si za ddala' : 'PRACTICE MODE — play money, nothing real'}
+          </span>
+          <button
+            type="button"
+            onClick={handleExitPractice}
+            className="px-3 py-1.5 bg-[#00261b] text-white rounded-lg text-xs font-bold active:scale-95"
+          >
+            {language === 'LU' ? 'Fuluma → ekibiina kyaffe' : 'Exit → my real group'}
+          </button>
+        </div>
+      )}
       {/* Village accessibility bar: big-text + sunlight + public display + simple/advanced */}
       <div className="bg-primary text-white text-[11px] font-bold px-3 py-1.5 flex items-center justify-center gap-2 no-print flex-wrap">
         <button
@@ -1674,7 +1794,7 @@ export function App() {
         <div className="bg-blue-50 border-b border-blue-200 text-blue-900 text-[11px] font-bold px-4 py-1.5 text-center flex items-center justify-center gap-2 flex-wrap">
           <span>
             {language === 'LU'
-              ? 'Ekibiina kino tekinnatuuka ku mutimbagano — kikolebwa ku ssimu eno yokka.'
+              ? 'Ekibiina kino tekiri ku yintaneeti — kikolebwa ku ssimu eno yokka.'
               : 'This group is saved on this phone only — not yet synced.'}
           </span>
           <button
@@ -1756,6 +1876,16 @@ export function App() {
             totalCycleMonths={vslaState.totalCycleMonths}
             sharePrice={vslaState.groupProfile?.sharePrice || 10000}
             totalShares={vslaState.members.reduce((s, m) => s + (m.sharesCount || 0), 0)}
+            myMemberName={myMember?.name}
+            mySavings={myMember?.sharesTotal}
+            myLoanBalance={myMember?.loanBalance}
+            onOpenMyAccount={() => handleNavigateScreen('member_home')}
+            marketCount={memberBusinesses.filter((p) => p.stockQty > 0).length}
+            onOpenShop={() => handleNavigateScreen('shop')}
+            momoBalance={funds.momo}
+            bankBalance={funds.bank}
+            fundTransfers={vslaState.fundTransfers || []}
+            onTransferFunds={handleTransferFunds}
           />
         )}
 
@@ -1797,7 +1927,13 @@ export function App() {
         )}
 
         {currentScreen === 'help' && (
-          <HelpView onNavigate={handleNavigateScreen} language={language} />
+          <HelpView
+            onNavigate={handleNavigateScreen}
+            language={language}
+            isPractice={isPractice}
+            onEnterPractice={handleEnterPractice}
+            onExitPractice={handleExitPractice}
+          />
         )}
 
         {currentScreen === 'shop' && (
@@ -1809,6 +1945,8 @@ export function App() {
             onSell={handleSellProduct}
             onAddExpense={handleAddExpense}
             language={language}
+            currentUserName={currentUser.name}
+            currentUserPhone={currentUser.phone}
           />
         )}
 
@@ -1863,6 +2001,8 @@ export function App() {
             onDownloadBackup={(sealed) => downloadBackupFile(sealed)}
             onAdjustDiscrepancy={handleDiscrepancyAdjustment}
             currentUserName={currentUser.name}
+            momoBalance={funds.momo}
+            bankBalance={funds.bank}
           />
         )}
 
@@ -1894,6 +2034,17 @@ export function App() {
           />
         )}
 
+        {currentScreen === 'member_home' && myMember && (
+          <MemberHomeView
+            member={myMember}
+            requests={myRequests}
+            memberBusinesses={memberBusinesses}
+            groupName={vslaState.groupName || vslaState.groupProfile?.name || 'Bakwata Savings Group'}
+            language={language}
+            onNavigate={handleNavigateScreen}
+          />
+        )}
+
         {currentScreen === 'member_passbook' && (
           <MemberPassbookView
             members={vslaState.members}
@@ -1916,6 +2067,7 @@ export function App() {
           <MoMoPushView
             onNavigate={handleNavigateScreen}
             onSuccessTransaction={handleMoMoSuccess}
+            language={language}
           />
         )}
 
@@ -1923,6 +2075,7 @@ export function App() {
           <NewLoanRequestView
             members={vslaState.members}
             onNavigate={handleNavigateScreen}
+            requestAsMemberNo={isMemberSelfService ? myMember.no : undefined}
             onSubmitLoan={handleSubmitNewLoan}
           />
         )}
@@ -1957,6 +2110,21 @@ export function App() {
             boxCashBalance={vslaState.boxCashBalance}
             meetingNumber={vslaState.recentMeetingsCount}
             membersCount={vslaState.members.length}
+            members={vslaState.members}
+            groupName={vslaState.groupName || 'Bakwata'}
+            language={language}
+            onReminderLogged={(memberId, channel, kind) => {
+              const m = vslaState.members.find((x) => x.id === memberId);
+              persistState(
+                withAudit(
+                  vslaState,
+                  currentUser.name,
+                  `Sent ${kind} reminder via ${channel}`,
+                  `${m?.name || memberId} (#${m?.no || '-'}) · ${m?.phone || 'no number'} · balance UGX ${(m?.loanBalance || 0).toLocaleString()}`,
+                  m?.loanBalance
+                )
+              );
+            }}
           />
         )}
 
