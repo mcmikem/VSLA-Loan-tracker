@@ -10,6 +10,8 @@ interface GroupOnboardingModalProps {
   onCreateGroup: (payload: CreateGroupPayload) => Promise<{ success: boolean; group?: GroupSummary; inviteCode?: string; error?: string; offline?: boolean }>;
   onJoinGroup: (payload: JoinGroupPayload) => Promise<{ success: boolean; groupName?: string; memberNo?: string; error?: string }>;
   defaultTab?: 'register' | 'join' | 'directory';
+  /** Strangers (welcome gate) get register/join only — no browsing groups. */
+  hideDirectory?: boolean;
 }
 
 export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
@@ -21,6 +23,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
   onCreateGroup,
   onJoinGroup,
   defaultTab = 'directory',
+  hideDirectory = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'directory' | 'register' | 'join'>(defaultTab);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -246,6 +249,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
           <>
             {/* Tabs Navigation */}
             <div className="flex border-b border-border-line bg-surface-container-low shrink-0 px-3 pt-2">
+              {!hideDirectory && (
               <button
                 type="button"
                 onClick={() => {
@@ -261,6 +265,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                 <span className="material-symbols-outlined text-[16px]">domain</span>
                 <span>All Groups ({availableGroups.length})</span>
               </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -333,23 +338,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                             </span>
                           </div>
                           <div className="flex items-center gap-3 text-xs text-text-muted flex-wrap">
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[14px]">location_on</span>
-                              {grp.location}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                              {grp.meetingDay}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 pt-1 text-[11px] font-medium text-text-muted">
                             <span>{grp.membersCount} Members</span>
-                            <span>•</span>
-                            <span>Share: UGX {grp.sharePrice.toLocaleString()}</span>
-                            <span>•</span>
-                            <span className="font-bold text-primary">
-                              Box: UGX {grp.boxCashBalance.toLocaleString()}
-                            </span>
                           </div>
                         </div>
 

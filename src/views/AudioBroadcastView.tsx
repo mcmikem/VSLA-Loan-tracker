@@ -27,7 +27,7 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
   meetingNumber = 28,
   membersCount = 30,
   members = [],
-  groupName = 'Bakwata',
+  groupName = 'Group',
   language = 'LU',
   onReminderLogged,
 }) => {
@@ -43,9 +43,9 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
 
   const formattedCash = boxCashBalance.toLocaleString('en-US');
 
-  const lugandaText = `Olukuŋŋaana #${meetingNumber} lwa Bakwata lufundikiddwa. Ssente eziri mu sanduuko ziri shillingi za Uganda emitwalo ${Math.round(boxCashBalance / 10000)} (UGX ${formattedCash}). Bammemba ${membersCount} beetabye. Sanduuko esibiddwa n'ekkufulu essatu ez'abakwasi b'ebisumuluzo.`;
+  const lugandaText = `Olukuŋŋaana #${meetingNumber} lwa ${groupName} lufundikiddwa. Ssente eziri mu sanduuko ziri shillingi za Uganda emitwalo ${Math.round(boxCashBalance / 10000)} (UGX ${formattedCash}). Bammemba ${membersCount} beetabye. Sanduuko esibiddwa n'ekkufulu essatu ez'abakwasi b'ebisumuluzo.`;
 
-  const englishText = `Bakwata Village Savings meeting number ${meetingNumber} has adjourned. The verified physical cash in the safe box is Uganda Shillings ${formattedCash}. All ${membersCount} members accounted for. The box has been locked with 3 padlocks by the appointed keyholders.`;
+  const englishText = `${groupName} meeting number ${meetingNumber} has adjourned. The verified physical cash in the safe box is Uganda Shillings ${formattedCash}. All ${membersCount} members accounted for. The box has been locked with 3 padlocks by the appointed keyholders.`;
 
   const handleTogglePlay = () => {
     if (!isPlaying) {

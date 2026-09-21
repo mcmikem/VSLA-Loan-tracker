@@ -3,6 +3,13 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
+import {
+  MomoProviderError,
+  collectionStatus,
+  getMomoConfig,
+  parseCollectionInput,
+  requestCollection,
+} from './lib/momo.js';
 
 const app = express();
 const PORT = 3000;
@@ -1474,63 +1481,58 @@ app.post('/api/backup/snapshot', (req, res) => {
   res.json({ success: true, groupId, snapshot, snapshots: current.snapshots });
 });
 
-// 8. Mobile Money USSD Push — sandbox simulation until live keys are configured.
-// Provide MTN_MOMO_* / AIRTEL_* env vars + MOMO_LIVE=1 to switch to LIVE mode.
-// The frontend calls GET /api/momo/config to decide which badge to show.
+// 8. Mobile Money collection — MTN MoMo + Airtel Money.
+// Live requests are provider-backed and remain pending until the status
+// endpoint confirms completion. Sandbox remains available when MOMO_LIVE=0.
 app.get('/api/momo/config', (req, res) => {
-  const mtnConfigured = Boolean(
-    process.env.MTN_MOMO_SUBSCRIPTION_KEY && process.env.MTN_MOMO_API_KEY
-  );
-  const airtelConfigured = Boolean(
-    process.env.AIRTEL_CLIENT_ID && process.env.AIRTEL_CLIENT_SECRET
-  );
-  const live = process.env.MOMO_LIVE === '1' && (mtnConfigured || airtelConfigured);
+  const config = getMomoConfig();
   res.json({
     success: true,
-    mode: live ? 'live' : 'sandbox',
-    mtnConfigured,
-    airtelConfigured,
-    missing: [
-      ...(!process.env.MTN_MOMO_SUBSCRIPTION_KEY || !process.env.MTN_MOMO_API_KEY ? ['MTN_MOMO_SUBSCRIPTION_KEY', 'MTN_MOMO_API_KEY'] : []),
-      ...(!process.env.AIRTEL_CLIENT_ID || !process.env.AIRTEL_CLIENT_SECRET ? ['AIRTEL_CLIENT_ID', 'AIRTEL_CLIENT_SECRET'] : []),
-    ],
-    hint: live
+    mode: config.mode,
+    mtnConfigured: config.mtnConfigured,
+    airtelConfigured: config.airtelConfigured,
+    mtnEnvironment: config.mtnEnvironment,
+    airtelEnvironment: config.airtelEnvironment,
+    hint: config.mode === 'live'
       ? 'Live MoMo collections enabled.'
-      : 'Set MTN_MOMO_SUBSCRIPTION_KEY + MTN_MOMO_API_KEY (and/or AIRTEL_CLIENT_ID + AIRTEL_CLIENT_SECRET) with MOMO_LIVE=1 to go live. Until then pushes are simulated.',
+      : 'Sandbox simulation — add both provider credentials and set MOMO_LIVE=1 to move real money.',
   });
 });
 
-app.post('/api/momo/push', (req, res) => {
-  const { network, phone, amount, memberName, purpose } = req.body;
-  const prefix = network === 'Airtel' ? 'AIRTEL-UG-' : 'MTN-UG-';
-  const transId = prefix + Math.floor(100000 + Math.random() * 900000);
-  const mtnConfigured = Boolean(
-    process.env.MTN_MOMO_SUBSCRIPTION_KEY && process.env.MTN_MOMO_API_KEY
-  );
-  const airtelConfigured = Boolean(
-    process.env.AIRTEL_CLIENT_ID && process.env.AIRTEL_CLIENT_SECRET
-  );
-  const live = process.env.MOMO_LIVE === '1' && (network === 'Airtel' ? airtelConfigured : mtnConfigured);
-
-  // Return simulated instant response
-  // TODO(live-momo): when `live` is true, exchange the provider token and call
-  // MTN Collection POST /collection/v1_0/requesttopay (X-Reference-Id) or the
-  // Airtel standard transaction API here instead of this timeout stub.
-  setTimeout(() => {
-    res.json({
+app.post('/api/momo/push', async (req, res) => {
+  if (!requireSecretaryLocal(req, res)) return;
+  try {
+    const input = parseCollectionInput(req.body || {});
+    const result = await requestCollection(input);
+    res.status(result.mode === 'live' ? 202 : 200).json({
       success: true,
-      transactionId: transId,
-      status: 'confirmed',
-      mode: live ? 'live' : 'sandbox',
-      network,
-      phone,
-      amount,
-      memberName,
-      purpose,
+      ...result,
+      network: input.network,
+      phone: input.phone,
+      amount: input.amount,
+      memberName: input.memberName,
+      purpose: input.purpose,
       timestamp: new Date().toISOString(),
-      ussdMessage: `Payment of UGX ${Number(amount).toLocaleString()} from ${memberName} confirmed. Box updated.`,
     });
-  }, 400);
+  } catch (error: any) {
+    if (error instanceof MomoProviderError) return res.status(error.status || 502).json({ success: false, error: error.message });
+    console.error('MoMo provider error:', error?.message || error);
+    return res.status(502).json({ success: false, error: 'Mobile-money provider error. No money was taken.' });
+  }
+});
+
+app.get('/api/momo/status', async (req, res) => {
+  if (!requireSecretaryLocal(req, res)) return;
+  try {
+    const network = String(req.query.network || '');
+    const transactionId = String(req.query.transactionId || '');
+    const result = await collectionStatus(network, transactionId);
+    return res.json({ success: true, ...result });
+  } catch (error: any) {
+    if (error instanceof MomoProviderError) return res.status(error.status || 502).json({ success: false, error: error.message });
+    console.error('MoMo status error:', error?.message || error);
+    return res.status(502).json({ success: false, error: 'Mobile-money provider error.' });
+  }
 });
 
 // 9. Meeting Close & Cash Reconciliation Finalize

@@ -18,6 +18,24 @@ import {
   rateLimit,
   validate,
 } from '../lib/_lib.js';
+import { requireRole } from '../lib/_auth.js';
+
+/**
+ * Directory summaries carry NO money, NO location, NO pricing — just enough
+ * to pick a group you belong to. Full ledgers always require a same-group
+ * session (see api/state.js).
+ */
+function publicGroupSummary(s) {
+  const full = toGroupSummary(s);
+  return {
+    id: full.id,
+    name: full.name,
+    boxIdentifier: full.boxIdentifier,
+    inviteCode: full.inviteCode,
+    membersCount: full.membersCount,
+    plan: full.plan,
+  };
+}
 import { loadGroup, saveGroup } from '../lib/_db.js';
 
 /** IDs of groups created via ?action=create (seeds are implicit). */
@@ -77,16 +95,18 @@ async function findGroupByCode(code) {
 export default async function handler(req, res) {
   const action = String(req.query?.action || '').toLowerCase();
 
-  // ---- LIST: GET /api/groups (seeds + every group created on this server) ----
+  // ---- LIST: GET /api/groups (signed-in users only, once enforced) ----
   if (req.method === 'GET' && (!action || action === 'list')) {
     if (!cors(req, res, 'GET,OPTIONS')) return;
-    const groups = [toGroupSummary(getBakwataSeed()), toGroupSummary(getKibuliSeed())];
+    const session = requireRole(req, res, 'member');
+    if (session === undefined) return;
+    const groups = [publicGroupSummary(getBakwataSeed()), publicGroupSummary(getKibuliSeed())];
     const seen = new Set(['bakwata-01', 'kibuli-01']);
     for (const gid of (await groupRegistry()).ids) {
       if (seen.has(gid)) continue;
       seen.add(gid);
       try {
-        groups.push(toGroupSummary(await loadGroup(gid)));
+        groups.push(publicGroupSummary(await loadGroup(gid)));
       } catch {
         /* dropped group file — skip */
       }
@@ -170,29 +190,30 @@ export default async function handler(req, res) {
       },
       groupName: name, boxIdentifier: boxId, inviteCode,
       cycle: 1, cycleMonth: 1, totalCycleMonths: Number(cycleDurationMonths) || 10,
-      boxCashBalance: price, loanFundBalance: 0, welfareFundBalance: welfare,
-      lastBackupDate: new Date().toISOString(), recentMeetingsCount: 1,
+      // Zero-start: no fabricated money or meetings — the first real Friday records them.
+      boxCashBalance: 0, loanFundBalance: 0, welfareFundBalance: 0,
+      lastBackupDate: new Date().toISOString(), recentMeetingsCount: 0,
       currentUser: adminAccount, availableAccounts: [adminAccount], activePreset: 'new_group',
       members: [{
         id: `m-${Date.now().toString(36)}`, no: '01', name: adminName,
         initials: adminAccount.avatarInitials, zone: location || 'Main Zone', phone: adminPhone,
-        provider: adminProvider || 'MTN', attendance: '1/1', sharesCount: 1, sharesTotal: price,
-        maxBorrowLimit: price * 3, loanBalance: 0, welfareBalance: welfare,
+        provider: adminProvider || 'MTN', attendance: '0/0', sharesCount: 0, sharesTotal: 0,
+        maxBorrowLimit: 0, loanBalance: 0, welfareBalance: 0,
         isKeyholder: true, keyholderTitle: 'Executive Secretary',
-        stamps: [{ week: 1, shares: 1, status: 'validated' }, { week: 2, shares: 0, status: 'next' }],
+        stamps: [{ week: 1, shares: 0, status: 'next' }, { week: 2, shares: 0, status: 'next' }],
         ledger: [],
       }],
       approvals: [], fines: [], welfareGrants: [],
       snapshots: [{
         id: `snap-init-${Date.now()}`, timestamp: new Date().toISOString(),
-        label: `Cycle 1 Genesis Initialization for ${name}`, membersCount: 1,
-        boxCashBalance: price, loanFundBalance: 0, welfareFundBalance: welfare, data: '',
+        label: `Registered ${name} — awaiting first meeting`, membersCount: 1,
+        boxCashBalance: 0, loanFundBalance: 0, welfareFundBalance: 0, data: '',
       }],
     };
 
     return res.status(200).json({
       success: true, groupId,
-      group: { id: groupId, name, boxIdentifier: boxId, location: location || 'Uganda', meetingDay: meetingDay || 'Every Friday 4:00 PM', sharePrice: price, inviteCode, membersCount: 1, boxCashBalance: price, plan: plan || 'free' },
+      group: { id: groupId, name, boxIdentifier: boxId, location: location || 'Uganda', meetingDay: meetingDay || 'Every Friday 4:00 PM', sharePrice: price, inviteCode, membersCount: 1, boxCashBalance: 0, plan: plan || 'free' },
       state: await persistCreatedGroup(groupId, newGroupState), account: adminAccount,
       message: `Savings group "${name}" initialized successfully with invite code ${inviteCode}`,
     });

@@ -1178,10 +1178,10 @@ export function App() {
   // Backup & Restore Handlers — restores always keep live face photos.
   const handleRestoreState = async (newState: VSLAState): Promise<boolean> => {
     try {
-      const res = await apiFetch('/api/backup/restore', {
+      const res = await apiFetch(`/api/backup/restore?groupId=${currentGroupId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: newState }),
+        headers: { 'Content-Type': 'application/json', 'x-group-id': currentGroupId },
+        body: JSON.stringify({ state: newState, groupId: currentGroupId }),
       });
       if (res.ok) {
         const json = await res.json();
@@ -1202,10 +1202,10 @@ export function App() {
 
   const handleCreateSnapshot = async (label: string) => {
     try {
-      const res = await apiFetch('/api/backup/snapshot', {
+      const res = await apiFetch(`/api/backup/snapshot?groupId=${currentGroupId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label }),
+        headers: { 'Content-Type': 'application/json', 'x-group-id': currentGroupId },
+        body: JSON.stringify({ label, groupId: currentGroupId }),
       });
       if (res.ok) {
         const json = await res.json();
@@ -1245,7 +1245,10 @@ export function App() {
 
   const handleResetToBaseline = async () => {
     try {
-      const res = await apiFetch('/api/backup/reset', { method: 'POST' });
+      const res = await apiFetch(`/api/backup/reset?groupId=${currentGroupId}`, {
+        method: 'POST',
+        headers: { 'x-group-id': currentGroupId },
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.state) {

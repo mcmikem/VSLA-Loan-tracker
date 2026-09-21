@@ -241,12 +241,14 @@ export interface GroupSummary {
   id: string;
   name: string;
   boxIdentifier: string;
-  location: string;
-  meetingDay: string;
-  sharePrice: number;
+  // The directory never carries these — location, pricing and money stay
+  // inside each group's own signed-in ledger (see publicGroupSummary).
+  location?: string;
+  meetingDay?: string;
+  sharePrice?: number;
   inviteCode: string;
   membersCount: number;
-  boxCashBalance: number;
+  boxCashBalance?: number;
   plan: 'free' | 'pro' | 'sacco';
   isCurrent?: boolean;
 }

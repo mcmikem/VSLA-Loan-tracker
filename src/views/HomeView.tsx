@@ -702,6 +702,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
 
         <div className="bg-surface-card rounded-xl border border-border-line p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)]">
+          {recentMeetingsCount === 0 ? (
+            <div className="text-center space-y-2 py-2">
+              <p className="text-sm font-bold text-primary">
+                {language === 'LU' ? 'Tewali lukuŋŋaana lunatera — tandika erisooka' : 'No meetings yet — start the first one'}
+              </p>
+              <button
+                type="button"
+                onClick={() => onNavigate('meeting_wizard')}
+                className="px-5 min-h-[48px] bg-[#15803D] text-white rounded-lg font-bold text-sm active:scale-[0.99]"
+              >
+                {t.home.startMeeting}
+              </button>
+            </div>
+          ) : (
+          <>
           <div className="flex items-start justify-between pb-3 border-b border-border-line">
             <div>
               <div className="flex items-center gap-2">
@@ -747,6 +762,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <span>{t.home.viewMinutes}</span>
             </button>
           </div>
+          </>
+          )}
         </div>
       </section>
     </main>

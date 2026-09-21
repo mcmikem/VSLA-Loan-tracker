@@ -18,6 +18,7 @@
     { "source": "/api/backup/reset", "destination": "/api/backup?action=reset" },
     { "source": "/api/momo/config", "destination": "/api/momo?action=config" },
     { "source": "/api/momo/push", "destination": "/api/momo?action=push" },
+    { "source": "/api/momo/webhook", "destination": "/api/momo?action=webhook" },
     { "source": "/api/momo/status", "destination": "/api/momo?action=status" },
     { "source": "/api/seed/preset", "destination": "/api/seed?action=preset" },
     { "source": "/app", "destination": "/index.html" }

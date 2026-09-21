@@ -179,6 +179,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
         onCreateGroup={onCreateGroup}
         onJoinGroup={onJoinGroup}
         defaultTab={modalTab}
+        hideDirectory
       />
     </div>
   );

@@ -308,6 +308,13 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
 
       {/* Row 2: Multi-Tenant Group Selector + Register Quick Action */}
       <div className="px-4 pb-2.5 pt-0.5 max-w-lg mx-auto relative">
+        {currentUser?.role === 'member' ? (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-canvas-bg border border-border-strong rounded-lg text-xs min-h-[38px]">
+            <span className="material-symbols-outlined text-[16px] text-secondary">domain</span>
+            <span className="font-bold text-on-surface truncate">{selectedBox}</span>
+          </div>
+        ) : (
+        <>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowBoxDropdown(!showBoxDropdown)}
@@ -420,6 +427,8 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             )}
           </div>
         )}
+        </>
+          )}
       </div>
     </header>
   );

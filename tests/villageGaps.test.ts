@@ -78,7 +78,12 @@ describe('offline group builder', () => {
     expect(state.groupName).toBe('Kajjansi Twegatte');
     expect(inviteCode).toMatch(/^[A-Z]{3}-\d{4}$/);
     expect(state.members).toHaveLength(1);
-    expect(state.members[0].maxBorrowLimit).toBe(15000);
+    // Zero-start: no fabricated money or meetings — first Friday records them.
+    expect(state.boxCashBalance).toBe(0);
+    expect(state.welfareFundBalance).toBe(0);
+    expect(state.recentMeetingsCount).toBe(0);
+    expect(state.members[0].sharesTotal).toBe(0);
+    expect(state.members[0].maxBorrowLimit).toBe(0);
     expect(state.availableAccounts?.[0].pin).toBe('5678');
     expect(group.id).toBe(state.groupId);
   });

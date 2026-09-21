@@ -1,6 +1,6 @@
 import { resolveGroupId } from '../lib/_seed.js';
 import { cors, memberCap, planOf, rateLimit, stateSchema, validate } from '../lib/_lib.js';
-import { actorName, requireRole } from '../lib/_auth.js';
+import { actorName, requireGroup, requireRole } from '../lib/_auth.js';
 import { loadGroup, saveGroup, storageInfo } from '../lib/_db.js';
 
 function isAdmin(req) {
@@ -16,9 +16,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     // Reads carry the full ledger (phones, balances, audit). In enforced
-    // mode only signed-in group members may read; pilots stay open.
+    // mode only signed-in group members may read — and only their OWN group.
     const session = requireRole(req, res, 'member');
     if (session === undefined) return;
+    if (!requireGroup(req, res, groupId)) return;
     const state = await loadGroup(groupId);
     return res.status(200).json({ success: true, groupId, state, storage: storageInfo(), ...state });
   }
@@ -26,6 +27,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const session = requireRole(req, res, 'treasurer');
     if (session === undefined) return;
+    if (!requireGroup(req, res, groupId)) return;
     const payload = req.body || {};
     const raw = payload.state || payload;
     const nextState = validate(stateSchema, raw, res);

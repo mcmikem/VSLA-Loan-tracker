@@ -10,7 +10,7 @@
  */
 import { getSeedForGroup, resolveGroupId } from '../lib/_seed.js';
 import { cors, rateLimit } from '../lib/_lib.js';
-import { actorName, requireRole } from '../lib/_auth.js';
+import { actorName, requireGroup, requireRole } from '../lib/_auth.js';
 import { loadGroup, saveGroup } from '../lib/_db.js';
 
 /** Exports never carry secrets — strip account PINs (hashes included). */
@@ -34,9 +34,10 @@ function handleExport(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const groupId = resolveGroupId(req);
-  // Full ledger incl. phones/balances/audit: members only, once enforced.
+  // Full ledger incl. phones/balances/audit: own-group members only, once enforced.
   const session = requireRole(req, res, 'member');
   if (session === undefined) return;
+  if (!requireGroup(req, res, groupId)) return;
   return loadGroup(groupId).then((live) => {
     const currentData = live && live.members ? live : getSeedForGroup(groupId);
     const safe = stripSecrets(currentData);
@@ -71,6 +72,7 @@ async function handleRestore(req, res) {
   if (session === undefined) return;
 
   const groupId = resolveGroupId(req);
+  if (!requireGroup(req, res, groupId)) return;
   const payload = req.body || {};
   const restoredData = payload.data || payload.state || payload;
   if (!restoredData.members || !Array.isArray(restoredData.members)) {
@@ -96,6 +98,10 @@ async function handleSnapshot(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const groupId = resolveGroupId(req);
+  // Own-group only: snapshots echo back the caller's books.
+  const snapSession = requireRole(req, res, 'member');
+  if (snapSession === undefined) return;
+  if (!requireGroup(req, res, groupId)) return;
   const { label } = req.body || {};
   const state = req.body?.state || null;
   const snapshot = {
@@ -121,6 +127,7 @@ async function handleReset(req, res) {
   if (session === undefined) return;
 
   const groupId = resolveGroupId(req);
+  if (!requireGroup(req, res, groupId)) return;
   const seed = getSeedForGroup(groupId);
   seed.groupId = groupId;
   return res.status(200).json({ success: true, groupId, message: 'Database reset to baseline state', state: seed });
