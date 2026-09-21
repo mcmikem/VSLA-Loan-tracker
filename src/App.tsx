@@ -47,7 +47,7 @@ import { WhatsNewModal } from './components/WhatsNewModal';
 import { APP_VERSION } from './data/changelog';
 import { withAudit } from './utils/audit';
 import { getTranslations } from './i18n/translations';
-import { appliedRepayment, changeDue, WELFARE_FAST_TRACK_CAP, welfareNeedsQueue } from './utils/policy';
+import { appliedRepayment, changeDue, WELFARE_FAST_TRACK_CAP, memberCapForPlan, welfareNeedsQueue } from './utils/policy';
 import { downloadBackupFile } from './utils/backupFile';
 import {
   buildLocalGroup,
@@ -60,10 +60,11 @@ import { buildPracticeState, isPracticeGroup, popStashedGroup, PRACTICE_GROUP_ID
 import { firstKeyUpdate, isSameOfficer } from './utils/dualApproval';
 import { isDefaultPin } from './utils/pin';
 import { PublicDisplayModal } from './components/PublicDisplayModal';
+import { DefaultPinGate } from './components/DefaultPinGate';
 import { LanguagePicker } from './components/LanguagePicker';
 import { BootSplash } from './components/BootSplash';
 import { LoginView } from './views/LoginView';
-import { apiFetch, fetchAuthStatus, getSessionToken, setSessionToken } from './utils/api';
+import { apiFetch, changePinRequest, fetchAuthStatus, getSessionToken, setSessionToken } from './utils/api';
 
 export function App() {
   // Default Luganda: local users first. Persisted once the user picks.
@@ -442,11 +443,42 @@ export function App() {
     setIsAccountModalOpen(false);
   };
 
-  // ---- Change sign-in PIN (stored plaintext until next login migrates it to scrypt) ----
-  const handleChangePin = (newPin: string) => {
+  // ---- Change sign-in PIN: server-first (scrypt hash), local fallback ----
+  // In open-dev mode the full state POST below also carries the new PIN to the
+  // memory store; in enforced mode the server already hashed it, so we only
+  // update this device (a full-state POST would 403 for member rank).
+  // Write an already-audited state to this device only (no server POST).
+  const applyLocalPinState = (next: VSLAState) => {
+    setVslaState(next);
+    try {
+      localStorage.setItem(isPracticeGroup(currentGroupId) ? 'vsla_practice_state_v1' : 'bakwata_vsla_state', JSON.stringify(next));
+    } catch {}
+  };
+
+  const applyLocalPin = (newPin: string) => {
     const updated: UserAccount = { ...currentUser, pin: newPin };
-    persistState(
-      withAudit(
+    const next: VSLAState = withAudit(
+      {
+        ...vslaState,
+        currentUser: updated,
+        availableAccounts: (vslaState.availableAccounts || []).map((a) =>
+          a.id === updated.id ? updated : a
+        ),
+      },
+      currentUser.name,
+      'Changed sign-in PIN',
+      `${currentUser.name} (#${currentUser.memberNo || 'EXEC'})`,
+      undefined
+    );
+    next.groupId = currentGroupId;
+    applyLocalPinState(next);
+  };
+
+  const handleChangePin = async (newPin: string, oldPin?: string): Promise<string | null> => {
+    const res = await changePinRequest({ groupId: currentGroupId, accountId: currentUser.id, oldPin, newPin });
+    if (res.ok) {
+      const updated: UserAccount = { ...currentUser, pin: newPin };
+      const next: VSLAState = withAudit(
         {
           ...vslaState,
           currentUser: updated,
@@ -458,8 +490,23 @@ export function App() {
         'Changed sign-in PIN',
         `${currentUser.name} (#${currentUser.memberNo || 'EXEC'})`,
         undefined
-      )
-    );
+      );
+      // Open-dev: the full-state POST also teaches the memory store the PIN.
+      // Enforced: server already hashed it — local-only update (a state POST
+      // would 403 for member rank).
+      if (!authEnforced) persistState(next);
+      else {
+        next.groupId = currentGroupId;
+        applyLocalPinState(next);
+      }
+      return null;
+    }
+    if (!isServerConnected) {
+      // Fully offline: local-only change; user re-confirms at next login.
+      applyLocalPin(newPin);
+      return null;
+    }
+    return res.error || 'PIN change failed.';
   };
 
   const handleSelectPreset = async (presetId: string) => {
@@ -1545,6 +1592,14 @@ export function App() {
     if (vslaState.members.some((m) => m.name.toLowerCase() === name.toLowerCase())) {
       return 'A member with this name already exists.';
     }
+    // Sell-ready: plan member caps (mirrors memberCap server-side).
+    const plan = vslaState.groupProfile?.plan || 'free';
+    const cap = memberCapForPlan(plan);
+    if (vslaState.members.length >= cap) {
+      return language === 'LU'
+        ? `Plan ya free ekoma ku members ${cap}. Yongera ku Pro — WhatsApp.`
+        : `Free plan allows ${cap} members. Upgrade to Pro to add more.`;
+    }
     const nextNo = vslaState.members.length + 1;
     const no = nextNo < 10 ? `0${nextNo}` : `${nextNo}`;
     const memNumber = `MEM-${String(nextNo).padStart(4, '0')}`;
@@ -1719,6 +1774,23 @@ export function App() {
 
   const showLocalOnlyBanner = storageDriver !== null && storageShared === false;
   const t = getTranslations(language);
+
+  // Sell-ready gate: on production-grade backends no default PIN gets in.
+  // Pilots (open-dev memory store) and the play-money sandbox stay frictionless.
+  const pinGateEnforced = (authEnforced || storageDriver === 'postgres') && !isPractice;
+  if (pinGateEnforced && isDefaultPin(currentUser.pin)) {
+    return (
+      <div className="min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans">
+        <DefaultPinGate
+          userName={currentUser.name}
+          groupId={currentGroupId}
+          accountId={currentUser.id}
+          language={language}
+          onChanged={(newPin) => applyLocalPin(newPin)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans selection:bg-secondary/20 ${elderMode ? 'elder-mode' : ''} ${sunlightMode ? 'sunlight-mode' : ''}`}>
@@ -1974,6 +2046,8 @@ export function App() {
             inviteCode={vslaState.inviteCode || vslaState.groupProfile?.inviteCode || 'BAK-4290'}
             membersCount={vslaState.members.length}
             logoUrl={vslaState.groupProfile?.logoUrl}
+            plan={vslaState.groupProfile?.plan || 'free'}
+            language={language}
             onSave={handleUpdateGroupSettings}
             onNavigate={handleNavigateScreen}
           />

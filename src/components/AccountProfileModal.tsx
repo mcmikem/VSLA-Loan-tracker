@@ -12,7 +12,8 @@ interface AccountProfileModalProps {
   authEnforced?: boolean;
   onSwitchAccount: (account: UserAccount) => void;
   onLogout?: () => void;
-  onChangePin?: (newPin: string) => void;
+  /** Returns an error message, or null on success. Receives current + new PIN. */
+  onChangePin?: (newPin: string, oldPin: string) => Promise<string | null>;
   onSelectPreset: (presetId: string) => void;
   onResetToBaseline: () => void;
   onNavigate: (screen: ScreenId) => void;
@@ -106,7 +107,11 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
         setPinMsg({ ok: false, text: 'Pick a PIN different from the current one.' });
         return;
       }
-      onChangePin(newPin);
+      const err = await onChangePin(newPin, currentPinInput);
+      if (err) {
+        setPinMsg({ ok: false, text: err });
+        return;
+      }
       setCurrentPinInput('');
       setNewPin('');
       setConfirmPin('');

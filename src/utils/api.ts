@@ -52,3 +52,25 @@ export function apiFetch(path: string, options: RequestInit = {}): Promise<Respo
   }
   return fetch(path, { ...options, headers });
 }
+
+/** Self-service PIN change. Server refuses the 1234 default. */
+export async function changePinRequest(args: {
+  groupId: string;
+  accountId: string;
+  oldPin?: string;
+  newPin: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await apiFetch('/api/auth/change-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(args),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) return { ok: true };
+    return { ok: false, error: data.error || 'PIN change failed.' };
+  } catch (e: any) {
+    // Offline: caller falls back to local-only change (syncs on next login).
+    return { ok: false, error: e?.message || 'No connection.' };
+  }
+}

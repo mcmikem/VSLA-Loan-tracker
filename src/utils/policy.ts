@@ -11,6 +11,16 @@ export const GAP_TWO_KEY_THRESHOLD = 50_000;
 /** UGX ceiling for single-key emergency welfare payouts. */
 export const WELFARE_FAST_TRACK_CAP = 100_000;
 
+/** Free-plan member cap — mirrors PLAN_LIMITS.free server-side. */
+export const FREE_MEMBER_CAP = 30;
+export const PRO_MEMBER_CAP = 500;
+
+export function memberCapForPlan(plan?: string): number {
+  if (plan === 'pro') return PRO_MEMBER_CAP;
+  if (plan === 'sacco') return 5000;
+  return FREE_MEMBER_CAP;
+}
+
 /** Cash to hand back when a member overpays a loan. Never negative. */
 export function changeDue(entered: number, balance: number): number {
   return Math.max(0, Math.floor(entered || 0) - Math.max(0, Math.floor(balance || 0)));

@@ -138,7 +138,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
         </div>
         {error && <p className="text-[11px] font-bold text-[#B91C1C]">{error}</p>}
         <button type="button" onClick={submit} className="w-full min-h-[48px] bg-[#006d30] text-white rounded-lg font-bold text-sm active:scale-[0.99]">
-          {str('Register member', 'Wandiisa')}
+          {str('Register member', 'Yongerako member')}
         </button>
         <button type="button" onClick={onClose} className="w-full min-h-[44px] text-xs font-bold text-[#4B5563]">
           {str('Cancel', 'Sazaamu')}

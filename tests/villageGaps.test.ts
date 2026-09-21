@@ -6,6 +6,7 @@ import {
   changeDue,
   displayFineReason,
   gapNeedsSecondKey,
+  memberCapForPlan,
   welfareNeedsQueue,
 } from '../src/utils/policy';
 import { buildLocalGroup } from '../src/utils/offlineGroup';
@@ -36,6 +37,13 @@ describe('village money policy', () => {
   it('welfare fast-track capped, above goes to queue', () => {
     expect(welfareNeedsQueue(WELFARE_FAST_TRACK_CAP)).toBe(false);
     expect(welfareNeedsQueue(WELFARE_FAST_TRACK_CAP + 1)).toBe(true);
+  });
+
+  it('plan member caps gate selling tiers', () => {
+    expect(memberCapForPlan('free')).toBe(30);
+    expect(memberCapForPlan(undefined)).toBe(30);
+    expect(memberCapForPlan('pro')).toBe(500);
+    expect(memberCapForPlan('sacco')).toBe(5000);
   });
 
   it('fine reasons stay canonical EN, display LU', () => {

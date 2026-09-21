@@ -6,6 +6,7 @@
  *   POST /api/groups/create         -> ?action=create
  *   POST /api/groups/join           -> ?action=join
  *   GET  /api/groups/:id/invite     -> ?action=invite&id=:id
+ *   POST /api/groups/plan           -> ?action=plan (x-admin-key required)
  */
 import { getBakwataSeed, getKibuliSeed, toGroupSummary } from '../lib/_seed.js';
 import {
@@ -256,6 +257,36 @@ export default async function handler(req, res) {
     });
   }
 
+  // ---- PLAN: POST /api/groups/plan (admin only) ----
+  // Manual sales flow: group pays via MoMo to the sales number, admin verifies
+  // the payment and activates the plan with the ADMIN_KEY. The app never
+  // accepts plan upgrades from group devices (see api/state.js).
+  if (req.method === 'POST' && action === 'plan') {
+    if (!cors(req, res, 'POST,OPTIONS')) return;
+    if (!rateLimit(req, res, { limit: 20, windowMs: 60000 })) return;
+    const key = req.headers?.['x-admin-key'] || '';
+    if (!process.env.ADMIN_KEY || key !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ error: 'Admin key required.' });
+    }
+    const { groupId, plan } = req.body || {};
+    if (!groupId || !['free', 'pro', 'sacco'].includes(plan)) {
+      return res.status(400).json({ error: 'Send { groupId, plan: free|pro|sacco }.' });
+    }
+    let group = null;
+    try {
+      group = await loadGroup(String(groupId));
+    } catch {
+      /* not found below */
+    }
+    if (!group || typeof group !== 'object') {
+      return res.status(404).json({ error: `No savings group found for "${groupId}".` });
+    }
+    group.groupProfile = group.groupProfile || {};
+    group.groupProfile.plan = plan;
+    await saveGroup(group.groupId || String(groupId), group);
+    return res.status(200).json({ success: true, groupId: group.groupId || String(groupId), plan });
+  }
+
   if (req.method === 'OPTIONS') return res.status(200).end();
-  return res.status(405).json({ error: 'Method not allowed. Use ?action=list|invite|create|join' });
+  return res.status(405).json({ error: 'Method not allowed. Use ?action=list|invite|create|join|plan' });
 }
