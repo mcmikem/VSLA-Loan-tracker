@@ -68,7 +68,7 @@ export async function changePinRequest(args: {
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) return { ok: true };
-    return { ok: false, error: data.error || 'PIN change failed.' };
+    return { ok: false, error: data.error || `Server said no (${res.status}). Try again.` };
   } catch (e: any) {
     // Offline: caller falls back to local-only change (syncs on next login).
     return { ok: false, error: e?.message || 'No connection.' };
