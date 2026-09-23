@@ -385,6 +385,48 @@ describe('plan enforcement', () => {
   });
 });
 
+describe('code recovery by admin phone', () => {
+  it('rejects short numbers', async () => {
+    const res = mockRes();
+    await groupsHandler(mockReq({ method: 'POST', action: 'recover', body: { adminPhone: '123' } }), res);
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('returns empty for unknown numbers (no enumeration of which exist)', async () => {
+    const res = mockRes();
+    await groupsHandler(
+      mockReq({ method: 'POST', action: 'recover', body: { adminPhone: '+256799999999' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.groups).toEqual([]);
+  });
+
+  it('finds the group across phone formats, exposing code only', async () => {
+    const cr = mockRes();
+    await groupsHandler(
+      mockReq({
+        method: 'POST',
+        action: 'create',
+        body: { name: 'Recoverable Group', adminName: 'Recover Admin', adminPhone: '+256712345678' },
+      }),
+      cr
+    );
+    expect(cr.statusCode).toBe(200);
+    const code = cr.body.group.inviteCode;
+    for (const variant of ['+256712345678', '0712345678', '256 712 345 678']) {
+      const res = mockRes();
+      await groupsHandler(mockReq({ method: 'POST', action: 'recover', body: { adminPhone: variant } }), res);
+      expect(res.statusCode).toBe(200);
+      const found = res.body.groups.find((g: any) => g.inviteCode === code);
+      expect(found).toBeTruthy();
+      expect(found.name).toBe('Recoverable Group');
+      expect(JSON.stringify(found)).not.toContain('boxCashBalance');
+      expect(JSON.stringify(found)).not.toContain('members');
+    }
+  });
+});
+
 describe('CORS allowlist', () => {
   it('grants nothing to hostile origins, echoes configured ones', async () => {
     process.env.APP_URL = 'https://vsla-ug.vercel.app';

@@ -313,6 +313,45 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, groupId: group.groupId || String(groupId), plan });
   }
 
+  // ---- RECOVER: POST /api/groups/recover ----
+  // "I lost my group code": given the ADMIN phone number used at registration,
+  // return that admin's groups (name + code only — no money, no members).
+  // Phone numbers are already shared inside every VSLA meeting, and a code
+  // alone only lets its holder JOIN as a new member with their own PIN.
+  if (req.method === 'POST' && action === 'recover') {
+    if (!cors(req, res, 'POST,OPTIONS')) return;
+    if (!rateLimit(req, res, { limit: 10, windowMs: 60000 })) return;
+    const rawPhone = String(req.body?.adminPhone || '');
+    const digits = rawPhone.replace(/\D/g, '');
+    if (digits.length < 9) {
+      return res.status(400).json({ error: 'Enter the phone number used to register the group.' });
+    }
+    const tail = digits.slice(-9);
+    const matches = [];
+    const seen = new Set(['bakwata-01', 'kibuli-01']);
+    for (const gid of (await groupRegistry()).ids.slice(0, 200)) {
+      if (seen.has(gid)) continue;
+      seen.add(gid);
+      let g = null;
+      try {
+        g = await loadGroup(gid);
+      } catch {
+        continue;
+      }
+      if (!g || typeof g !== 'object') continue;
+      const adminDigits = String(g.groupProfile?.adminPhone || '').replace(/\D/g, '').slice(-9);
+      if (adminDigits && adminDigits === tail) {
+        matches.push({
+          groupId: gid,
+          name: g.groupName || g.groupProfile?.name || 'Savings Group',
+          inviteCode: g.inviteCode || g.groupProfile?.inviteCode || '',
+        });
+      }
+      if (matches.length >= 10) break;
+    }
+    return res.status(200).json({ success: true, groups: matches });
+  }
+
   if (req.method === 'OPTIONS') return res.status(200).end();
-  return res.status(405).json({ error: 'Method not allowed. Use ?action=list|invite|create|join|plan' });
+  return res.status(405).json({ error: 'Method not allowed. Use ?action=list|invite|create|join|plan|recover' });
 }

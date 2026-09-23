@@ -17,6 +17,7 @@ interface AudioBroadcastViewProps {
   membersCount?: number;
   members?: Member[];
   groupName?: string;
+  inviteCode?: string;
   language?: Language;
   onReminderLogged?: (memberId: string, channel: 'SMS' | 'WhatsApp', kind: 'repayment' | 'balance' | 'meeting') => void;
 }
@@ -28,6 +29,7 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
   membersCount = 30,
   members = [],
   groupName = 'Group',
+  inviteCode = '',
   language = 'LU',
   onReminderLogged,
 }) => {
@@ -76,6 +78,11 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
     reminderKind === 'repayment'
       ? buildRepaymentReminder(m, { groupName, meetingNo: nextMeeting, lang })
       : buildBalanceSnapshot(m, { groupName, lang });
+
+  const codeTextFor = (m: Member) =>
+    lang === 'LU'
+      ? `Gyoli ${m.name.split(' ')[0] || m.name}, koodi y'ekibiina ${groupName} ye eno: ${inviteCode}. Yingira mu app → Sign in.`
+      : `Hi ${m.name.split(' ')[0] || m.name}, your group code for ${groupName} is: ${inviteCode}. Open the app → Sign in.`;
 
   const copyText = async (id: string, text: string) => {
     try {
@@ -317,6 +324,58 @@ export const AudioBroadcastView: React.FC<AudioBroadcastViewProps> = ({
           </>
         )}
       </section>
+
+      {/* Share the group code — every member gets their way back in */}
+      {inviteCode && members.length > 0 && (
+        <section className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] space-y-3">
+          <div>
+            <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-secondary text-base">key</span>
+              {lang === 'LU' ? 'Gabana koodi y’ekibiina' : 'Share the group code'} ({members.length})
+            </h3>
+            <p className="text-[11px] text-text-muted mt-0.5">
+              {lang === 'LU'
+                ? `Koodi: ${inviteCode} — weereza buli mukiise, ajje mu app.`
+                : `Code: ${inviteCode} — send every member their way back into the app.`}
+            </p>
+          </div>
+          <div className="space-y-2">
+            {members.map((m) => {
+              const text = codeTextFor(m);
+              return (
+                <div key={m.id} className="p-3 bg-canvas-bg rounded-lg border border-border-line space-y-2">
+                  <p className="text-xs font-bold text-primary truncate">
+                    {m.name} <span className="font-mono text-text-muted">#{m.no}</span>
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <a
+                      href={smsHref(m.phone || '', text)}
+                      className="py-2 bg-primary-container text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">sms</span> SMS
+                    </a>
+                    <a
+                      href={waHref(m.phone || '', text)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="py-2 bg-secondary text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">chat</span> WhatsApp
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => copyText(`code-${m.id}`, text)}
+                      className="py-2 bg-surface-card border border-border-strong rounded-lg font-bold text-[11px] text-primary active:scale-95"
+                    >
+                      {copiedId === `code-${m.id}` ? '✓ Copied' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Village Meeting Protocol Guidelines */}
       <section className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] space-y-2">

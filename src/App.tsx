@@ -2446,6 +2446,7 @@ export function App() {
             membersCount={vslaState.members.length}
             members={vslaState.members}
             groupName={vslaState.groupName || 'Bakwata'}
+            inviteCode={vslaState.inviteCode || vslaState.groupProfile?.inviteCode || ''}
             language={language}
             onReminderLogged={(memberId, channel, kind) => {
               const m = vslaState.members.find((x) => x.id === memberId);

@@ -51,6 +51,11 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
   const [signAccounts, setSignAccounts] = useState<UserAccount[]>([]);
   const [signError, setSignError] = useState<string | null>(null);
   const [signBusy, setSignBusy] = useState(false);
+  const [recoverPhone, setRecoverPhone] = useState('');
+  const [recoverBusy, setRecoverBusy] = useState(false);
+  const [recoverError, setRecoverError] = useState<string | null>(null);
+  const [recovered, setRecovered] = useState<{ name: string; inviteCode: string }[]>([]);
+  const [recoverDone, setRecoverDone] = useState(false);
   const [resumeBusy, setResumeBusy] = useState(false);
   const [resumeError, setResumeError] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -111,6 +116,36 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
     } finally {
       setSignBusy(false);
     }
+  };
+
+  const doRecover = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoverPhone.trim() || recoverBusy) return;
+    setRecoverBusy(true);
+    setRecoverError(null);
+    setRecovered([]);
+    setRecoverDone(false);
+    try {
+      const res = await fetch('/api/groups/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminPhone: recoverPhone.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Lookup failed.');
+      setRecovered(Array.isArray(data.groups) ? data.groups : []);
+      setRecoverDone(true);
+    } catch (err: any) {
+      setRecoverError(err?.message || (lu ? 'Waliwo ekikyamu. Gezaako nate.' : 'Something went wrong. Try again.'));
+    } finally {
+      setRecoverBusy(false);
+    }
+  };
+
+  const useRecoveredCode = (code: string) => {
+    setSignCode(code);
+    setRecovered([]);
+    setRecoverDone(false);
   };
 
   if (signGroup) {
@@ -224,6 +259,49 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
           <p className="text-[11px] text-text-muted">
             {lu ? 'Eri ku lupapula lwo olw’okuyita oba buuza Omuwandiisi.' : 'On your invitation slip — or ask the secretary.'}
           </p>
+          <form onSubmit={doRecover} className="pt-1 border-t border-border-line space-y-2">
+            <p className="text-[11px] font-bold text-primary pt-1">
+              {lu ? 'Wabula koodi? Yingiza namba yo eya ssimu.' : 'Lost your code? Enter your phone number.'}
+            </p>
+            <div className="flex gap-2">
+              <input
+                value={recoverPhone}
+                onChange={(e) => setRecoverPhone(e.target.value)}
+                inputMode="tel"
+                placeholder="07XX XXX XXX"
+                className="flex-1 min-h-[48px] border border-border-strong rounded-lg px-3 text-sm font-mono bg-white"
+              />
+              <button
+                type="submit"
+                disabled={recoverBusy || !recoverPhone.trim()}
+                className="px-4 min-h-[48px] bg-surface-container border border-border-strong text-primary rounded-lg font-bold text-sm disabled:opacity-50 active:scale-95"
+              >
+                {recoverBusy ? '…' : lu ? 'Noonya' : 'Find'}
+              </button>
+            </div>
+            {recoverError && <p className="text-[11px] font-bold text-status-bad-tx">{recoverError}</p>}
+            {recoverDone && recovered.length === 0 && (
+              <p className="text-[11px] text-text-muted">
+                {lu ? 'Tewali kibiina na namba eno.' : 'No group registered with this number.'}
+              </p>
+            )}
+            {recovered.map((g) => (
+              <button
+                key={g.inviteCode}
+                type="button"
+                onClick={() => useRecoveredCode(g.inviteCode)}
+                className="w-full flex items-center justify-between gap-2 bg-canvas-bg border border-border-strong rounded-lg px-3 py-2.5 active:scale-[0.99] text-left"
+              >
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-primary truncate">{g.name}</span>
+                  <span className="block font-mono font-bold text-secondary">{g.inviteCode}</span>
+                </span>
+                <span className="text-[11px] font-bold text-secondary underline shrink-0">
+                  {lu ? 'Kozesa →' : 'Use →'}
+                </span>
+              </button>
+            ))}
+          </form>
         </section>
 
         <button

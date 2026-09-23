@@ -6,6 +6,7 @@
   "rewrites": [
     { "source": "/api/groups/create", "destination": "/api/groups?action=create" },
     { "source": "/api/groups/join", "destination": "/api/groups?action=join" },
+    { "source": "/api/groups/recover", "destination": "/api/groups?action=recover" },
     { "source": "/api/groups/plan", "destination": "/api/groups?action=plan" },
     { "source": "/api/groups/:id/invite", "destination": "/api/groups?action=invite&id=:id" },
     { "source": "/api/accounts", "destination": "/api/auth?action=accounts" },
