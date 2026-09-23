@@ -385,8 +385,7 @@ describe('plan enforcement', () => {
   });
 });
 
-describe('code recovery by admin phone', () => {
-  it('rejects short numbers', async () => {
+describe('code recovery by admin phone', () => {  it('rejects short numbers', async () => {
     const res = mockRes();
     await groupsHandler(mockReq({ method: 'POST', action: 'recover', body: { adminPhone: '123' } }), res);
     expect(res.statusCode).toBe(400);
@@ -464,5 +463,29 @@ describe('sandbox MoMo shape', () => {
     expect(push.statusCode).toBe(200);
     expect(push.body.status).toBe('pending');
     expect(push.body.mode).toBe('sandbox');
+  });
+});
+
+describe('accounts endpoint serves the real roster', () => {
+  it('new group sign-in lists only its own admin, never seed strangers', async () => {
+    const cr = mockRes();
+    await groupsHandler(
+      mockReq({
+        method: 'POST',
+        action: 'create',
+        body: { name: 'Roster Probe Group', adminName: 'Roster Admin', adminPhone: '+256711111111' },
+      }),
+      cr
+    );
+    expect(cr.statusCode).toBe(200);
+    const gid: string = cr.body.groupId;
+    const res = mockRes();
+    await authHandler(mockReq({ method: 'GET', action: 'accounts', query: { groupId: gid } }), res);
+    expect(res.statusCode).toBe(200);
+    const names = res.body.accounts.map((a: any) => a.name);
+    expect(names).toEqual(['Roster Admin']);
+    expect(names).not.toContain('Grace Akello');
+    expect(names).not.toContain('Sarah Nabukalu');
+    expect(JSON.stringify(res.body)).not.toContain('"pin"');
   });
 });

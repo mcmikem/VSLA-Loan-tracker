@@ -98,7 +98,15 @@ async function handleAccounts(req, res) {
   const groupId = resolveGroupId(req);
 
   if (req.method === 'GET') {
-    const data = getSeedForGroup(groupId);
+    // Real accounts for real groups — never the demo seed roster.
+    // (Unknown ids fall back to seed so open-dev pilots keep working.)
+    let data = null;
+    try {
+      data = await loadGroup(groupId);
+    } catch {
+      data = getSeedForGroup(groupId);
+    }
+    if (!data || !Array.isArray(data.availableAccounts)) data = getSeedForGroup(groupId);
     return res.status(200).json({
       success: true, groupId,
       currentUser: publicAccount(data.currentUser || data.availableAccounts?.[0] || SEED_ACCOUNTS[0]),
@@ -108,7 +116,13 @@ async function handleAccounts(req, res) {
 
   if (req.method === 'POST') {
     const { accountId } = req.body || {};
-    const data = getSeedForGroup(groupId);
+    let data = null;
+    try {
+      data = await loadGroup(groupId);
+    } catch {
+      data = getSeedForGroup(groupId);
+    }
+    if (!data || !Array.isArray(data.availableAccounts)) data = getSeedForGroup(groupId);
     const pool = data.availableAccounts || SEED_ACCOUNTS;
     const target = pool.find((a) => a.id === accountId) || pool[0];
     if (!target) return res.status(404).json({ error: 'Account not found in group' });
