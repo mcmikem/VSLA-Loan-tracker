@@ -145,7 +145,7 @@ async function handleChangePin(req, res) {
   if (!account) return res.status(404).json({ error: 'Account not found in group' });
 
   const session = readSession(req);
-  const isSelf = !!session && session.accountId === account.id && session.groupId === groupId;
+  const isSelf = !!session && session.sub === account.id && session.groupId === groupId;
   const isOfficerReset =
     !!session && session.groupId === groupId && ['secretary', 'treasurer', 'chairperson'].includes(session.role);
 

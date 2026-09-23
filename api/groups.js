@@ -36,7 +36,7 @@ function publicGroupSummary(s) {
     plan: full.plan,
   };
 }
-import { loadGroup, saveGroup } from '../lib/_db.js';
+import { loadGroup, saveGroup, groupExists } from '../lib/_db.js';
 
 /** IDs of groups created via ?action=create (seeds are implicit). */
 async function groupRegistry() {
@@ -292,6 +292,11 @@ export default async function handler(req, res) {
     const { groupId, plan } = req.body || {};
     if (!groupId || !['free', 'pro', 'sacco'].includes(plan)) {
       return res.status(400).json({ error: 'Send { groupId, plan: free|pro|sacco }.' });
+    }
+    // Never activate (or create junk rows for) typo'd ids — seeds always count.
+    const knownSeed = groupId === 'bakwata-01' || groupId === 'kibuli-01';
+    if (!knownSeed && !(await groupExists(String(groupId)).catch(() => true))) {
+      return res.status(404).json({ error: `No savings group found for "${groupId}".` });
     }
     let group = null;
     try {
