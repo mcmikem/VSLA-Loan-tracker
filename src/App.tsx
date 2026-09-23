@@ -200,6 +200,11 @@ export function App() {
         if (data.groups && Array.isArray(data.groups)) {
           setAvailableGroups(data.groups);
         }
+      } else if (res.status === 401) {
+        // Dead/foreign session: drop it so the welcome gate appears instead
+        // of a PIN screen for an account that isn't yours.
+        setSessionToken(null);
+        setSessionTokenState(null);
       }
     } catch (err) {
       console.warn('Could not fetch groups list:', err);
@@ -1870,10 +1875,10 @@ export function App() {
   const showLocalOnlyBanner = storageDriver !== null && storageShared === false;
   const t = getTranslations(language);
 
-  // Sell-ready gate: on production-grade backends no default PIN gets in.
-  // Pilots (open-dev memory store) and the play-money sandbox stay frictionless.
+  // Sell-ready gate: on production-grade backends no SIGNED-IN default PIN
+  // gets in. Sessionless visitors never reach here (welcome gate above).
   const pinGateEnforced = (authEnforced || storageDriver === 'postgres') && !isPractice;
-  if (pinGateEnforced && isDefaultPin(currentUser.pin)) {
+  if (pinGateEnforced && sessionToken && isDefaultPin(currentUser.pin)) {
     return (
       <div className="min-h-screen bg-canvas-bg text-on-surface flex flex-col font-sans">
         <DefaultPinGate
