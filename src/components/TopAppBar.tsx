@@ -70,9 +70,6 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
               <h1 className="text-headline-sm font-headline-sm font-bold text-primary tracking-tight truncate">
                 {t.topBar.appName}
               </h1>
-              <span className="text-[9px] font-bold px-1.5 py-0.2 bg-secondary/15 text-secondary rounded uppercase tracking-wider">
-                SaaS
-              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-primary text-white tracking-wide uppercase">
@@ -306,9 +303,10 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
         </div>
       </div>
 
-      {/* Row 2: Multi-Tenant Group Selector + Register Quick Action */}
+      {/* Row 2: group name for members / single groups; switcher only when
+          there are 2+ reachable groups — never strangers' groups. */}
       <div className="px-4 pb-2.5 pt-0.5 max-w-lg mx-auto relative">
-        {currentUser?.role === 'member' ? (
+        {currentUser?.role === 'member' || availableGroups.length <= 1 ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-canvas-bg border border-border-strong rounded-lg text-xs min-h-[38px]">
             <span className="material-symbols-outlined text-[16px] text-secondary">domain</span>
             <span className="font-bold text-on-surface truncate">{selectedBox}</span>
@@ -337,7 +335,7 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             <button
               type="button"
               onClick={() => onOpenGroupModal('register')}
-              title="Register a brand new savings group on SaaS"
+              title="Register a brand new savings group"
               className="px-2.5 py-1.5 bg-secondary text-white hover:brightness-105 rounded-lg text-xs font-bold flex items-center gap-1 shrink-0 transition active:scale-95 shadow-xs"
             >
               <span className="material-symbols-outlined text-[16px]">add_business</span>

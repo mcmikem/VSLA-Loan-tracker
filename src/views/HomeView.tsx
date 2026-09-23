@@ -312,7 +312,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
     <main className="flex-1 px-4 pt-3 pb-8 space-y-4 max-w-lg mx-auto w-full">
       {/* SaaS Group Banner & Invite Bar */}
       <section
-        aria-label="SaaS Group Identity & Invite Code"
+        aria-label="Group Identity & Invite Code"
         className="rounded-xl bg-surface-card border border-border-strong p-3 shadow-sm flex items-center justify-between gap-2.5 flex-wrap"
       >
         <div className="flex items-center gap-2 min-w-0">

@@ -151,7 +151,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
               <span className="material-symbols-outlined text-[22px] text-secondary">hub</span>
             </div>
             <div>
-              <h2 className="text-title-md font-bold leading-tight">VSLA SaaS Onboarding</h2>
+              <h2 className="text-title-md font-bold leading-tight">VSLA UG Groups</h2>
               <p className="text-[11px] text-white/80">Multi-tenant group management & self-serve enrollment</p>
             </div>
           </div>

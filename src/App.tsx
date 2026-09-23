@@ -143,6 +143,27 @@ export function App() {
     }
   });
   const [availableGroups, setAvailableGroups] = useState<GroupSummary[]>([]);
+  // Groups signed in on THIS phone (id → name + session token). The switcher
+  // and directory only ever offer these — strangers' groups are unreachable.
+  const [knownGroups, setKnownGroups] = useState<Record<string, { name: string; token: string }>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('bakwata_known_groups') || '{}');
+    } catch {
+      return {};
+    }
+  });
+  const visibleGroups = availableGroups.filter((g) => g.id === currentGroupId || knownGroups[g.id]);
+  const rememberSession = (gid: string, name: string) => {
+    const token = getSessionToken();
+    if (!token) return;
+    setKnownGroups((prev) => {
+      const next = { ...prev, [gid]: { name, token } };
+      try {
+        localStorage.setItem('bakwata_known_groups', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [groupModalDefaultTab, setGroupModalDefaultTab] = useState<'directory' | 'register' | 'join'>('directory');
   const [isShareInviteOpen, setIsShareInviteOpen] = useState(false);
@@ -300,6 +321,14 @@ export function App() {
   }, [currentGroupId, fetchGroupsList]);
 
   const handleSelectGroup = async (groupId: string) => {
+    if (groupId === currentGroupId) return;
+    // You can only enter groups signed in on this phone — the directory never
+    // offers strangers' groups, and the server would 403 them anyway.
+    const known = knownGroups[groupId];
+    if (!known?.token) return;
+    setSessionToken(known.token);
+    setSessionTokenState(known.token);
+    setShowGroupHome(false);
     setCurrentGroupId(groupId);
     try {
       localStorage.setItem('bakwata_active_group_id', groupId);
@@ -309,7 +338,7 @@ export function App() {
 
   // Sign in with fresh credentials (welcome gate: just registered/joined).
   // Returns true when a session token was stored.
-  const loginWithCredentials = async (groupId: string, accountId: string, pin: string): Promise<boolean> => {
+  const loginWithCredentials = async (groupId: string, accountId: string, pin: string, groupName?: string): Promise<boolean> => {
     try {
       const res = await apiFetch('/api/auth/login', {
         method: 'POST',
@@ -320,6 +349,7 @@ export function App() {
       if (res.ok && data.token) {
         setSessionToken(data.token);
         setSessionTokenState(data.token);
+        rememberSession(groupId, groupName || data.account?.groupName || groupId);
         return true;
       }
     } catch {
@@ -350,7 +380,7 @@ export function App() {
         if (data.state) applyState({ ...data.state, pendingSync: false }, data.groupId);
         // Sessionless (welcome gate): sign straight in with the PIN just set.
         if (!getSessionToken() && data.account?.id) {
-          await loginWithCredentials(data.groupId, data.account.id, payload.adminPin);
+          await loginWithCredentials(data.groupId, data.account.id, payload.adminPin, data.group?.name);
         }
         return { success: true, group: data.group, inviteCode: data.group?.inviteCode };
       } else {
@@ -427,7 +457,7 @@ export function App() {
         }
         // Sessionless (welcome gate): sign straight in with the PIN just set.
         if (!getSessionToken() && data.account?.id) {
-          await loginWithCredentials(data.groupId, data.account.id, payload.pin);
+          await loginWithCredentials(data.groupId, data.account.id, payload.pin, data.groupName);
         }
         return { success: true, groupName: data.groupName, memberNo: data.memberNo };
       } else {
@@ -440,15 +470,36 @@ export function App() {
 
   // Recovery for interrupted setup: a group saved on THIS phone (online or
   // offline) can be resumed — its invite code is shown so it is never lost.
+  // Seed demo data never qualifies; only groups with a local login or an
+  // unsynced offline registration. A stale group pointer heals to the state.
+  const SEED_GROUP_IDS = ['bakwata-01', 'kibuli-01'];
+  const readKnownGroupsStore = (): Record<string, { name: string; token: string }> => {
+    try {
+      return JSON.parse(localStorage.getItem('bakwata_known_groups') || '{}');
+    } catch {
+      return {};
+    }
+  };
   const readLocalGroup = (): { groupId: string; groupName: string; inviteCode: string; pendingSync: boolean } | null => {
     try {
-      const gid = localStorage.getItem('bakwata_active_group_id');
       const raw = localStorage.getItem('bakwata_vsla_state');
-      if (!gid || !raw || isPracticeGroup(gid)) return null;
+      if (!raw) return null;
       const s = JSON.parse(raw);
-      if (!s || s.groupId !== gid || !Array.isArray(s.members)) return null;
+      if (!s || typeof s.groupId !== 'string' || isPracticeGroup(s.groupId)) return null;
+      if (!Array.isArray(s.members)) return null;
+      if (SEED_GROUP_IDS.includes(s.groupId)) return null;
+      const stored = readKnownGroupsStore();
+      const pointer = (() => { try { return localStorage.getItem('bakwata_active_group_id'); } catch { return null; } })();
+      // Interrupted switch (pointer aims elsewhere): the loaded books win.
+      const stranded = !!pointer && pointer !== s.groupId;
+      if (!s.pendingSync && !stored[s.groupId]?.token && !stranded) return null;
+      try {
+        if (localStorage.getItem('bakwata_active_group_id') !== s.groupId) {
+          localStorage.setItem('bakwata_active_group_id', s.groupId);
+        }
+      } catch {}
       return {
-        groupId: gid,
+        groupId: s.groupId,
         groupName: s.groupName || s.groupProfile?.name || 'Savings Group',
         inviteCode: s.inviteCode || s.groupProfile?.inviteCode || '',
         pendingSync: !!s.pendingSync,
@@ -502,7 +553,7 @@ export function App() {
     const acct = (stored as VSLAState).currentUser;
     const pin = acct?.pin ? String(acct.pin) : '';
     if (acct?.id && pin && !pin.startsWith('hash:')) {
-      const ok = await loginWithCredentials(lg.groupId, acct.id, pin);
+      const ok = await loginWithCredentials(lg.groupId, acct.id, pin, lg.groupName);
       if (ok) {
         setCurrentScreen('home');
         setActiveTab('home');
@@ -549,6 +600,7 @@ export function App() {
     setSessionTokenState(getSessionToken());
     setLoginPreselectId(undefined);
     setShowGroupHome(false);
+    rememberSession(currentGroupId, vslaState.groupName || currentGroupId);
     if (account.memberId) {
       setSelectedMemberId(account.memberId);
     }
@@ -1936,7 +1988,7 @@ export function App() {
         language={language}
         onEnterPractice={handleEnterPractice}
         onLogin={handleLogin}
-        availableGroups={availableGroups}
+        availableGroups={visibleGroups}
         currentGroupId={currentGroupId}
         onSelectGroup={handleSelectGroup}
         onCreateGroup={handleCreateGroup}
@@ -2080,7 +2132,7 @@ export function App() {
         currentUser={currentUser}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
         isOnline={isServerConnected}
-        availableGroups={availableGroups}
+        availableGroups={visibleGroups}
         currentGroupId={currentGroupId}
         onSelectGroup={handleSelectGroup}
         onOpenGroupModal={(tab) => {
@@ -2456,7 +2508,7 @@ export function App() {
       <GroupOnboardingModal
         isOpen={isGroupModalOpen}
         onClose={() => setIsGroupModalOpen(false)}
-        availableGroups={availableGroups}
+        availableGroups={visibleGroups}
         currentGroupId={currentGroupId}
         onSelectGroup={handleSelectGroup}
         onCreateGroup={handleCreateGroup}
