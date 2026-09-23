@@ -489,3 +489,38 @@ describe('accounts endpoint serves the real roster', () => {
     expect(JSON.stringify(res.body)).not.toContain('"pin"');
   });
 });
+
+describe('demo groups are closed in enforced mode', () => {
+  it('refuses login, accounts and invite lookup for seed ids', async () => {
+    const login = mockRes();
+    await authHandler(
+      mockReq({ method: 'POST', action: 'login', body: { groupId: 'bakwata-01', accountId: 'acc-sec', pin: '1234' } }),
+      login
+    );
+    expect(login.statusCode).toBe(404);
+
+    const acc = mockRes();
+    await authHandler(mockReq({ method: 'GET', action: 'accounts', query: { groupId: 'kibuli-01' } }), acc);
+    expect(acc.statusCode).toBe(404);
+
+    const inv = mockRes();
+    await groupsHandler(mockReq({ method: 'GET', action: 'invite', query: { id: 'BAK-4290' } }), inv);
+    expect(inv.statusCode).toBe(404);
+  });
+
+  it('hides seed groups from the directory when enforced', async () => {
+    const res = mockRes();
+    await groupsHandler(mockReq({ method: 'GET', action: 'list', headers: authHeaders(tokenA, G1) }), res);
+    expect(res.statusCode).toBe(200);
+    const ids = res.body.groups.map((g: any) => g.id);
+    expect(ids).not.toContain('bakwata-01');
+    expect(ids).not.toContain('kibuli-01');
+    expect(ids).toContain(G1);
+  });
+
+  it('404s accounts for unknown groups when enforced', async () => {
+    const res = mockRes();
+    await authHandler(mockReq({ method: 'GET', action: 'accounts', query: { groupId: 'grp-ghost-xyz' } }), res);
+    expect(res.statusCode).toBe(404);
+  });
+});

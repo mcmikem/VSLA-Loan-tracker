@@ -11,8 +11,8 @@
 import { z } from 'zod';
 import { cors, rateLimit, validate } from '../lib/_lib.js';
 import { authEnforced, hashPin, issueSession, readSession, verifyPin } from '../lib/_auth.js';
-import { loadGroup, saveGroup, storageInfo } from '../lib/_db.js';
-import { getSeedForGroup, resolveGroupId, SEED_ACCOUNTS } from '../lib/_seed.js';
+import { groupExists, loadGroup, saveGroup, storageInfo } from '../lib/_db.js';
+import { getSeedForGroup, isDemoGroupId, resolveGroupId, SEED_ACCOUNTS } from '../lib/_seed.js';
 
 const loginSchema = z.object({
   groupId: z.string().min(1).max(64).optional(),
@@ -48,6 +48,10 @@ async function handleLogin(req, res) {
   if (!input) return;
 
   const groupId = input.groupId || resolveGroupId(req);
+  // Demo groups are closed on a selling server — practice mode is the demo door.
+  if (authEnforced() && isDemoGroupId(groupId)) {
+    return res.status(404).json({ error: 'Demo groups are disabled here. Use practice mode to explore.' });
+  }
   const group = await loadGroup(groupId);
   const pool = group.availableAccounts || [];
   const account = pool.find((a) => a.id === input.accountId);
@@ -96,17 +100,28 @@ async function handleStatus(req, res) {
 async function handleAccounts(req, res) {
   if (!cors(req, res, 'GET,POST,OPTIONS')) return;
   const groupId = resolveGroupId(req);
+  // Enforced mode: demo rosters and unknown ids 404 — the welcome gate only
+  // ever asks for groups resolved from a real invite code.
+  if (authEnforced() && isDemoGroupId(groupId)) {
+    return res.status(404).json({ error: 'Demo groups are disabled here. Use practice mode to explore.' });
+  }
 
   if (req.method === 'GET') {
     // Real accounts for real groups — never the demo seed roster.
     // (Unknown ids fall back to seed so open-dev pilots keep working.)
     let data = null;
-    try {
+    if (authEnforced()) {
+      const exists = await groupExists(String(groupId)).catch(() => true);
+      if (!exists) return res.status(404).json({ error: 'No savings group found.' });
       data = await loadGroup(groupId);
-    } catch {
-      data = getSeedForGroup(groupId);
+    } else {
+      try {
+        data = await loadGroup(groupId);
+      } catch {
+        data = getSeedForGroup(groupId);
+      }
+      if (!data || !Array.isArray(data.availableAccounts)) data = getSeedForGroup(groupId);
     }
-    if (!data || !Array.isArray(data.availableAccounts)) data = getSeedForGroup(groupId);
     return res.status(200).json({
       success: true, groupId,
       currentUser: publicAccount(data.currentUser || data.availableAccounts?.[0] || SEED_ACCOUNTS[0]),
@@ -116,6 +131,9 @@ async function handleAccounts(req, res) {
 
   if (req.method === 'POST') {
     const { accountId } = req.body || {};
+    if (authEnforced() && isDemoGroupId(groupId)) {
+      return res.status(404).json({ error: 'Demo groups are disabled here. Use practice mode to explore.' });
+    }
     let data = null;
     try {
       data = await loadGroup(groupId);

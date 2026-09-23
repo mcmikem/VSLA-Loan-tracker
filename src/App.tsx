@@ -70,7 +70,7 @@ import { DefaultPinGate } from './components/DefaultPinGate';
 import { LanguagePicker } from './components/LanguagePicker';
 import { BootSplash } from './components/BootSplash';
 import { LoginView } from './views/LoginView';
-import { apiFetch, changePinRequest, fetchAuthStatus, getSessionToken, setSessionToken } from './utils/api';
+import { apiFetch, changePinRequest, fetchAuthStatus, getSessionToken, sessionGroupId, setSessionToken } from './utils/api';
 
 export function App() {
   // Default Luganda: local users first. Persisted once the user picks.
@@ -764,6 +764,17 @@ export function App() {
 
   useEffect(() => {
     document.title = 'Bakwata VSLA — Group App';
+    // Heal a poisoned group pointer: the session token knows which group you
+    // belong to — trust it over a stale local pointer (e.g. after tapping a
+    // group you could never enter). Runs before any fetch.
+    const tokenGid = sessionGroupId(getSessionToken());
+    if (tokenGid && tokenGid !== currentGroupId && !isPracticeGroup(tokenGid) && !isPracticeGroup(currentGroupId)) {
+      setCurrentGroupId(tokenGid);
+      try {
+        localStorage.setItem('bakwata_active_group_id', tokenGid);
+      } catch {}
+      return;
+    }
     fetchGroupsList();
     fetchStateFromServer(currentGroupId);
     fetchAuthStatus().then((s) => {

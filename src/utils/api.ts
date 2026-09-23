@@ -30,6 +30,19 @@ export interface AuthStatus {
   storage: { driver: string; durable: boolean; shared?: boolean };
 }
 
+/** Read the group a session token belongs to (routing only — never trust). */
+export function sessionGroupId(token: string | null): string | null {
+  try {
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload?.groupId === 'string' ? payload.groupId : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchAuthStatus(): Promise<AuthStatus | null> {
   try {
     const res = await fetch('/api/auth/status');

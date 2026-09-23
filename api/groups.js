@@ -8,7 +8,7 @@
  *   GET  /api/groups/:id/invite     -> ?action=invite&id=:id
  *   POST /api/groups/plan           -> ?action=plan (x-admin-key required)
  */
-import { getBakwataSeed, getKibuliSeed, toGroupSummary } from '../lib/_seed.js';
+import { getBakwataSeed, getKibuliSeed, isDemoGroupId, toGroupSummary } from '../lib/_seed.js';
 import {
   cors,
   createGroupSchema,
@@ -18,7 +18,7 @@ import {
   rateLimit,
   validate,
 } from '../lib/_lib.js';
-import { requireRole } from '../lib/_auth.js';
+import { authEnforced, requireRole } from '../lib/_auth.js';
 
 /**
  * Directory summaries carry NO money, NO location, NO pricing — just enough
@@ -96,11 +96,16 @@ export default async function handler(req, res) {
   const action = String(req.query?.action || '').toLowerCase();
 
   // ---- LIST: GET /api/groups (signed-in users only, once enforced) ----
+  // Demo seed groups are never listed on a selling server — practice mode
+  // is the demo door, not lookalike ledgers with real-looking money.
   if (req.method === 'GET' && (!action || action === 'list')) {
     if (!cors(req, res, 'GET,OPTIONS')) return;
     const session = requireRole(req, res, 'member');
     if (session === undefined) return;
-    const groups = [publicGroupSummary(getBakwataSeed()), publicGroupSummary(getKibuliSeed())];
+    const groups = [];
+    if (!authEnforced()) {
+      groups.push(publicGroupSummary(getBakwataSeed()), publicGroupSummary(getKibuliSeed()));
+    }
     const seen = new Set(['bakwata-01', 'kibuli-01']);
     for (const gid of (await groupRegistry()).ids) {
       if (seen.has(gid)) continue;
@@ -134,6 +139,9 @@ export default async function handler(req, res) {
       }
     }
     if (!group) return res.status(404).json({ error: `No savings group found for "${id}".` });
+    if (authEnforced() && gid && isDemoGroupId(gid)) {
+      return res.status(404).json({ error: `No savings group found for "${id}".` });
+    }
     const inviteCode = group.inviteCode || group.groupProfile?.inviteCode || 'BAK-4290';
     const name = group.groupName || 'Bakwata Savings Group';
     const boxId = group.boxIdentifier || 'BOX-01';
