@@ -21,6 +21,9 @@ interface WelcomeViewProps {
   onCreateGroup: (payload: CreateGroupPayload) => Promise<{ success: boolean; group?: GroupSummary; inviteCode?: string; error?: string; offline?: boolean }>;
   onJoinGroup: (payload: JoinGroupPayload) => Promise<{ success: boolean; groupName?: string; memberNo?: string; error?: string }>;
   logoUrl?: string;
+  /** Interrupted setup recovery: a group already saved on this phone. */
+  localGroup?: { groupId: string; groupName: string; inviteCode: string; pendingSync: boolean } | null;
+  onResumeLocalGroup?: () => Promise<{ ok: boolean; error?: string }>;
 }
 
 /**
@@ -38,6 +41,8 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
   onCreateGroup,
   onJoinGroup,
   logoUrl,
+  localGroup = null,
+  onResumeLocalGroup,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<'register' | 'join' | 'directory'>('join');
@@ -46,7 +51,34 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
   const [signAccounts, setSignAccounts] = useState<UserAccount[]>([]);
   const [signError, setSignError] = useState<string | null>(null);
   const [signBusy, setSignBusy] = useState(false);
+  const [resumeBusy, setResumeBusy] = useState(false);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
   const lu = language === 'LU';
+
+  const copyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = code;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
+  const doResume = async () => {
+    if (!onResumeLocalGroup || resumeBusy) return;
+    setResumeBusy(true);
+    setResumeError(null);
+    const res = await onResumeLocalGroup();
+    setResumeBusy(false);
+    if (!res.ok) setResumeError(res.error || (lu ? 'Waliwo ekikyamu. Gezaako nate.' : 'Something went wrong. Try again.'));
+  };
 
   const openModal = (tab: 'register' | 'join' | 'directory') => {
     setModalTab(tab);
@@ -122,6 +154,39 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
         </div>
 
         <div className="space-y-3">
+          {localGroup && (
+            <section className="rounded-xl bg-[#DCFCE7] border-2 border-[#006d30] p-4 space-y-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#166534]">
+                {lu ? 'Ekibiina kyo kiri ku ssimu eno' : 'Your group is on this phone'}
+              </p>
+              <p className="font-bold text-primary">{localGroup.groupName}</p>
+              {localGroup.inviteCode ? (
+                <button
+                  type="button"
+                  onClick={() => copyCode(localGroup.inviteCode)}
+                  className="w-full flex items-center justify-between gap-2 bg-white rounded-lg border border-border-strong px-3 py-2.5 active:scale-[0.99]"
+                  title={lu ? 'Nyiga okukoppa' : 'Tap to copy'}
+                >
+                  <span className="font-mono font-bold tracking-widest text-primary">{localGroup.inviteCode}</span>
+                  <span className="text-[11px] font-bold text-secondary">{codeCopied ? '✓' : (lu ? 'Koppa' : 'Copy')}</span>
+                </button>
+              ) : null}
+              {localGroup.pendingSync && (
+                <p className="text-[11px] text-[#166534]">
+                  {lu ? 'Tekinnaterekebwa ku mutimbagano — ekyo kikolebwa bw’oddamu okuyingira.' : 'Not synced yet — that happens when you continue.'}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={doResume}
+                disabled={resumeBusy}
+                className="w-full min-h-[52px] bg-[#006d30] text-white rounded-lg font-bold text-sm disabled:opacity-60 active:scale-[0.99]"
+              >
+                {resumeBusy ? '…' : (lu ? 'Weeyongereyo okuteekateeka' : 'Continue setting up')}
+              </button>
+              {resumeError && <p className="text-[11px] font-bold text-status-bad-tx">{resumeError}</p>}
+            </section>
+          )}
           <button type="button" onClick={() => openModal('join')} className={`${bigBtn} bg-[#006d30] text-white`}>
             <span className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg shrink-0">1</span>
             <span>

@@ -407,7 +407,7 @@ export function App() {
     }
   };
 
-  const handleJoinGroup = async (payload: JoinGroupPayload) => {    try {
+    const handleJoinGroup = async (payload: JoinGroupPayload) => {    try {
       const res = await apiFetch('/api/groups/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -436,6 +436,80 @@ export function App() {
     } catch (err: any) {
       return { success: false, error: err.message || 'Network error' };
     }
+  };
+
+  // Recovery for interrupted setup: a group saved on THIS phone (online or
+  // offline) can be resumed — its invite code is shown so it is never lost.
+  const readLocalGroup = (): { groupId: string; groupName: string; inviteCode: string; pendingSync: boolean } | null => {
+    try {
+      const gid = localStorage.getItem('bakwata_active_group_id');
+      const raw = localStorage.getItem('bakwata_vsla_state');
+      if (!gid || !raw || isPracticeGroup(gid)) return null;
+      const s = JSON.parse(raw);
+      if (!s || s.groupId !== gid || !Array.isArray(s.members)) return null;
+      return {
+        groupId: gid,
+        groupName: s.groupName || s.groupProfile?.name || 'Savings Group',
+        inviteCode: s.inviteCode || s.groupProfile?.inviteCode || '',
+        pendingSync: !!s.pendingSync,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const handleResumeLocalGroup = async (): Promise<{ ok: boolean; error?: string }> => {
+    const lg = readLocalGroup();
+    if (!lg) return { ok: false, error: 'Nothing saved on this phone yet.' };
+    let stored: VSLAState | null = null;
+    try {
+      stored = JSON.parse(localStorage.getItem('bakwata_vsla_state') || 'null');
+    } catch {
+      stored = null;
+    }
+    if (!stored || stored.groupId !== lg.groupId) {
+      return { ok: false, error: 'Saved data looks broken — register again.' };
+    }
+    // 1. Activate locally first (works fully offline).
+    setVslaState(stored);
+    setCurrentGroupId(lg.groupId);
+    setSelectedBox(`${stored.groupName} • ${stored.boxIdentifier}`);
+    if (stored.members?.[0]) setSelectedMemberId(stored.members[0].id);
+    // 2. Push if it was created offline (server bootstraps unknown grp-* ids).
+    if (stored.pendingSync) {
+      try {
+        const res = await apiFetch(`/api/state?groupId=${lg.groupId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-group-id': lg.groupId },
+          body: JSON.stringify({ state: { ...stored, pendingSync: false }, groupId: lg.groupId }),
+        });
+        if (res.ok) {
+          const cleared = { ...stored, pendingSync: false };
+          setVslaState(cleared);
+          try {
+            localStorage.setItem('bakwata_vsla_state', JSON.stringify(cleared));
+          } catch {}
+          clearPendingGroup();
+          setIsServerConnected(true);
+          fetchGroupsList();
+          stored = cleared;
+        }
+      } catch {
+        /* offline — local copy stands */
+      }
+    }
+    // 3. Sign in with the credentials stored on this phone.
+    const acct = (stored as VSLAState).currentUser;
+    const pin = acct?.pin ? String(acct.pin) : '';
+    if (acct?.id && pin && !pin.startsWith('hash:')) {
+      const ok = await loginWithCredentials(lg.groupId, acct.id, pin);
+      if (ok) {
+        setCurrentScreen('home');
+        setActiveTab('home');
+        return { ok: true };
+      }
+    }
+    return { ok: false, error: 'Could not sign in automatically — use your invite code below.' };
   };
 
   const handleSwitchAccount = async (account: UserAccount) => {
@@ -1868,6 +1942,8 @@ export function App() {
         onCreateGroup={handleCreateGroup}
         onJoinGroup={handleJoinGroup}
         logoUrl={vslaState.groupProfile?.logoUrl}
+        localGroup={readLocalGroup()}
+        onResumeLocalGroup={handleResumeLocalGroup}
       />
     );
   }

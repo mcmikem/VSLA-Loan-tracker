@@ -1,7 +1,7 @@
 import { resolveGroupId } from '../lib/_seed.js';
 import { cors, memberCap, planOf, rateLimit, stateSchema, validate } from '../lib/_lib.js';
 import { actorName, requireGroup, requireRole } from '../lib/_auth.js';
-import { loadGroup, saveGroup, storageInfo } from '../lib/_db.js';
+import { groupExists, loadGroup, saveGroup, storageInfo } from '../lib/_db.js';
 
 function isAdmin(req) {
   const key = req.headers?.['x-admin-key'] || '';
@@ -25,9 +25,21 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const session = requireRole(req, res, 'treasurer');
+    // Bootstrap exception: a phone that registered a group offline may push
+    // that NEW group (grp-* ids only) without a session — creation itself is
+    // public (/api/groups/create), so this grants no new privilege. Anything
+    // that already exists on the server still needs a same-group treasurer.
+    let bootstrap = false;
+    if (String(groupId).startsWith('grp-')) {
+      try {
+        bootstrap = !(await groupExists(groupId));
+      } catch {
+        bootstrap = false;
+      }
+    }
+    const session = bootstrap ? null : requireRole(req, res, 'treasurer');
     if (session === undefined) return;
-    if (!requireGroup(req, res, groupId)) return;
+    if (!bootstrap && !requireGroup(req, res, groupId)) return;
     const payload = req.body || {};
     const raw = payload.state || payload;
     const nextState = validate(stateSchema, raw, res);
