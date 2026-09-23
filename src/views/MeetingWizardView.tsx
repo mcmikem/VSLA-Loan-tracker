@@ -452,7 +452,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[1]}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">
-              UGX {sharePrice.toLocaleString()} {str('per share · max 5 · total staged:', 'bul i mugabo ·')} <strong className="font-mono">{sharesTotal}</strong>
+              UGX {sharePrice.toLocaleString()} {str('per share · max 5 · total staged:', 'buli mugabo ·')} <strong className="font-mono">{sharesTotal}</strong>
             </p>
           </div>
           {presentIds.map((id) => {
@@ -492,7 +492,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[2]}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">
-              UGX {welfareAmount.toLocaleString()} {str('from each present member', 'bul i mukiise')}
+              UGX {welfareAmount.toLocaleString()} {str('from each present member', 'buli mukiise')}
             </p>
           </div>
           {stepBtn(

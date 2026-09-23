@@ -4,9 +4,11 @@ import {
   aggConfig,
   buildUgCharge,
   flwNetwork,
+  initiateUgCharge,
   mapFlwStatus,
   newTxRef,
   normalizeUgMsisdn,
+  verifyFlwTransaction,
   verifyWebhookSignature,
 } from '../lib/aggregator.js';
 
@@ -82,5 +84,54 @@ describe('flutterwave aggregator contract', () => {
     expect(verifyWebhookSignature({})).toBe(false);
     vi.stubEnv('FLW_SECRET_HASH', '');
     expect(verifyWebhookSignature({ 'verif-hash': 'anything' })).toBe(false);
+  });
+
+  it('accepts id-less UG charge responses (tx_ref is authoritative)', async () => {
+    vi.stubEnv('FLW_SECRET_KEY', 'FLWSECK_TEST_abc123xyz');
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      calls.push(String(url));
+      return {
+        ok: true,
+        text: async () =>
+          JSON.stringify({
+            status: 'success',
+            message: 'Charge initiated',
+            meta: { authorization: { mode: 'redirect', redirect: 'https://pay.example/confirm/1' } },
+          }),
+      } as any;
+    });
+    const started = await initiateUgCharge({
+      phone: '0772123456',
+      network: 'MTN',
+      amount: 50000,
+      txRef: 'flw-test-abcdef123456',
+    });
+    expect(started.status).toBe('pending');
+    expect(started.flwId).toBeNull();
+    expect(started.txRef).toBe('flw-test-abcdef123456');
+    expect(started.redirectUrl).toBe('https://pay.example/confirm/1');
+    vi.unstubAllGlobals();
+  });
+
+  it('verifies by tx_ref when no numeric id exists', async () => {
+    vi.stubEnv('FLW_SECRET_KEY', 'FLWSECK_TEST_abc123xyz');
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      calls.push(String(url));
+      return {
+        ok: true,
+        text: async () =>
+          JSON.stringify({
+            status: 'success',
+            data: { id: 3091255, tx_ref: 'flw-test-abcdef123456', amount: 50000, currency: 'UGX', status: 'successful' },
+          }),
+      } as any;
+    });
+    const v = await verifyFlwTransaction(null, 'flw-test-abcdef123456');
+    expect(calls[0]).toContain('verify_by_reference?tx_ref=flw-test-abcdef123456');
+    expect(v.status).toBe('confirmed');
+    expect(v.amount).toBe(50000);
+    vi.unstubAllGlobals();
   });
 });

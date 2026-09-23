@@ -136,7 +136,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
     });
     const msg =
       language === 'LU'
-        ? `Okusasula kwa cash kwa UGX ${repaymentAmount.toLocaleString()} kuweereddwa ${member.name}!`
+        ? `Okusasula ssente enkalu kwa UGX ${repaymentAmount.toLocaleString()} kuweereddwa ${member.name}!`
          : `Cash repayment of UGX ${repaymentAmount.toLocaleString()} recorded for ${member.name}!`;
     setFeedbackNotice(msg);
     setTimeout(() => setFeedbackNotice(null), 4000);
@@ -815,4 +815,3 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
     </div>
   );
 };
-

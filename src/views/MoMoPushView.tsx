@@ -25,6 +25,7 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
   const [momoHint, setMomoHint] = useState<string | null>(null);
   const [txnId, setTxnId] = useState('MM-98421034');
   const [providerTransactionId, setProviderTransactionId] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
   const [momoError, setMomoError] = useState<string | null>(null);
   const settledRef = useRef(false);
 
@@ -110,6 +111,7 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
     setStatus('pushing');
     setMomoError(null);
     setProviderTransactionId(null);
+    setRedirectUrl(null);
     settledRef.current = false;
     const numericAmt = parseInt(amount.replace(/,/g, ''), 10) || 50000;
     apiFetch('/api/momo/push', {
@@ -125,6 +127,7 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
       .then((data) => {
         setTxnId(data.transactionId);
         setProviderTransactionId(data.mode === 'live' ? data.transactionId : null);
+        setRedirectUrl(data.mode === 'live' && data.redirectUrl ? data.redirectUrl : null);
         setMomoMode(data.mode === 'live' ? 'live' : 'sandbox');
         setTimerSeconds(60);
         setStatus('waiting_pin');
@@ -139,6 +142,7 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
     setStatus('idle');
     setTimerSeconds(60);
     setProviderTransactionId(null);
+    setRedirectUrl(null);
     setMomoError(null);
     settledRef.current = false;
   };
@@ -334,6 +338,27 @@ export const MoMoPushView: React.FC<MoMoPushViewProps> = ({
               <p className="font-bold">Ask the member to approve the prompt on their phone.</p>
               <p className="font-mono text-[11px] break-all">Reference: {providerTransactionId || txnId}</p>
               <p className="text-[11px]">The ledger updates only after the provider confirms payment.</p>
+              {redirectUrl && (
+                <div className="pt-1 space-y-1.5">
+                  <p className="font-bold text-[11px]">Member can't find the prompt? Send the approval link:</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <a
+                      href={`sms:${phoneNumber.replace(/\s/g, '')}?body=${encodeURIComponent(`Approve your payment of UGX ${amount} here: ${redirectUrl}`)}`}
+                      className="py-2 bg-primary-container text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">sms</span> SMS link
+                    </a>
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(`Approve your payment of UGX ${amount} here: ${redirectUrl}`)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="py-2 bg-secondary text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">chat</span> WhatsApp
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-[#1E293B] text-white rounded-lg p-3 font-mono text-xs space-y-1 shadow-inner">
