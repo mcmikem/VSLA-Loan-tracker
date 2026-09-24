@@ -53,6 +53,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [ledgerExpanded, setLedgerExpanded] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
 
   const t = getTranslations(language);
@@ -629,7 +630,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {member.ledger.map((entry) => (
+              {(ledgerExpanded ? member.ledger : member.ledger.slice(0, 4)).map((entry) => (
                 <div
                   key={entry.id}
                   className="p-3 bg-canvas-bg rounded-lg border border-border-line flex items-start justify-between"
@@ -641,7 +642,7 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                         {entry.badge}
                       </span>
                     </div>
-                    <p className="text-[11px] text-text-muted mt-0.5">{entry.subtitle}</p>
+                    <p className="text-xs text-text-muted mt-0.5">{entry.subtitle}</p>
                     <span className="text-[10px] text-text-muted block mt-0.5">{entry.date}</span>
                   </div>
                   <span
@@ -653,6 +654,19 @@ export const MemberPassbookView: React.FC<MemberPassbookViewProps> = ({
                   </span>
                 </div>
               ))}
+              {member.ledger.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setLedgerExpanded(!ledgerExpanded)}
+                  className="w-full py-2.5 bg-canvas-bg border border-border-line rounded-lg text-xs font-bold text-primary active:scale-[0.99]"
+                >
+                  {ledgerExpanded
+                    ? (language === 'LU' ? 'Kweka ebikadde ▲' : 'Hide older ▲')
+                    : (language === 'LU'
+                        ? `Ebiwandiiko ebikadde (${member.ledger.length - 4}) ▼`
+                        : `Earlier entries (${member.ledger.length - 4}) ▼`)}
+                </button>
+              )}
             </div>
           )}
         </section>
