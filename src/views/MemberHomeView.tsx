@@ -1,6 +1,7 @@
 import React from 'react';
 import { ApprovalItem, Language, Member, ScreenId, ShopProduct } from '../types';
 import { MemberAvatar } from '../components/MemberAvatar';
+import { KeyStepper } from '../components/KeyStepper';
 import { smsHref, waHref } from '../utils/smsReminders';
 
 interface MemberHomeViewProps {
@@ -13,13 +14,6 @@ interface MemberHomeViewProps {
   /** Officers' group home — members see this only via a quiet link. */
   onOpenGroupHome?: () => void;
 }
-
-const statusStyle = (s: string) =>
-  s === 'approved'
-    ? 'bg-status-ok-bg text-status-ok-tx'
-    : s === 'rejected'
-    ? 'bg-status-bad-bg text-status-bad-tx'
-    : 'bg-status-warn-bg text-status-warn-tx';
 
 /**
  * Member-first home: my savings, my loan position, my requests with
@@ -140,22 +134,21 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
           <p className="text-xs text-text-muted">{str('No requests yet. Tap “Request a loan” above.', 'Tonnasaba. Nyiga “Saba Ekyewolo” waggulu.')}</p>
         ) : (
           requests.slice(0, 5).map((r) => (
-            <div key={r.id} className="p-2.5 bg-canvas-bg rounded-lg border border-border-line flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-xs font-bold font-mono">UGX {r.amount.toLocaleString()} · {r.reqNumber}</p>
+            <div key={r.id} className="p-2.5 bg-canvas-bg rounded-lg border border-border-line space-y-1.5">
+              <p className="text-xs font-bold font-mono">UGX {r.amount.toLocaleString()} · {r.reqNumber}</p>
+              <KeyStepper
+                firstBy={r.firstApprovedBy}
+                decided={r.status === 'approved'}
+                language={language}
+                compact
+              />
+              {r.status !== 'pending' && (
                 <p className="text-xs text-text-muted truncate">
-                  {r.status === 'pending'
-                    ? r.firstApprovedBy
-                      ? str(`Key 1/2 by ${r.firstApprovedBy} — needs one more officer`, `Ekisumuluzo 1/2 — kyetaaga omukulu omulala`)
-                      : str('Waiting for first officer key', 'Kulindirira omukulu asooka')
-                    : r.status === 'approved'
+                  {r.status === 'approved'
                     ? `${str('Approved', 'Kyakkiriziddwa')} ${r.decidedBy ? `· ${r.decidedBy}` : ''}`
                     : `${str('Rejected', 'Kyagaaniddwa')}${r.rejectReason ? ` — ${r.rejectReason}` : ''}`}
                 </p>
-              </div>
-              <span className={`px-2 py-1 rounded text-[10px] font-bold shrink-0 ${statusStyle(r.status)}`}>
-                {r.status === 'pending' ? (r.firstApprovedBy ? '1/2' : '0/2') : r.status.toUpperCase()}
-              </span>
+              )}
             </div>
           ))
         )}

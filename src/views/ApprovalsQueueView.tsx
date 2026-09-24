@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { ApprovalItem, Member, UserAccount } from '../types';
-import { describeKeys, isSameOfficer } from '../utils/dualApproval';
+import { isSameOfficer } from '../utils/dualApproval';
 import { feeNotice } from '../utils/momoFees';
 import { findMemberPhoto } from '../utils/photo';
 import { ledgerHash } from '../utils/ledgerHash';
 import { MemberAvatar } from '../components/MemberAvatar';
 import { ApprovalsKeyModal } from '../components/ApprovalsKeyModal';
 import { PromptDialog } from '../components/ConfirmDialog';
+import { KeyStepper } from '../components/KeyStepper';
 
 interface ApprovalsQueueViewProps {
   approvals: ApprovalItem[];
@@ -286,20 +287,17 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="bg-status-ok-bg/40 border border-emerald-200 rounded-lg p-3 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-status-ok-tx text-[18px]">
-                            check_circle
-                          </span>
-                          <span className="text-xs font-semibold text-status-ok-tx">
-                            Eligibility Criteria Verified
-                          </span>
-                        </div>
+                    <details className="bg-status-ok-bg/40 border border-emerald-200 rounded-lg">
+                      <summary className="p-3 flex items-center justify-between cursor-pointer list-none">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-status-ok-tx">
+                          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                          Eligibility Criteria Verified
+                        </span>
                         <span className="text-xs font-bold bg-status-ok-bg text-status-ok-tx px-2 py-0.5 rounded border border-emerald-300">
                           PASS
                         </span>
-                      </div>
+                      </summary>
+                      <div className="px-3 pb-3 space-y-1.5">
                       <div className="text-xs text-status-ok-tx grid grid-cols-2 gap-2 pt-1 border-t border-emerald-200/60">
                         <div>
                           <span className="block text-emerald-800">Total Savings:</span>
@@ -318,15 +316,10 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                         <span className="material-symbols-outlined text-[14px]">inventory_2</span>
                         Loan fund box check: Sufficient balance available
                       </div>
-                    </div>
+                      </div>
+                    </details>
 
-                    <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-300 rounded-lg p-2.5 text-xs">
-                      <span className="font-bold text-amber-900 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[16px]">key</span>
-                        {item.firstApprovedBy ? `Key 1/2: ${item.firstApprovedBy}` : 'Key 0/2'}
-                      </span>
-                      <span className="text-amber-800">{describeKeys(item)}</span>
-                    </div>
+                    <KeyStepper firstBy={item.firstApprovedBy} />
                     {currentUserName && item.firstApprovedBy && isSameOfficer(item, currentUserName) && (
                       <p className="text-[11px] text-status-bad-tx bg-status-bad-bg border border-red-200 rounded-lg p-2">
                         You turned key 1/2. A DIFFERENT officer must turn key 2/2 — switching account is required.
@@ -355,14 +348,14 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                     <div className="grid grid-cols-2 gap-2.5 pt-1">
                       <button
                         onClick={() => handleAction(item.id, 'reject', item.memberName)}
-                        className="min-h-[48px] px-3 bg-status-bad-bg border border-status-bad-tx text-status-bad-tx text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
+                        className="min-h-[56px] px-3 bg-status-bad-bg border-2 border-status-bad-tx text-status-bad-tx text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
                       >
                         <span className="material-symbols-outlined text-[18px]">close</span>
                         <span>Reject</span>
                       </button>
                       <button
                         onClick={() => handleAction(item.id, 'approve', item.memberName)}
-                        className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
+                        className="min-h-[56px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
                         <span className="material-symbols-outlined text-[18px]">key</span>
                         <span>{item.firstApprovedBy ? 'Turn key 2/2 — release' : 'Turn key 1/2'} ({payoutFor(item)})</span>
@@ -444,10 +437,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-300 rounded-lg p-2.5 text-xs">
-                      <span className="font-bold text-amber-900">Key {item.firstApprovedBy ? '1/2' : '0/2'}</span>
-                      <span className="text-amber-800">{describeKeys(item)}</span>
-                    </div>
+                    <KeyStepper firstBy={item.firstApprovedBy} />
                     <p className="text-[11px] text-text-muted bg-canvas-bg border border-border-line rounded-lg p-2">
                       {feeNotice(item.amount, (payoutFor(item) as 'MTN' | 'Airtel' | 'Cash') || 'Cash')}
                     </p>
@@ -471,14 +461,14 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                     <div className="grid grid-cols-2 gap-2.5 pt-1">
                       <button
                         onClick={() => handleAction(item.id, 'reject', item.memberName)}
-                        className="min-h-[48px] px-3 bg-status-bad-bg border border-status-bad-tx text-status-bad-tx text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
+                        className="min-h-[56px] px-3 bg-status-bad-bg border-2 border-status-bad-tx text-status-bad-tx text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
                       >
                         <span className="material-symbols-outlined text-[18px]">close</span>
                         <span>Reject</span>
                       </button>
                       <button
                         onClick={() => handleAction(item.id, 'approve', item.memberName)}
-                        className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
+                        className="min-h-[56px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
                         <span className="material-symbols-outlined text-[18px]">key</span>
                         <span>{item.firstApprovedBy ? 'Key 2/2 — release' : 'Key 1/2'} ({payoutFor(item)})</span>
@@ -567,22 +557,19 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-300 rounded-lg p-2.5 text-xs">
-                      <span className="font-bold text-amber-900">Key {item.firstApprovedBy ? '1/2' : '0/2'}</span>
-                      <span className="text-amber-800">{describeKeys(item)}</span>
-                    </div>
+                    <KeyStepper firstBy={item.firstApprovedBy} />
 
                     <div className="grid grid-cols-2 gap-2.5 pt-1">
                       <button
                         onClick={() => handleAction(item.id, 'reject', item.memberName)}
-                        className="min-h-[48px] px-3 bg-status-bad-bg border border-status-bad-tx text-status-bad-tx text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
+                        className="min-h-[56px] px-3 bg-status-bad-bg border-2 border-status-bad-tx text-status-bad-tx text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform hover:bg-red-100"
                       >
                         <span className="material-symbols-outlined text-[18px]">close</span>
                         <span>Reject</span>
                       </button>
                       <button
                         onClick={() => handleAction(item.id, 'approve', item.memberName)}
-                        className="min-h-[48px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
+                        className="min-h-[56px] px-3 bg-[#15803D] hover:bg-[#0B3D2E] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-transform shadow-sm focus:ring-4 focus:ring-emerald-200"
                       >
                         <span className="material-symbols-outlined text-[18px]">key</span>
                         <span>{item.firstApprovedBy ? 'Key 2/2 — release' : 'Key 1/2'} ({payoutFor(item)})</span>

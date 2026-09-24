@@ -581,14 +581,24 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                     placeholder="UGX"
                     className="w-24 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono text-right"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setRepayInputs({ ...repayInputs, [m.id]: String(m.loanBalance || 0) })}
-                    className="px-2 min-h-[44px] rounded-lg bg-[#F6F7F6] border border-[#E5E7EB] text-[11px] font-bold text-[#006d30]"
-                    title={str('Fill full balance', 'Jjuza zonna')}
-                  >
-                    {str('Full', 'Zonna')}
-                  </button>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setRepayInputs({ ...repayInputs, [m.id]: String(m.loanBalance || 0) })}
+                      className="px-2 py-1 rounded-lg bg-[#DCFCE7] border border-[#006d30] text-[11px] font-bold text-[#166534]"
+                      title={str('Fill full balance', 'Jjuza zonna')}
+                    >
+                      {str('Full', 'Zonna')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRepayInputs({ ...repayInputs, [m.id]: String(Math.floor((m.loanBalance || 0) / 2)) })}
+                      className="px-2 py-1 rounded-lg bg-[#F6F7F6] border border-[#E5E7EB] text-[11px] font-bold text-[#4B5563]"
+                      title={str('Fill half balance', 'Jjuza kitundu')}
+                    >
+                      ½
+                    </button>
+                  </div>
                 </div>
               </div>
               {changeDue(Number(repayInputs[m.id] || 0), m.loanBalance) > 0 && (
