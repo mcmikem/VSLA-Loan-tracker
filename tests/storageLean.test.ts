@@ -40,3 +40,11 @@ describe('snapshot photo hygiene', () => {
     expect(maskContact('123')).toBe('•••');
   });
 });
+
+describe('wizard v1 to v2 step migration', () => {
+  it('maps merged steps forward without losing place', async () => {
+    const { migrateDraftStep } = await import('../src/views/MeetingWizardView.tsx');
+    expect([0, 1, 2, 3, 4, 5, 6, 7].map(migrateDraftStep)).toEqual([0, 1, 1, 2, 3, 4, 4, 5]);
+    expect(migrateDraftStep(99)).toBe(0);
+  });
+});

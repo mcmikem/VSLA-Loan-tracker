@@ -63,6 +63,8 @@ type AttStatus = 'present' | 'late' | 'absent' | 'excused';
 
 interface Draft {
   step: number;
+  /** Schema version: v2 merged shares+welfare and fines+sales (was 8 steps). */
+  v?: number;
   attendance: Record<string, AttStatus>;
   shares: Record<string, number>;
   welfareDone: string[];
@@ -84,8 +86,14 @@ interface Draft {
 const DRAFT_KEY = 'vsla_meeting_draft_v1';
 const MAX_SHARES = 5;
 
+/** v1 (8 steps) → v2 (6 steps): shares+welfare and fines+sales merged. */
+export function migrateDraftStep(oldStep: number): number {
+  return [0, 1, 1, 2, 3, 4, 4, 5][oldStep] ?? 0;
+}
+
 const blankDraft = (): Draft => ({
   step: 0,
+  v: 2,
   attendance: {},
   shares: {},
   welfareDone: [],
@@ -105,6 +113,11 @@ function loadDraft(groupId: string): Draft {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (raw) {
       const parsed = { ...blankDraft(), ...JSON.parse(raw) };
+      // v1 → v2 migration: 8 steps became 6 (shares+welfare, fines+sales merged).
+      if (parsed.v !== 2 && typeof parsed.step === 'number') {
+        parsed.step = migrateDraftStep(parsed.step);
+        parsed.v = 2;
+      }
       // Draft ownership: a draft opened for another group is discarded, never
       // merged — mixing two groups' cash counts would corrupt both meetings.
       // Legacy drafts without a groupId are adopted into the current group.
@@ -122,8 +135,8 @@ function loadDraft(groupId: string): Draft {
 }
 
 /**
- * The core loop: guided weekly meeting —
- * Attendance → Shares → Welfare → Repayments → Loans → Fines → Close & Seal.
+ * The core loop: guided weekly meeting — Attendance → Contribute
+ * (shares + welfare) → Repayments → Loans → Fines & Sales → Close & Seal.
  * Action steps commit in bulk (one state write each) so figures never clobber.
  */
 export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
@@ -185,14 +198,13 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
 
   const steps = [
     str('Attendance', 'Abakiise'),
-    str('Shares', 'Emigabo'),
-    str('Welfare', 'Obuyambi'),
+    str('Contribute', 'Kunganyiza'),
     str('Repayments', 'Okusasula'),
     str('New Loans', 'Ebyewolo'),
-    str('Fines', 'Engassi'),
-    str('Sales', 'Okutunda'),
+    str('Fines & Sales', 'Engassi'),
     str('Close & Seal', 'Ggala & Siba'),
   ];
+  const STEP_COUNT = steps.length;
 
   const attOf = (id: string): AttStatus => draft.attendance[id] || 'present';
   const presentIds = useMemo(
@@ -380,7 +392,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </div>
         </div>
         <span className="font-mono text-xs font-bold text-[#00261b] bg-white px-2 py-1 rounded border">
-          {draft.step + 1}/8
+          {draft.step + 1}/{STEP_COUNT}
         </span>
       </div>
 
@@ -389,11 +401,11 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="font-bold text-[#00261b] text-lg leading-tight">{steps[draft.step]}</h2>
           <span className="font-mono text-xs font-bold text-[#4B5563] shrink-0">
-            {str('Step', 'Omutendera')} {draft.step + 1}/8
+            {str('Step', 'Omutendera')} {draft.step + 1}/{STEP_COUNT}
           </span>
         </div>
         <div className="w-full bg-[#E5E7EB] rounded-full h-2 mt-2 overflow-hidden">
-          <div className="bg-[#006d30] h-2 rounded-full transition-all" style={{ width: `${((draft.step + 1) / 8) * 100}%` }} />
+          <div className="bg-[#006d30] h-2 rounded-full transition-all" style={{ width: `${((draft.step + 1) / STEP_COUNT) * 100}%` }} />
         </div>
       </div>
       <div className="flex gap-1">
@@ -402,7 +414,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             key={label}
             type="button"
             onClick={() => patch({ step: i })}
-            className={`flex-1 rounded-lg py-1.5 text-[9px] font-bold transition truncate px-0.5 ${
+            className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition truncate px-0.5 ${
               i === draft.step
                 ? 'bg-[#00261b] text-white'
                 : i < draft.step
@@ -457,11 +469,11 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         </section>
       )}
 
-      {/* STEP 2: SHARES */}
+      {/* STEP 2: CONTRIBUTE — shares first, welfare right below, one screen */}
       {draft.step === 1 && (
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
-            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[1]}</h3>
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[1]} · {str('Shares', 'Emigabo')}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">
               UGX {sharePrice.toLocaleString()} {str('per share · max 5 · total staged:', 'buli mugabo ·')} <strong className="font-mono">{sharesTotal}</strong>
             </p>
@@ -483,25 +495,16 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           })}
           {draft.sharesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded to passbooks', 'Kikoseddwa')}</p>}
           {stepBtn(
-            draft.sharesRecorded ? str('Continue to Welfare →', 'Weeyongereyo →') : `${str('Record', 'Kaza')} ${sharesTotal} ${str('shares', 'emigabo')} (UGX ${(sharesTotal * sharePrice).toLocaleString()})`,
+            `${str('Record', 'Kaza')} ${sharesTotal} ${str('shares', 'emigabo')} (UGX ${(sharesTotal * sharePrice).toLocaleString()})`,
             () => {
               if (!draft.sharesRecorded) commitShares();
-              else patch({ step: 2 });
             },
             true,
             sharesTotal === 0 && !draft.sharesRecorded
           )}
-          {!draft.sharesRecorded && sharesTotal > 0 && (
-            <button type="button" onClick={() => patch({ step: 2 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka')}</button>
-          )}
-        </section>
-      )}
-
-      {/* STEP 3: WELFARE */}
-      {draft.step === 2 && (
-        <section className="space-y-2">
+          {/* WELFARE — collected on the same screen, straight below shares */}
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
-            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[2]}</h3>
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[1]} · {str('Welfare', 'Obuyambi')}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">
               UGX {welfareAmount.toLocaleString()} {str('from each present member', 'buli mukiise')}
             </p>
@@ -512,7 +515,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               : `${str('Collect from', 'Kunganyiza okuva ku')} ${presentIds.filter((id) => !draft.welfareDone.includes(id)).length} ${str('members', 'bakiise')} (UGX ${(presentIds.filter((id) => !draft.welfareDone.includes(id)).length * welfareAmount).toLocaleString()})`,
             () => {
               if (!draft.welfareRecorded) commitWelfare();
-              else patch({ step: 3 });
+              else patch({ step: 2 });
             }
           )}
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
@@ -527,11 +530,11 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         </section>
       )}
 
-      {/* STEP 4: REPAYMENTS */}
-      {draft.step === 3 && (
+      {/* STEP 3: REPAYMENTS */}
+      {draft.step === 2 && (
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
-            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[3]}</h3>
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[2]}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">{debtors.length} {str('members owe', 'beebbanja')}</p>
             {(() => {
               const entered = debtors.reduce((s, m) => s + Math.max(0, Math.floor(Number(repayInputs[m.id] || 0))), 0);
@@ -600,20 +603,20 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             draft.repaymentsRecorded ? str('Continue to New Loans →', 'Weeyongereyo →') : str('Record repayments', 'Kaza okusasula'),
             () => {
               if (!draft.repaymentsRecorded) commitRepayments();
-              else patch({ step: 4 });
+              else patch({ step: 3 });
             }
           )}
           {!draft.repaymentsRecorded && (
-            <button type="button" onClick={() => patch({ step: 4 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka')}</button>
+            <button type="button" onClick={() => patch({ step: 3 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('Skip for now', 'Buuka')}</button>
           )}
         </section>
       )}
 
-      {/* STEP 5: NEW LOANS */}
-      {draft.step === 4 && (
+      {/* STEP 4: NEW LOANS */}
+      {draft.step === 3 && (
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
-            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[4]}</h3>
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[3]}</h3>
             <MemberFaceGrid members={members} value={loanForm.memberId} onChange={(memberId) => setLoanForm({ ...loanForm, memberId })} layout="row" />
             {loanMember && (
               <p className="text-[11px] text-[#4B5563]">
@@ -633,15 +636,15 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             {stepBtn(str('Submit for approval', 'Weereza'), commitLoan, true, !loanEligible)}
             {draft.loansRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Request queued for executives', 'Kisindikiddwa')}</p>}
           </div>
-          {stepBtn(str('Continue to Fines →', 'Weeyongereyo →'), () => patch({ step: 5 }), false)}
+          {stepBtn(str('Continue to Fines →', 'Weeyongereyo →'), () => patch({ step: 4 }), false)}
         </section>
       )}
 
-      {/* STEP 6: FINES */}
-      {draft.step === 5 && (
+      {/* STEP 5: FINES & SALES — levies first, shop right below, one screen */}
+      {draft.step === 4 && (
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
-            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[5]}</h3>
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[4]} · {str('Fines', 'Engassi')}</h3>
             <MemberFaceGrid members={members} value={fineMember} onChange={setFineMember} layout="row" />
             <div className="flex flex-wrap gap-1.5">
               {STANDARD_FINE_REASONS.slice(0, 4).map((r) => (
@@ -666,25 +669,16 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           ))}
           {draft.finesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded', 'Kikoseddwa')}</p>}
           {stepBtn(
-            draft.finesRecorded ? str('Continue to Sales →', 'Weeyongereyo →') : `${str('Record', 'Kaza')} ${stagedFines.length} ${str('fine(s)', 'engassi')}`,
+            `${str('Record', 'Kaza')} ${stagedFines.length} ${str('fine(s)', 'engassi')}`,
             () => {
               if (!draft.finesRecorded) commitFines();
-              else patch({ step: 6 });
             },
             true,
             stagedFines.length === 0 && !draft.finesRecorded
           )}
-          {!draft.finesRecorded && stagedFines.length === 0 && (
-            <button type="button" onClick={() => patch({ step: 6 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No fines — go to Sales', 'Tewali ngassi')}</button>
-          )}
-        </section>
-      )}
-
-      {/* STEP 7: SALES */}
-      {draft.step === 6 && (
-        <section className="space-y-2">
+          {/* SALES — same screen, straight below fines */}
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
-            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[6]}</h3>
+            <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[4]} · {str('Sales', 'Okutunda')}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">{str('Group stock only · profit returns to the loan fund', 'Ebyamaguzi byekibiina byokka')}</p>
           </div>
           {groupProducts.length === 0 && (
@@ -716,22 +710,22 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             draft.salesRecorded ? str('Continue to Close →', 'Weeyongereyo →') : str('Record sales', 'Kaza okutunda'),
             () => {
               if (!draft.salesRecorded) commitSales();
-              else patch({ step: 7 });
+              else patch({ step: 5 });
             },
             true,
             Object.values(saleQty).every((q) => !(q > 0)) && !draft.salesRecorded
           )}
           {!draft.salesRecorded && (
-            <button type="button" onClick={() => patch({ step: 7 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No sales — go to Close', 'Tewali kutunda')}</button>
+            <button type="button" onClick={() => patch({ step: 5 })} className="w-full text-xs font-bold text-[#4B5563] underline">{str('No sales — go to Close', 'Tewali kutunda')}</button>
           )}
         </section>
       )}
 
-      {/* STEP 8: CLOSE & SEAL */}
-      {draft.step === 7 && (
+      {/* STEP 6: CLOSE & SEAL */}
+      {draft.step === 5 && (
         <section className="space-y-2">
           <div className="bg-[#0b3d2e] text-white rounded-xl p-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#bcedd7]">{steps[7]}</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#bcedd7]">{steps[5]}</h3>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-xs text-white/70">{str('Expected in box:', 'Ezisuubirwa:')}</span>
               <span className="font-mono text-xl font-bold">UGX {expectedCash.toLocaleString()}</span>
@@ -792,48 +786,48 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                 step: 1,
               },
               {
-                label: steps[2],
+                label: str('Welfare', 'Obuyambi'),
                 status: draft.welfareRecorded ? 'done' : presentIds.length > 0 ? 'attention' : 'zero',
                 detail: draft.welfareRecorded
                   ? str('Collected', 'Zikunganyiziddwa')
                   : str('Not collected yet', 'Tezinnakunganyizibwa'),
-                step: 2,
+                step: 1,
               },
               {
-                label: steps[3],
+                label: steps[2],
                 status: draft.repaymentsRecorded ? 'done' : debtors.length > 0 ? 'attention' : 'zero',
                 detail: draft.repaymentsRecorded
                   ? str('Recorded', 'Kikoseddwa')
                   : debtors.length > 0
                     ? `${debtors.length} ${str('debtors owe — enter or confirm zero', 'beebbanja — yingiza oba kakasa zeru')}`
                     : str('No loans out', 'Tewali bbanja'),
-                step: 3,
+                step: 2,
               },
               {
-                label: steps[4],
+                label: steps[3],
                 status: draft.loansRecorded ? 'done' : 'zero',
                 detail: draft.loansRecorded
                   ? str('Request queued', 'Kisindikiddwa')
                   : str('No new requests', 'Tewali kusaba kupya'),
-                step: 4,
+                step: 3,
               },
               {
-                label: steps[5],
+                label: steps[4],
                 status: draft.finesRecorded ? 'done' : stagedFines.length > 0 ? 'attention' : 'zero',
                 detail: draft.finesRecorded
                   ? str('Recorded', 'Kikoseddwa')
                   : stagedFines.length > 0
                     ? `${stagedFines.length} ${str('staged but not recorded', 'biteekeddwateka naye tebinnakwatibwa')}`
                     : str('No fines', 'Tewali ngassi'),
-                step: 5,
+                step: 4,
               },
               {
-                label: steps[6],
+                label: str('Sales', 'Okutunda'),
                 status: draft.salesRecorded ? 'done' : 'zero',
                 detail: draft.salesRecorded
                   ? str('Recorded', 'Kikoseddwa')
                   : str('No sales', 'Tewali kutunda'),
-                step: 6,
+                step: 4,
               },
             ];
             const attention = rows.filter((r) => r.status === 'attention');
