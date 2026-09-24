@@ -66,7 +66,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
       >
         {icon}
       </span>
-      <span className={`tracking-tight mt-0.5 text-[11px] ${activeTab === tab ? 'font-bold' : 'font-semibold'}`}>{label}</span>
+      <span className={`tracking-tight mt-0.5 text-xs ${activeTab === tab ? 'font-bold' : 'font-semibold'}`}>{label}</span>
       {badge !== undefined && badge > 0 && (
         <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 px-0.5 rounded-full bg-status-warn-bg text-status-warn-tx font-bold text-[10px] border border-[#FDE68A]">
           {badge}

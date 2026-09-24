@@ -185,10 +185,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </button>
         </section>
 
-        {/* One compact status card: approvals + sync state, neutral — never red.
+        {/* One compact status card: approvals + backup + sync. Neutral — never red.
             Red is reserved for money-at-risk (cash gaps, default PIN). */}
-        {(pendingApprovalsCount > 0 || !isOnline || showLocalOnly) && (
-          <section className="rounded-xl bg-surface-card border border-border-strong p-3 shadow-sm space-y-2">
+        {(pendingApprovalsCount > 0 || !hasBackup || !isOnline || showLocalOnly) && (
+          <section className="rounded-xl bg-surface-card border border-border-strong p-3 shadow-sm space-y-1">
             {pendingApprovalsCount > 0 && (
               <button
                 type="button"
@@ -202,13 +202,29 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <span className="block font-bold text-sm text-primary">
                     {pendingApprovalsCount} {t.home.pendingApprovals}
                   </span>
-                  <span className="block text-[11px] text-secondary font-bold underline">{t.home.reviewQueue}</span>
+                  <span className="block text-xs text-secondary font-bold underline">{t.home.reviewQueue}</span>
+                </span>
+                <span className="material-symbols-outlined text-primary">arrow_forward</span>
+              </button>
+            )}
+            {!hasBackup && (
+              <button
+                type="button"
+                onClick={() => onNavigate('backup')}
+                className="w-full flex items-center gap-2.5 text-left active:scale-[0.99] min-h-[48px] border-t border-border-line pt-2"
+              >
+                <span className="w-9 h-9 rounded-full bg-[#DCFCE7] text-[#006d30] flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-sm text-primary">{t.home.simpleSaveBackup}</span>
+                  <span className="block text-xs text-text-muted">{t.home.simpleSaveBackupSub}</span>
                 </span>
                 <span className="material-symbols-outlined text-primary">arrow_forward</span>
               </button>
             )}
             {(!isOnline || showLocalOnly) && (
-              <p className="flex items-center gap-1.5 text-[11px] text-text-muted border-t border-border-line pt-2">
+              <p className="flex items-center gap-1.5 text-xs text-text-muted border-t border-border-line pt-2">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${isOnline ? 'bg-secondary' : 'bg-status-warn-tx'}`} />
                 {!isOnline
                   ? (language === 'LU' ? 'Tewali Mutimbagano — bikolebwa ku ssimu eno' : 'Offline — saved on this phone')
@@ -227,7 +243,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <span className="text-xl align-top mr-1">UGX</span>
             <span className="text-4xl">{formatUGX(boxCashBalance)}</span>
           </p>
-          <p className="text-[11px] text-primary-fixed/80 mt-1">
+          <p className="text-xs text-primary-fixed/80 mt-1">
             {language === 'LU'
               ? 'Ensimbi enkalu ezibaliddwa mu kasanduuko'
               : 'Physical cash counted in the metal box'}
@@ -236,18 +252,18 @@ export const HomeView: React.FC<HomeViewProps> = ({
             )}
           </p>
           <div className="flex flex-wrap gap-1.5 mt-3">
-            <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold">
+            <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-bold">
               {t.home.welfareFund}: <span className="font-mono">UGX {formatUGX(welfareFundBalance)}</span>
             </span>
             {(momoBalance > 0 || bankBalance > 0) && (
               <>
                 {momoBalance > 0 && (
-                  <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold">
+                  <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-bold">
                     MoMo: <span className="font-mono">UGX {formatUGX(momoBalance)}</span>
                   </span>
                 )}
                 {bankBalance > 0 && (
-                  <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold">
+                  <span className="px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-bold">
                     Bank: <span className="font-mono">UGX {formatUGX(bankBalance)}</span>
                   </span>
                 )}
@@ -255,57 +271,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
             )}
           </div>
         </section>
-
-        {/* My account — the member's own money first */}
-        {onOpenMyAccount && myMemberName && (
-          <section className="rounded-xl bg-[#FFF8E1] border-2 border-[#EAB308] p-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="w-10 h-10 rounded-full bg-[#00261b] text-[#EAB308] flex items-center justify-center font-bold shrink-0">
-                {myMemberName.charAt(0)}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-bold text-sm text-primary truncate">
-                  {myMemberName} · UGX {formatUGX(mySavings || 0)}
-                </span>
-                <span className="block text-xs text-text-muted">
-                  {(myLoanBalance || 0) > 0
-                    ? `${language === 'LU' ? 'Obbanja:' : 'Owe'} UGX ${formatUGX(myLoanBalance || 0)}`
-                    : (language === 'LU' ? 'Tewali bbanja — laba bizinesi' : 'Debt-free — see ventures')}
-                </span>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={onOpenMyAccount}
-              className="w-full min-h-[52px] bg-[#00261b] text-[#EAB308] rounded-lg font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.99]"
-            >
-              <span className="material-symbols-outlined">account_circle</span>
-              {language === 'LU' ? 'Ggulawo akawunti kange' : 'Open my account'}
-            </button>
-          </section>
-        )}
-
-        {/* Group market teaser — neighbours' ventures */}
-        {onOpenShop && marketCount > 0 && (
-          <button
-            type="button"
-            onClick={onOpenShop}
-            className="w-full rounded-xl bg-surface-card border border-border-strong p-4 text-left active:scale-[0.99] flex items-center gap-3 shadow-sm"
-          >
-            <span className="w-10 h-10 rounded-lg bg-[#FEF3C7] text-status-warn-tx flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined">storefront</span>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold text-sm text-primary">
-                {marketCount} {language === 'LU' ? 'bizinesi z’abakiise ziriwo →' : 'neighbour ventures on sale →'}
-              </span>
-              <span className="block text-xs text-text-muted">
-                {language === 'LU' ? 'Tundanagane — ekibiina kikule' : 'Buy from each other — grow together'}
-              </span>
-            </span>
-            <span className="material-symbols-outlined text-primary">arrow_forward</span>
-          </button>
-        )}
 
         {/* 3 giant Friday steps */}
         <section className="space-y-3">
@@ -342,30 +307,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
             )}
             <span className="material-symbols-outlined ml-auto">arrow_forward</span>
           </button>
-          <button
-            type="button"
-            onClick={() => onNavigate('backup')}
-            className="w-full min-h-[60px] flex items-center gap-3 px-4 py-3 bg-status-ok-bg/40 border-2 border-secondary/60 rounded-xl font-bold text-primary active:scale-[0.99]"
-          >
-            <span className="material-symbols-outlined text-secondary">cloud_sync</span>
-            <span className="text-left">
-              <span className="block">{t.home.simpleSaveBackup}</span>
-              <span className="block text-xs font-normal text-text-muted">{t.home.simpleSaveBackupSub}</span>
-            </span>
-          </button>
         </section>
 
-        {/* Lost? */}
-        <section className="rounded-xl bg-surface-card border border-border-line p-4 text-center space-y-2">
-          <p className="text-xs text-text-muted">{t.home.simpleHelp}</p>
-          <button
-            type="button"
-            onClick={() => onNavigate('help')}
-            className="w-full min-h-[52px] bg-primary text-white rounded-lg font-bold active:scale-[0.99]"
-          >
-            {language === 'LU' ? 'Obuyambi' : 'Help & Support'}
-          </button>
-        </section>
+        {/* Quiet way out — one text link, nothing competing */}
+        <button
+          type="button"
+          onClick={() => onNavigate('help')}
+          className="w-full py-3 text-center text-sm font-bold text-secondary underline active:scale-[0.99]"
+        >
+          {language === 'LU' ? 'Obuyambi — buuza wano' : 'Need help? Ask here'}
+        </button>
       </main>
     );
   }

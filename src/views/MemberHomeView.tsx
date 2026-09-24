@@ -56,7 +56,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
         </p>
         <p className="font-mono text-xs font-bold shrink-0">UGX {p.salePrice.toLocaleString()}/{p.unit}</p>
       </div>
-      <p className="text-[11px] text-text-muted">
+      <p className="text-xs text-text-muted">
         {p.sellerName || str('A fellow member', 'Omukiise munno')} · {str('Stock:', 'Zisigadde:')} {p.stockQty}
         {p.sellerName === member.name && <span className="ml-1.5 font-bold text-secondary">· {str('Yours', 'Ekyo')}</span>}
       </p>
@@ -64,7 +64,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
         <div className="grid grid-cols-2 gap-1.5">
           <a
             href={smsHref(p.sellerPhone || '', buyText(p))}
-            className="py-2 bg-primary-container text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95"
+            className="py-2 bg-primary-container text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1 active:scale-95"
           >
             <span className="material-symbols-outlined text-[16px]">sms</span> {str('Ask to buy', 'Gula')}
           </a>
@@ -72,7 +72,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
             href={waHref(p.sellerPhone || '', buyText(p))}
             target="_blank"
             rel="noreferrer"
-            className="py-2 bg-secondary text-white rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 active:scale-95"
+            className="py-2 bg-secondary text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1 active:scale-95"
           >
             <span className="material-symbols-outlined text-[16px]">chat</span> WhatsApp
           </a>
@@ -97,7 +97,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
           <button
             type="button"
             onClick={onOpenGroupHome}
-            className="text-[11px] font-bold text-text-muted underline shrink-0"
+            className="text-xs font-bold text-text-muted underline shrink-0"
           >
             {str('Group home →', 'Ekibiina →')}
           </button>
@@ -143,7 +143,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
             <div key={r.id} className="p-2.5 bg-canvas-bg rounded-lg border border-border-line flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-xs font-bold font-mono">UGX {r.amount.toLocaleString()} · {r.reqNumber}</p>
-                <p className="text-[11px] text-text-muted truncate">
+                <p className="text-xs text-text-muted truncate">
                   {r.status === 'pending'
                     ? r.firstApprovedBy
                       ? str(`Key 1/2 by ${r.firstApprovedBy} — needs one more officer`, `Ekisumuluzo 1/2 — kyetaaga omukulu omulala`)
@@ -167,7 +167,7 @@ export const MemberHomeView: React.FC<MemberHomeViewProps> = ({
           <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
             {str('Buy from each other', 'Tundanagane')} ({memberBusinesses.length})
           </h3>
-          <button type="button" onClick={() => onNavigate('shop')} className="text-[11px] font-bold text-secondary underline">
+          <button type="button" onClick={() => onNavigate('shop')} className="text-xs font-bold text-secondary underline">
             {str('Open shop →', 'Ggulawo kaduuka →')}
           </button>
         </div>
