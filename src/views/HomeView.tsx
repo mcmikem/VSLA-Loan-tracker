@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FundTransfer, Language, ScreenId, UserAccount } from '../types';
 import { getTranslations } from '../i18n/translations';
 import { FundLocationsCard } from '../components/FundLocationsCard';
@@ -46,6 +46,10 @@ interface HomeViewProps {
   /** Connectivity state for the one compact status card. */
   isOnline?: boolean;
   showLocalOnly?: boolean;
+  /** First-run checklist progress (officer home only). */
+  hasMembers?: boolean;
+  hasMet?: boolean;
+  hasBackup?: boolean;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -84,6 +88,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onTransferFunds,
   isOnline = true,
   showLocalOnly = false,
+  hasMembers = true,
+  hasMet = true,
+  hasBackup = true,
 }) => {
   const formatUGX = (num: number) => num.toLocaleString('en-US');
   const t = getTranslations(language);
@@ -96,9 +103,64 @@ export const HomeView: React.FC<HomeViewProps> = ({
   );
 
   // ---- SIMPLE MODE: what a village member needs on Friday, nothing else ----
+  const [checklistHidden, setChecklistHidden] = useState(false);
   if (simpleMode) {
+    const checklistDismissed = (() => {
+      try {
+        return localStorage.getItem('vsla_checklist_done') === '1';
+      } catch {
+        return true;
+      }
+    })();
+    const checklist = [
+      { done: hasMembers, label: language === 'LU' ? 'Yongerako member' : 'Add members', screen: 'member_passbook' as ScreenId },
+      { done: hasMet, label: language === 'LU' ? 'Kola lukuŋŋaana olusooka' : 'Run the first meeting', screen: 'meeting_wizard' as ScreenId },
+      { done: hasBackup, label: language === 'LU' ? 'Tereka backup' : 'Save a backup', screen: 'backup' as ScreenId },
+    ];
+    const showChecklist = !checklistDismissed && checklist.some((c) => !c.done);
+    const dismissChecklist = () => {
+      try {
+        localStorage.setItem('vsla_checklist_done', '1');
+      } catch {}
+      setChecklistHidden(true);
+    };
     return (
       <main className="flex-1 px-4 pt-3 pb-8 space-y-4 max-w-lg mx-auto w-full">
+        {/* First-run checklist: three things, then it disappears forever */}
+        {showChecklist && !checklistHidden && (
+          <section className="rounded-xl bg-[#00261b] text-white p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="font-bold text-sm">
+                {language === 'LU' ? 'Tandika wano — emitendera 3' : 'Start here — 3 steps'}
+              </p>
+              <button
+                type="button"
+                onClick={dismissChecklist}
+                className="text-white/60 hover:text-white text-xs font-bold px-1"
+                aria-label={language === 'LU' ? 'Ggalawo' : 'Dismiss'}
+              >
+                ✕
+              </button>
+            </div>
+            {checklist.map((c) => (
+              <button
+                key={c.label}
+                type="button"
+                onClick={() => onNavigate(c.screen)}
+                className="w-full flex items-center gap-2.5 text-left active:scale-[0.99]"
+              >
+                <span
+                  className={`w-7 h-7 rounded-full text-sm font-bold flex items-center justify-center shrink-0 ${
+                    c.done ? 'bg-[#EAB308] text-[#00261b]' : 'bg-white/15 text-white border border-white/30'
+                  }`}
+                >
+                  {c.done ? '✓' : '○'}
+                </span>
+                <span className={`text-sm font-bold ${c.done ? 'line-through opacity-60' : ''}`}>{c.label}</span>
+              </button>
+            ))}
+          </section>
+        )}
         {/* Who + which group, one line */}
         <section className="rounded-xl bg-surface-card border border-border-strong p-3 shadow-sm flex items-center gap-2.5">
           <div

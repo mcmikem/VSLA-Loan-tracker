@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { VSLAState, BackupSnapshot, Language, ScreenId } from '../types';
 import { formatAuditTime } from '../utils/audit';
 import { RecoverySheetModal } from '../components/RecoverySheetModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface BackupAuditViewProps {
   state: VSLAState;
@@ -49,6 +50,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
   const [activeTab, setActiveTab] = useState<'export' | 'restore' | 'snapshots' | 'audit'>('export');
   const [isCopied, setIsCopied] = useState(false);
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<BackupSnapshot | null>(null);
 
   // Generate downloadable JSON
   const handleDownloadBackup = () => {
@@ -637,11 +639,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
                   )}
                   {onDeleteSnapshot && (
                     <button
-                      onClick={() => {
-                        if (window.confirm(`Delete snapshot "${snap.label}"? The live books stay untouched.`)) {
-                          onDeleteSnapshot(snap.id);
-                        }
-                      }}
+                      onClick={() => setDeleteTarget(snap)}
                       className="px-2.5 py-1.5 bg-white border border-border-strong text-status-bad-tx text-xs font-bold rounded-lg active:scale-95"
                       type="button"
                       title="Delete snapshot to free phone storage"
@@ -758,6 +756,25 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
         onClose={() => setIsRecoveryOpen(false)}
         state={state}
         language={language}
+      />
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title={language === 'LU' ? 'Sazaamu snapshot?' : 'Delete snapshot?'}
+        body={
+          deleteTarget
+            ? language === 'LU'
+              ? `"${deleteTarget.label}" ejja kusazibwamu. Ebitabo ebiriwo tebikwatibwako.`
+              : `Delete "${deleteTarget.label}"? The live books stay untouched.`
+            : ''
+        }
+        confirmLabel={language === 'LU' ? 'Yee, sazaamu' : 'Yes, delete it'}
+        language={language}
+        danger
+        onConfirm={() => {
+          if (deleteTarget && onDeleteSnapshot) onDeleteSnapshot(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </main>
   );

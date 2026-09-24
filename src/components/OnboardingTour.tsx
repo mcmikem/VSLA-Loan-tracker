@@ -22,6 +22,16 @@ const STEPS = [
     en: 'Member Passbook holds every saver\'s stamps, loans and printable receipts.',
     lu: 'Ppaasibuku erimu sitampu, ebyewolo ne risiti za buli mukiise.',
   },
+  {
+    icon: 'key',
+    en: 'Money moves only when TWO different officers turn their keys — each with their own PIN.',
+    lu: 'Ssente zitambula abakulu babiri abenjawulo bwe bakkiriza — buli omu ne PIN ye.',
+  },
+  {
+    icon: 'cloud_sync',
+    en: 'Save a backup after every meeting — it is your way back if the phone is lost.',
+    lu: 'Tereka backup buli lukuŋŋaana lwe luwedde — yiyo engeri y’okuddamu singa ssimu ebuze.',
+  },
 ];
 
 /**

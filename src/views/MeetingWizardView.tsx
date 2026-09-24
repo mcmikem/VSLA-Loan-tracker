@@ -385,6 +385,17 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
       </div>
 
       {/* Step rail */}
+      <div className="bg-white rounded-xl border border-[#E5E7EB] p-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="font-bold text-[#00261b] text-lg leading-tight">{steps[draft.step]}</h2>
+          <span className="font-mono text-xs font-bold text-[#4B5563] shrink-0">
+            {str('Step', 'Omutendera')} {draft.step + 1}/8
+          </span>
+        </div>
+        <div className="w-full bg-[#E5E7EB] rounded-full h-2 mt-2 overflow-hidden">
+          <div className="bg-[#006d30] h-2 rounded-full transition-all" style={{ width: `${((draft.step + 1) / 8) * 100}%` }} />
+        </div>
+      </div>
       <div className="flex gap-1">
         {steps.map((label, i) => (
           <button

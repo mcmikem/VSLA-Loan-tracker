@@ -6,6 +6,7 @@ import { findMemberPhoto } from '../utils/photo';
 import { ledgerHash } from '../utils/ledgerHash';
 import { MemberAvatar } from '../components/MemberAvatar';
 import { ApprovalsKeyModal } from '../components/ApprovalsKeyModal';
+import { PromptDialog } from '../components/ConfirmDialog';
 
 interface ApprovalsQueueViewProps {
   approvals: ApprovalItem[];
@@ -31,6 +32,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
 }) => {
   const [filter, setFilter] = useState<'all' | 'vsla_loan' | 'savings_withdrawal' | 'welfare_grant'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ id: string; name: string } | null>(null);
   const [payoutMethods, setPayoutMethods] = useState<Record<string, string>>({});
   const [keyTargetId, setKeyTargetId] = useState<string | null>(null);
 
@@ -61,10 +63,7 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
       // Key ceremony: the officer holding the phone proves who they are.
       setKeyTargetId(id);
     } else {
-      const reason = window.prompt(`Why is ${name}'s request rejected? (optional — shown in history)`);
-      if (reason === null) return; // Cancelled — keep it pending.
-      onReject(id, reason.trim() || undefined);
-      showToast(`Request for ${name} rejected.`);
+      setRejectTarget({ id, name });
     }
   };
 
@@ -659,6 +658,19 @@ export const ApprovalsQueueView: React.FC<ApprovalsQueueViewProps> = ({
           onConfirm={handleKeyConfirm}
         />
       )}
+      <PromptDialog
+        isOpen={!!rejectTarget}
+        title={rejectTarget ? `Why is ${rejectTarget.name}'s request rejected?` : 'Reject request'}
+        placeholder="Reason (optional — shown in history)"
+        confirmLabel="Reject request"
+        onSubmit={(reason) => {
+          if (reason !== null && rejectTarget) {
+            onReject(rejectTarget.id, reason.trim() || undefined);
+            showToast(`Request for ${rejectTarget.name} rejected.`);
+          }
+          setRejectTarget(null);
+        }}
+      />
     </main>
   );
 };

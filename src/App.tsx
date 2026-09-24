@@ -2221,6 +2221,9 @@ export function App() {
             onTransferFunds={handleTransferFunds}
             isOnline={isServerConnected}
             showLocalOnly={showLocalOnlyBanner}
+            hasMembers={vslaState.members.length > 1}
+            hasMet={vslaState.recentMeetingsCount > 0}
+            hasBackup={(vslaState.snapshots || []).length > 0}
           />
         )}
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Member, ScreenId, UserAccount } from '../types';
 import { PRESET_SCENARIOS, SEED_ACCOUNTS } from '../data/mockData';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface AccountProfileModalProps {
   isOpen: boolean;
@@ -54,6 +55,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
   const [confirmPin, setConfirmPin] = useState('');
   const [pinMsg, setPinMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pinBusy, setPinBusy] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   if (!isOpen) return null;
 
@@ -525,18 +527,26 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
               <div className="pt-2 border-t border-border-line">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.confirm('Reset all members, cashbox, and ledger to clean Meeting #28 baseline?')) {
-                      onResetToBaseline();
-                      onClose();
-                    }
-                  }}
+                  onClick={() => setShowResetConfirm(true)}
                   className="w-full py-2 bg-white border border-border-strong text-status-bad-tx hover:bg-rose-50 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition"
                 >
                   <span className="material-symbols-outlined text-sm">restart_alt</span>
                   Reset Entire Database to Seed Baseline
                 </button>
               </div>
+              <ConfirmDialog
+                isOpen={showResetConfirm}
+                title="Reset everything?"
+                body="All members, cashbox figures and ledgers return to the clean Meeting #28 baseline. Only for testing."
+                confirmLabel="Yes, reset all"
+                danger
+                onConfirm={() => {
+                  setShowResetConfirm(false);
+                  onResetToBaseline();
+                  onClose();
+                }}
+                onCancel={() => setShowResetConfirm(false)}
+              />
             </div>
           )}
         </div>
