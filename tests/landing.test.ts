@@ -378,6 +378,34 @@ describe('landing: what the rendered page was actually doing', () => {
     expect(landing).toContain('.grid12>*,.shell{min-width:0}');
   });
 
+  it('declares the cascade layer order, so preflight cannot outrank the design system', () => {
+    // This is the bug that dropped every section against the left edge of the
+    // page, in every browser and on every phone. Cascade layers rank by FIRST
+    // appearance, and Vite emits the compiled Tailwind <link> *after* this
+    // inline <style> — so without an explicit order statement `components`
+    // registered first, at the lowest rank, below Tailwind's preflight
+    // `@layer base{*{margin:0;padding:0}}`, which then zeroed every `.shell`
+    // gutter and `.sec` rhythm. The rules were present and still did nothing.
+    const order = /@layer\s+properties,\s*theme,\s*base,\s*components,\s*utilities\s*;/.exec(landing);
+    expect(order, 'index.html must declare the Tailwind layer order explicitly').not.toBeNull();
+    expect(order!.index).toBeLessThan(landing.indexOf('@layer components {'));
+    // ...and the rules it protects have to still be there
+    expect(landing).toContain('padding-inline:var(--gut)');
+    expect(landing).toContain('--gut:16px');
+    expect(landing).toContain('--gut:28px');
+  });
+
+  it('the wide bento card only becomes a row when it has room for one', () => {
+    // at 768 it went three-across with 224px + 320px fixed columns, leaving
+    // ~32px for the paragraph, which pushed the page 11px into a scrollbar
+    expect(landing).toContain('bento-wide col-span-4 md:col-span-8 lg:col-span-12 p-7 lg:flex lg:items-center lg:gap-10');
+    expect(landing).toContain('lg:w-56 shrink-0');
+    expect(landing).toContain('lg:w-80 shrink-0');
+    expect(landing).not.toContain('md:w-56');
+    expect(landing).not.toContain('md:w-80');
+    expect(landing).not.toContain('md:flex md:items-center md:gap-10');
+  });
+
   it('the brand mark is the one the app uses', () => {
     // the app renders /icon.svg (the strongbox); the landing had a book glyph
     expect(landing).not.toContain('menu_book');

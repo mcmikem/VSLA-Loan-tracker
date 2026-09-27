@@ -29,6 +29,13 @@
     .faq-a{grid-template-rows:1fr}
   </style></noscript>
   <style>
+    /* Layer order has to be declared HERE, in the document, before Tailwind's
+       compiled stylesheet. Cascade layers rank by first appearance, and this
+       <style> precedes the compiled <link>, so without this line `components`
+       registers *below* preflight's `base` — and preflight's `*{padding:0}`
+       then wipes every `.shell` gutter and `.sec` rhythm, dropping all the
+       content against the left edge of the page on every browser and device. */
+    @layer properties, theme, base, components, utilities;
     /* The page's own design-system rules. They sit in the `components`
        cascade layer so that a utility class written next to an element
        always wins: an unlayered rule beats every layered one, which is how
@@ -486,14 +493,14 @@
        <h3 class="fz-21 head-h3"><span class="canva-text lu" style="color: rgb(255, 255, 255); font-weight: 700; font-size: 21px;">Olukiiko n’okugerageranya</span><span class="canva-text en" style="color: rgb(255, 255, 255); font-weight: 700; font-size: 21px;">Meetings and reconciliation</span></h3>
        <p class="mt-3"><span class="canva-text lu" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 15px; line-height: 1.5;">Wandiika ssente enkalu, MoMo ne bbanka, olabe oba bikwatagana n’ebibaliddwa.</span><span class="canva-text en" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 15px; line-height: 1.5;">Record cash, MoMo and bank balances and check them against what was counted.</span></p>
       </article>
-      <article class="canva-card dcard bento-wide col-span-4 md:col-span-8 lg:col-span-12 p-7 md:flex md:items-center md:gap-10" style="background: rgb(6, 43, 29);">
-       <div class="flex items-center gap-3 mb-4 md:mb-0 md:w-56 shrink-0">
-        <svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-sms" xlink:href="#i-sms"/></svg>
-        <p class="pill"><span class="canva-text lu" style="color: rgb(234, 179, 8); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">OKUKUBA &amp; SMS</span><span class="canva-text en" style="color: rgb(234, 179, 8); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">PRINT &amp; SMS</span></p>
-       </div>
-       <h3 class="fz-21 head-h3 md:w-80 shrink-0"><span class="canva-text lu" style="color: rgb(255, 255, 255); font-weight: 700; font-size: 21px;">Meeting sheets ne SMS mu Luganda</span><span class="canva-text en" style="color: rgb(255, 255, 255); font-weight: 700; font-size: 21px;">Meeting sheets and Luganda SMS</span></h3>
-       <p class="mt-3 md:mt-0"><span class="canva-text lu" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 15px; line-height: 1.5;">Kuba empapula z’olukiiko ez’okukuuma, era oweereze abammemba obubaka obubajjukiza mu Luganda.</span><span class="canva-text en" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 15px; line-height: 1.5;">Print meeting sheets to keep, and send members reminders in Luganda.</span></p>
-      </article>
+       <article class="canva-card dcard bento-wide col-span-4 md:col-span-8 lg:col-span-12 p-7 lg:flex lg:items-center lg:gap-10" style="background: rgb(6, 43, 29);">
+        <div class="flex items-center gap-3 mb-4 lg:mb-0 lg:w-56 shrink-0">
+         <svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-sms" xlink:href="#i-sms"/></svg>
+         <p class="pill"><span class="canva-text lu" style="color: rgb(234, 179, 8); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">OKUKUBA &amp; SMS</span><span class="canva-text en" style="color: rgb(234, 179, 8); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">PRINT &amp; SMS</span></p>
+        </div>
+        <h3 class="fz-21 head-h3 lg:w-80 shrink-0"><span class="canva-text lu" style="color: rgb(255, 255, 255); font-weight: 700; font-size: 21px;">Meeting sheets ne SMS mu Luganda</span><span class="canva-text en" style="color: rgb(255, 255, 255); font-weight: 700; font-size: 21px;">Meeting sheets and Luganda SMS</span></h3>
+        <p class="mt-3 lg:mt-0"><span class="canva-text lu" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 15px; line-height: 1.5;">Kuba empapula z’olukiiko ez’okukuuma, era oweereze abammemba obubaka obubajjukiza mu Luganda.</span><span class="canva-text en" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 15px; line-height: 1.5;">Print meeting sheets to keep, and send members reminders in Luganda.</span></p>
+       </article>
      </div>
     </div>
    </section>
