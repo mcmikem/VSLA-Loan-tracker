@@ -398,8 +398,9 @@ describe('landing: what the rendered page was actually doing', () => {
     expect(landing).toContain('<ul class="shell grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4');
   });
 
-  it('the comparison note spans the whole grid row, never one column', () => {
-    expect(landing).not.toContain('class="compare-note mt-7');
-    expect(landing).toContain('class="md:col-span-2 compare-note flex gap-2.5 items-start"');
+  it('the comparison note is a full-width block below the cards', () => {
+    // it once lived inside the two-card grid, where any placement squeezed it
+    expect(landing).not.toContain('col-span-2 compare-note');
+    expect(landing).toContain('class="col-span-4 md:col-span-8 lg:col-span-12 compare-note mt-6 flex gap-2.5 items-start"');
   });
 });

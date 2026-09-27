@@ -60,6 +60,9 @@
     /* grid and flex children default to min-width:auto, so one long word is enough
        to shove a track out of alignment */
     .grid12>*,.shell{min-width:0}
+/* flex children default to min-width:auto, so one oversized child
+   (a wide icon, a long word) shoves its whole row out of alignment */
+.grid12 *{min-width:0}
     .sec{padding-block:72px}
     @media(min-width:768px){.sec{padding-block:96px}}
     @media(min-width:1024px){.sec{padding-block:112px}}
@@ -437,7 +440,7 @@
        </ul>
       </div>
      </div>
-     <p class="md:col-span-2 compare-note flex gap-2.5 items-start"><svg class="ms w-5 h-5 shrink-0" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-edit_note" xlink:href="#i-edit_note"/></svg><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.45;">Ekitabo ky’empapula kisigala nga backup ey’omugaso.</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.45;">The paper book remains a useful backup.</span></p>
+     <p class="col-span-4 md:col-span-8 lg:col-span-12 compare-note mt-6 flex gap-2.5 items-start"><svg class="ms w-5 h-5 shrink-0" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-edit_note" xlink:href="#i-edit_note"/></svg><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.45;">Ekitabo ky’empapula kisigala nga backup ey’omugaso.</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.45;">The paper book remains a useful backup.</span></p>
     </div>
    </section>
    <section id="features" class="rv canva-section w-full ledger-grid" style="background: rgb(0, 38, 27);">
