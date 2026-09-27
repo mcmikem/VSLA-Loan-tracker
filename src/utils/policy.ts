@@ -13,8 +13,37 @@ export const LATE_FINE_AMOUNT = 2000;
 
 /** UGX ceiling for single-key emergency welfare payouts. */
 export const WELFARE_FAST_TRACK_CAP = 100_000;
+export const DEFAULT_LOAN_MINIMUM = 100_000;
+export const DEFAULT_BORROW_MULTIPLIER = 3;
+export const DEFAULT_MAX_SHARES_PER_MEETING = 5;
+export const DEFAULT_REQUIRED_GUARANTORS = 0;
+export const DEFAULT_LOAN_RATES = {
+  oneMonth: 5,
+  twoMonths: 8,
+  threeMonths: 10,
+};
 
-/** Free-plan member cap — mirrors PLAN_LIMITS.free server-side. */
+export function loanRateForTerm(term: string, rates?: Partial<typeof DEFAULT_LOAN_RATES>): number {
+  const fallback = DEFAULT_LOAN_RATES;
+  if (term === '1 month') return rates?.oneMonth ?? fallback.oneMonth;
+  if (term === '2 months') return rates?.twoMonths ?? fallback.twoMonths;
+  return rates?.threeMonths ?? fallback.threeMonths;
+}
+
+export function groupSharePrice(profile?: { sharePrice?: number; shareClasses?: { id: string; price: number; active?: boolean }[] }): number {
+  const activeClass = profile?.shareClasses?.find((shareClass) => shareClass.active !== false);
+  return Math.max(0, activeClass?.price ?? profile?.sharePrice ?? 10000);
+}
+
+export function sharePurchaseLedgerFields(shareClassId: string, shareClassName: string, shareCount: number, unitPrice: number) {
+  return {
+    entryType: 'share_purchase' as const,
+    shareClassId,
+    shareClassName,
+    shareCount,
+    unitPrice,
+  };
+}
 export const FREE_MEMBER_CAP = 30;
 export const PRO_MEMBER_CAP = 500;
 

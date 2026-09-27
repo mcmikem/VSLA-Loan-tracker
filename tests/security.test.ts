@@ -524,3 +524,270 @@ describe('demo groups are closed in enforced mode', () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+describe('durable approval code actions', () => {
+  it('accepts a member loan request without allowing a full-state write', async () => {
+    const created = mockRes();
+    await groupsHandler(
+      mockReq({
+        method: 'POST',
+        action: 'create',
+        body: { name: 'Loan Request Action Group', adminName: 'Loan Action Admin', adminPhone: '+256700000021' },
+      }),
+      created
+    );
+    const gid = created.body.groupId;
+    const admin = created.body.account;
+    const adminLogin = await login(gid, admin.id, '1234');
+    const adminToken = adminLogin.body.token;
+    const joined = mockRes();
+    await groupsHandler(
+      mockReq({
+        method: 'POST',
+        action: 'join',
+        body: { inviteCode: created.body.group.inviteCode, memberName: 'Loan Action Member', phone: '+256700000022', pin: '4321' },
+      }),
+      joined
+    );
+    const member = joined.body.account;
+    const memberLogin = await login(gid, member.id, '4321');
+    const memberToken = memberLogin.body.token;
+    const get = mockRes();
+    await stateHandler(mockReq({ method: 'GET', query: { groupId: gid }, headers: authHeaders(adminToken, gid) }), get);
+    const state = get.body.state;
+    const memberRecord = state.members.find((record: any) => record.no === member.memberNo);
+    memberRecord.maxBorrowLimit = 100000;
+    state.loanFundBalance = 100000;
+    state.groupProfile.loanMinimum = 0;
+    const save = mockRes();
+    await stateHandler(mockReq({ method: 'POST', query: { groupId: gid }, headers: authHeaders(adminToken, gid), body: { state } }), save);
+    expect(save.statusCode).toBe(200);
+
+    const request = mockRes();
+    await stateHandler(
+      mockReq({
+        method: 'POST',
+        query: { action: 'create-loan', groupId: gid },
+        headers: authHeaders(memberToken, gid),
+        body: {
+          action: 'create-loan',
+          approvalId: 'member-loan-action',
+          reqNumber: 'Req #MEMBER-ACTION',
+          memberNo: member.memberNo,
+          amount: 1000,
+          term: '1 month',
+          purpose: 'Working capital',
+          guarantorNos: [],
+        },
+      }),
+      request
+    );
+    expect(request.statusCode).toBe(200);
+    expect(request.body.state.approvals[0].memberNo).toBe(member.memberNo);
+    expect(request.body.state.approvals[0].initiator).toBe('Loan Action Member');
+    expect(request.body.state.notifications.some((item: any) => item.audience === 'member' && item.memberNo === member.memberNo)).toBe(true);
+  });
+
+  it('stores only a code hash and records key 1/2 across requests', async () => {
+    const get = mockRes();
+    await stateHandler(mockReq({ method: 'GET', query: { groupId: G1 }, headers: authHeaders(tokenA, G1) }), get);
+    const state = get.body.state;
+    state.loanFundBalance = 100000;
+    state.members[0].maxBorrowLimit = 100000;
+    state.approvals = [
+      {
+        id: 'approval-code-test',
+        type: 'vsla_loan',
+        reqNumber: 'Req #CODE-TEST',
+        timeText: 'Now',
+        memberName: state.members[0].name,
+        memberNo: state.members[0].no,
+        initiator: 'Test Admin One',
+        amount: 1000,
+        status: 'pending',
+      },
+    ];
+    const save = mockRes();
+    await stateHandler(
+      mockReq({ method: 'POST', query: { groupId: G1 }, headers: authHeaders(tokenA, G1), body: { state } }),
+      save
+    );
+    expect(save.statusCode).toBe(200);
+
+    const request = mockRes();
+    await stateHandler(
+      mockReq({
+        method: 'POST',
+        query: { action: 'request-code', groupId: G1 },
+        headers: authHeaders(tokenA, G1),
+        body: { action: 'request-code', approvalId: 'approval-code-test', officerId: adminA.id },
+      }),
+      request
+    );
+    expect(request.statusCode).toBe(200);
+    expect(request.body.code).toMatch(/^\d{6}$/);
+    expect(request.body.state.approvals[0].confirmationCode).toBeUndefined();
+    expect(request.body.state.approvals[0].confirmationCodeHash).toBeUndefined();
+    expect(request.body.state.notifications[0].kind).toBe('approval_code');
+
+    const approve = mockRes();
+    await stateHandler(
+      mockReq({
+        method: 'POST',
+        query: { action: 'approve-code', groupId: G1 },
+        headers: authHeaders(tokenA, G1),
+        body: { action: 'approve-code', approvalId: 'approval-code-test', code: request.body.code },
+      }),
+      approve
+    );
+    expect(approve.statusCode).toBe(200);
+    expect(approve.body.state.approvals[0].firstApprovedBy).toBe('Test Admin One');
+    expect(approve.body.state.approvals[0].confirmationCodeHash).toBeUndefined();
+    expect(approve.body.state.auditLog[0].action).toContain('Phone code approved');
+  });
+
+  it('refuses approve-code to a plain member, even with a valid code', async () => {
+    // A member must never be able to write "key 1/2" into the audit log — not
+    // even holding the officer's 6-digit code (shoulder-surfed, or their own
+    // loan: the code is the only thing standing between them and the record).
+    const created = mockRes();
+    await groupsHandler(
+      mockReq({
+        method: 'POST',
+        action: 'create',
+        body: { name: 'Member Key Group', adminName: 'Member Key Admin', adminPhone: '+256700000031' },
+      }),
+      created
+    );
+    const gid = created.body.groupId;
+    const admin = created.body.account;
+    const adminToken = (await login(gid, admin.id, '1234')).body.token;
+    const joined = mockRes();
+    await groupsHandler(
+      mockReq({
+        method: 'POST',
+        action: 'join',
+        body: { inviteCode: created.body.group.inviteCode, memberName: 'Member Key Member', phone: '+256700000032', pin: '4321' },
+      }),
+      joined
+    );
+    const memberToken = (await login(gid, joined.body.account.id, '4321')).body.token;
+
+    const get = mockRes();
+    await stateHandler(mockReq({ method: 'GET', query: { groupId: gid }, headers: authHeaders(adminToken, gid) }), get);
+    const state = get.body.state;
+    // live loan checks run on approval, so the borrower needs a limit + funds
+    state.loanFundBalance = 100000;
+    state.members[0].maxBorrowLimit = 100000;
+    state.approvals = [
+      {
+        id: 'approval-member-key',
+        type: 'vsla_loan',
+        reqNumber: 'Req #MEMBER-KEY',
+        timeText: 'Now',
+        memberName: state.members[0].name,
+        memberNo: state.members[0].no,
+        initiator: state.members[0].name,
+        amount: 1000,
+        status: 'pending',
+      },
+    ];
+    const save = mockRes();
+    await stateHandler(
+      mockReq({ method: 'POST', query: { groupId: gid }, headers: authHeaders(adminToken, gid), body: { state } }),
+      save
+    );
+    expect(save.statusCode).toBe(200);
+
+    // The officer mints the code (keyholder+ allowed).
+    const request = mockRes();
+    await stateHandler(
+      mockReq({
+        method: 'POST',
+        query: { action: 'request-code', groupId: gid },
+        headers: authHeaders(adminToken, gid),
+        body: { action: 'request-code', approvalId: 'approval-member-key', officerId: admin.id },
+      }),
+      request
+    );
+    expect(request.statusCode).toBe(200);
+    const code = request.body.code;
+
+    // The member tries to burn it.
+    const memberApprove = mockRes();
+    await stateHandler(
+      mockReq({
+        method: 'POST',
+        query: { action: 'approve-code', groupId: gid },
+        headers: authHeaders(memberToken, gid),
+        body: { action: 'approve-code', approvalId: 'approval-member-key', code },
+      }),
+      memberApprove
+    );
+    expect(memberApprove.statusCode).toBe(403);
+
+    // …and the officer still can.
+    const officerApprove = mockRes();
+    await stateHandler(
+      mockReq({
+        method: 'POST',
+        query: { action: 'approve-code', groupId: gid },
+        headers: authHeaders(adminToken, gid),
+        body: { action: 'approve-code', approvalId: 'approval-member-key', code },
+      }),
+      officerApprove
+    );
+    expect(officerApprove.statusCode).toBe(200);
+    expect(officerApprove.body.state.approvals[0].firstApprovedBy).toBeTruthy();
+  });
+
+  it('refuses request-code to a plain member too', async () => {
+    expect(memberToken).toBeTruthy(); // minted in the member-rank test above
+    const res = mockRes();
+    await stateHandler(
+      mockReq({
+        method: 'POST',
+        query: { action: 'request-code', groupId: G1 },
+        headers: authHeaders(memberToken, G1),
+        body: { action: 'request-code', approvalId: 'anything', officerId: adminA.id },
+      }),
+      res
+    );
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('a member may not request a loan in someone else’s name', async () => {
+    const get = mockRes();
+    await stateHandler(mockReq({ method: 'GET', query: { groupId: G1 }, headers: authHeaders(tokenA, G1) }), get);
+    const state = get.body.state;
+    const other = state.members.find((record: any) => record.no !== memberAcct.memberNo);
+    state.loanFundBalance = 100000;
+    other.maxBorrowLimit = 100000;
+    const save = mockRes();
+    await stateHandler(
+      mockReq({ method: 'POST', query: { groupId: G1 }, headers: authHeaders(tokenA, G1), body: { state } }),
+      save
+    );
+    expect(save.statusCode).toBe(200);
+
+    const stolen = mockRes();
+    await stateHandler(
+      mockReq({
+        method: 'POST',
+        query: { action: 'create-loan', groupId: G1 },
+        headers: authHeaders(memberToken, G1),
+        body: {
+          action: 'create-loan',
+          approvalId: 'stolen-loan',
+          memberNo: other.no,
+          amount: 1000,
+          term: '1 month',
+          purpose: 'Not mine',
+          guarantorNos: [],
+        },
+      }),
+      stolen
+    );
+    expect(stolen.statusCode).toBe(403);
+  });
+});

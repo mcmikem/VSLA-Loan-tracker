@@ -49,6 +49,7 @@ describe('computeShareOut', () => {
     const base = computeShareOut([member()], 0, 0);
     const rich = computeShareOut([member()], 1000000, 50000);
     expect(rich.totalPool).toBe(base.totalPool + Math.round(1000000 * 0.32) + 50000);
+    expect(rich.interestRate).toBe(0.32);
   });
 
   it('handles an empty roster without NaN', () => {

@@ -1,5 +1,19 @@
 import type { VSLAState } from '../types';
 
+export function redactBackupState(state: VSLAState): VSLAState {
+  return {
+    ...state,
+    approvals: (state.approvals || []).map((approval) => ({
+      ...approval,
+       confirmationCode: undefined,
+       confirmationCodeHash: undefined,
+       confirmationCodeExpiresAt: undefined,
+    })),
+    availableAccounts: state.availableAccounts?.map((account) => ({ ...account, pin: '' })),
+    currentUser: state.currentUser ? { ...state.currentUser, pin: '' } : undefined,
+  };
+}
+
 /**
  * Shared backup-file download (used by Backup center AND the meeting-seal
  * gate). Must be called from a user tap or browsers may block it.
@@ -19,7 +33,7 @@ export function buildBackupPayload(state: VSLAState) {
     cycle: state.cycle,
     exportedAt: new Date().toISOString(),
     checksum: `VSLA-${Date.now().toString(36).toUpperCase()}`,
-    data: state,
+    data: redactBackupState(state),
   };
 }
 

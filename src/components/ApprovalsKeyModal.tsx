@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { UserAccount } from '../types';
+import { Language, UserAccount } from '../types';
 
 interface ApprovalsKeyModalProps {
   isOpen: boolean;
+  language?: Language;
   /** e.g. 'Key 1/2' or 'Key 2/2 — releases cash' */
   keyLabel: string;
   memberLine: string;
@@ -23,6 +24,7 @@ interface ApprovalsKeyModalProps {
  */
 export const ApprovalsKeyModal: React.FC<ApprovalsKeyModalProps> = ({
   isOpen,
+  language = 'EN',
   keyLabel,
   memberLine,
   amountText,
@@ -38,6 +40,7 @@ export const ApprovalsKeyModal: React.FC<ApprovalsKeyModalProps> = ({
   );
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const str = (en: string, lu: string) => language === 'LU' ? lu : en;
 
   if (!isOpen) return null;
 

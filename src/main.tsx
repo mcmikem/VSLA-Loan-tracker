@@ -3,25 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
 
-// Route-level split: landing visitors never download the group tool and
-// vice versa. Matters on 2G/3G cheap Androids — each route is ~half the JS.
-// `/app` → working group tool · everything else → marketing landing page.
-const isAppRoute =
-  typeof window !== 'undefined' && window.location.pathname.startsWith('/app');
-
+// Two HTML entries: `/` is the static marketing landing page (no React), and
+// `/app` loads this file. So a visitor who never joins a group never downloads
+// the group tool, and the landing page stays a single cached HTML file.
 const App = lazy(() => import('./App.tsx'));
-const LandingPage = lazy(() =>
-  import('./landing/LandingPage.tsx').then((m) => ({ default: m.LandingPage }))
-);
-
-// Offline-first: register service worker for /app (never caches /api/*).
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator && isAppRoute) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      /* offline still works via localStorage */
-    });
-  });
-}
 
 function RouteLoader() {
   return (
@@ -35,7 +20,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <Suspense fallback={<RouteLoader />}>
-        {isAppRoute ? <App /> : <LandingPage />}
+        <App />
       </Suspense>
     </ErrorBoundary>
   </StrictMode>

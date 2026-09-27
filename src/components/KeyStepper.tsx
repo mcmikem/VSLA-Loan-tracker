@@ -27,14 +27,14 @@ export const KeyStepper: React.FC<KeyStepperProps> = ({
 
   const caption = decided
     ? lu
-      ? 'Kifulumidwa — ebisumuluzo 2/2'
+      ? 'Ziwuukidwa — ebisumuluzo 2/2'
       : 'Released — keys 2/2'
     : firstBy
       ? lu
-        ? `1/2 — ${firstBy}; linda omukulu omulala`
+        ? `1/2 — ${firstBy}; lindiriza omukulu omulala`
         : `1/2 — ${firstBy}; waiting for a different officer`
       : lu
-        ? 'Tewali kisumuluzo — beetaaga babiri'
+        ? 'Tewali bisumuluzo — abakulu babiri ba kikulu'
         : 'No keys yet — two officers needed';
 
   return (

@@ -32,12 +32,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [busy, setBusy] = useState(false);
 
   const selected = accounts.find((a) => a.id === selectedId) || accounts[0];
+  const str = (en: string, lu: string) => (language === 'LU' ? lu : en);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected || busy) return;
     if (!/^\d{4,8}$/.test(pin)) {
-      setError('Enter your 4-digit PIN.');
+       setError(str('Enter your 4-digit PIN.', 'Yingiza PIN yo ee digits.'));
       return;
     }
     setBusy(true);
@@ -50,14 +51,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error || 'Wrong account or PIN.');
+         setError(data.error || str('Wrong account or PIN.', 'Awaliwo ekizibu eri akawunti oba PIN.'));
         setBusy(false);
         return;
       }
       setSessionToken(data.token);
       onLogin(selected);
     } catch {
-      setError('No connection to the server. Check network and retry.');
+       setError(str('No connection to the server. Check network and retry.', 'Tewali mutimbagano. Kebera network era gezaako.'));
     } finally {
       setBusy(false);
     }
@@ -70,12 +71,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
           <GroupLogo logoUrl={logoUrl} alt={groupName} className="w-14 h-14 rounded-2xl shadow" />
         </div>
         <h1 className="font-bold text-primary text-lg">{groupName}</h1>
-        <p className="text-xs text-text-muted font-mono">{boxIdentifier} · sign in with your PIN</p>
+         <p className="text-xs text-text-muted font-mono">{boxIdentifier} · {str('sign in with your PIN', 'yingira eri PIN yo')}</p>
       </div>
 
       <form onSubmit={submit} className="bg-surface-card border border-border-line rounded-2xl p-4 space-y-3 shadow-sm">
         <div>
-          <label className="text-[11px] font-bold text-text-muted uppercase block mb-1">Who is signing in?</label>
+           <label className="text-[11px] font-bold text-text-muted uppercase block mb-1">{str('Who is signing in?', 'Kiki y’okuyingira?')}</label>
           <div className="space-y-1.5 max-h-56 overflow-y-auto">
             {accounts.map((a) => (
               <button
@@ -98,7 +99,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
         <div>
           <label className="text-[11px] font-bold text-text-muted uppercase block mb-1">
-            PIN for {selected?.name || 'account'}
+             {str('PIN for', 'PIN ya')} {selected?.name || str('account', 'akawunti')}
           </label>
           <input
             type="password"
@@ -121,15 +122,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
           disabled={busy || !selected}
           className="w-full min-h-[52px] bg-[#0b3d2e] text-white rounded-xl font-bold text-sm active:scale-[0.99] disabled:opacity-60"
         >
-          {busy ? 'Checking PIN…' : 'Sign in'}
+           {busy ? str('Checking PIN…', 'Kukebera PIN…') : str('Sign in', 'Yingira')}
         </button>
 
         <p className="text-[11px] text-text-muted text-center">
-          New member? Your secretary registers you — default PIN <span className="font-mono font-bold">1234</span>, change it after first sign-in.
+           {str('New member? Your secretary gives you a private PIN. Do not share it.', 'Omukiise omupya? Omuwandiisi akupa PIN ekyekizibu. Toyagisanya.')}
         </p>
         <p className="text-[11px] text-text-muted text-center border-t border-border-line pt-2">
           {language === 'LU'
-            ? 'Towa muntu yenna PIN yo. Bika PIN, koodi, ne ebikwata ku members mu bukuumi.'
+            ? 'Towa muntu y’enna PIN yo. Bika PIN, koodi n’ebikwata ku bakozesa mu bukuumi.'
             : 'Never give anyone your PIN. Keep your PIN, codes and member details safe.'}
         </p>
       </form>

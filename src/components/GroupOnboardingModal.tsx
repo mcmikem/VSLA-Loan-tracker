@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { CreateGroupPayload, GroupSummary, JoinGroupPayload, UserAccount } from '../types';
+import { CreateGroupPayload, GroupSummary, JoinGroupPayload, Language, UserAccount } from '../types';
 
 interface GroupOnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  language?: Language;
   availableGroups: GroupSummary[];
   currentGroupId: string;
   onSelectGroup: (groupId: string) => Promise<void>;
@@ -17,6 +18,7 @@ interface GroupOnboardingModalProps {
 export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
   isOpen,
   onClose,
+  language = 'EN',
   availableGroups,
   currentGroupId,
   onSelectGroup,
@@ -42,14 +44,14 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
     name: '',
     boxIdentifier: '',
     location: '',
-    meetingDay: 'Every Friday 4:00 PM',
+     meetingDay: language === 'LU' ? 'Buli lwa kukya 4:00 PM' : 'Every Friday 4:00 PM',
     sharePrice: 10000,
     welfareMonthly: 5000,
     cycleDurationMonths: 10,
     adminName: '',
     adminPhone: '+256 ',
     adminProvider: 'MTN',
-    adminPin: '1234',
+    adminPin: '',
     plan: 'pro',
   });
 
@@ -60,10 +62,11 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
     phone: '+256 ',
     provider: 'MTN',
     nationalId: '',
-    pin: '1234',
+    pin: '',
   });
 
   const [copiedCode, setCopiedCode] = useState(false);
+  const str = (en: string, lu: string) => language === 'LU' ? lu : en;
 
   if (!isOpen) return null;
 
@@ -77,11 +80,15 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
     e.preventDefault();
     setFeedbackError(null);
     if (!regForm.name.trim()) {
-      setFeedbackError('Please provide a savings group or association name.');
+      setFeedbackError(str('Please provide a savings group or association name.', 'Londa erinnya ly\'ekibiina ky\'ensimbi kwa mukwayama.'));
       return;
     }
     if (!regForm.adminName.trim() || regForm.adminPhone.trim().length < 8) {
-      setFeedbackError('Please provide the General Secretary / Admin name and phone number.');
+      setFeedbackError(str('Please provide the General Secretary / Admin name and phone number.', 'Londa erinnya n\'enamba y\'essimu y\'Omuwandiisi / Admin.'));
+      return;
+    }
+    if (!/^\d{4}$/.test(regForm.adminPin) || regForm.adminPin === '1234') {
+      setFeedbackError(str('Choose a private 4-digit PIN that is not 1234.', 'Londa PIN ekyekuuka, ebirimu mannya 4, era tebweza 1234.'));
       return;
     }
 
@@ -97,10 +104,10 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
           offline: res.offline,
         });
       } else {
-        setFeedbackError(res.error || 'Failed to register group. Please check parameters.');
+        setFeedbackError(res.error || str('Failed to register group. Please check parameters.', 'Kikikwaze okwandiisa ekibiina. Kebera ebisobozesebwa.'));
       }
     } catch (err: any) {
-      setFeedbackError(err.message || 'An unexpected error occurred during group registration.');
+      setFeedbackError(err.message || str('An unexpected error occurred during group registration.', 'Waliwo ekikyamu ekasikiriza nga kandiisa ekibiina.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -110,11 +117,15 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
     e.preventDefault();
     setFeedbackError(null);
     if (!joinForm.inviteCode.trim()) {
-      setFeedbackError('Please enter the 6-character Group Invite Code.');
+      setFeedbackError(str('Please enter the group invite code from your secretary.', 'Yingiza koodi y\'ekibiina oyikoleetse Omuwandiisi.'));
       return;
     }
     if (!joinForm.memberName.trim() || joinForm.phone.trim().length < 8) {
-      setFeedbackError('Please enter your full name and mobile phone number.');
+      setFeedbackError(str('Please enter your full name and mobile phone number.', 'Yingiza erinnya lyo eggwanga era enamba y\'essimu y\'omukozzi.'));
+      return;
+    }
+    if (!/^\d{4}$/.test(joinForm.pin) || joinForm.pin === '1234') {
+      setFeedbackError(str('Choose a private 4-digit PIN that is not 1234.', 'Londa PIN ekyekuuka, ebirimu mannya 4, era tebweza 1234.'));
       return;
     }
 
@@ -129,10 +140,10 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
           memberNo: res.memberNo || '01',
         });
       } else {
-        setFeedbackError(res.error || 'Could not join group. Verify the invite code with your secretary.');
+        setFeedbackError(res.error || str('Could not join group. Verify the invite code with your secretary.', 'Tewali bubweru okuyingira mu kibiina. Kebera koodi n\'Omuwandiisi.'));
       }
     } catch (err: any) {
-      setFeedbackError(err.message || 'An error occurred while joining the savings group.');
+      setFeedbackError(err.message || str('An error occurred while joining the savings group.', 'Waliwo ekikyamu nga yingira mu kibiina ky\'ensimbi.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -151,14 +162,15 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
               <span className="material-symbols-outlined text-[22px] text-secondary">hub</span>
             </div>
             <div>
-              <h2 className="text-title-md font-bold leading-tight">VSLA UG Groups</h2>
-              <p className="text-[11px] text-white/80">Multi-tenant group management & self-serve enrollment</p>
+               <h2 className="text-title-md font-bold leading-tight">{str('VSLA UG Groups', 'Ebibiina bya VSLA UG')}</h2>
+               <p className="text-[11px] text-white/80">{str('Multi-tenant group management & self-serve enrollment', 'Kuyimiriza ebibiina n\'okuziyogerako buli kikwata ku kifo')}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+           <button
+             type="button"
+             aria-label={str('Close group onboarding', 'Ggalawo okuyingiza ekibiina')}
+             onClick={onClose}
+             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -175,16 +187,16 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
 
             <div className="space-y-1">
               <h3 className="text-title-lg font-bold text-primary">
-                {successInfo.type === 'created' ? 'Group Successfully Registered!' : 'Successfully Joined Group!'}
+                 {successInfo.type === 'created' ? str('Group Successfully Registered!', 'Ekibiina kimaze okwandiiswa!') : str('Successfully Joined Group!', 'Womuzeyo okuyingira mu kibiina!')}
               </h3>
               <p className="text-xs text-text-muted max-w-sm">
                 {successInfo.type === 'created'
-                  ? `Your digital savings box for "${successInfo.groupName}" is live and ready for Meeting #1.`
-                  : `You are officially registered as Member #${successInfo.memberNo} in "${successInfo.groupName}".`}
+                   ? str(`Your digital savings box for "${successInfo.groupName}" is live and ready for Meeting #1.`, `Sanduuko yo yasegula y\'ekibiina "${successInfo.groupName}" ekikola era tekibwa ku Lukuŋŋaana #1.`)
+                   : str(`You are officially registered as Member #${successInfo.memberNo} in "${successInfo.groupName}".`, `Wawandiiswa bulungi nga Omukiise #${successInfo.memberNo} mu "${successInfo.groupName}".`)}
               </p>
               {successInfo.offline && (
                 <p className="text-[11px] font-bold text-blue-900 bg-blue-50 border border-blue-200 rounded-lg p-2.5 max-w-sm">
-                  No network — saved on this phone only. It will sync automatically when you're back online. Don't uninstall the app or clear its data.
+                   {str('No network — saved on this phone only. It will sync automatically when you\'re back online. Don\'t uninstall the app or clear its data.', 'Tewali mutimbagano — byefererwa ku ssimu eno. Bwe uzoke mulaba n\'entimbagano, bisinkana nga bwe munene. Toyoonya ku kugyako app oba okufuna ebisobozesebwa byaayo.')}
                 </p>
               )}
             </div>
@@ -193,10 +205,10 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
             <div className="w-full bg-canvas-bg border border-border-strong rounded-xl p-4 space-y-2 text-left">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
-                  Group Member Invite Code
+                   {str('Group Member Invite Code', 'Koodi y\'Okuyingiza Abakiise')}
                 </span>
                 <span className="text-[10px] text-secondary font-bold px-1.5 py-0.5 bg-secondary/10 rounded">
-                  Active
+                   {str('Active', 'Ekikola')}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 bg-surface-card p-3 rounded-lg border border-border-line">
@@ -211,11 +223,11 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                   <span className="material-symbols-outlined text-[16px]">
                     {copiedCode ? 'done' : 'content_copy'}
                   </span>
-                  <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+                   <span>{copiedCode ? str('Copied', 'Kikoppolwedde') : str('Copy', 'Koppa')}</span>
                 </button>
               </div>
               <p className="text-[11px] text-text-muted">
-                Share this code with members via SMS or WhatsApp so they can join and view their passbook.
+                 {str('Share this code with members via SMS or WhatsApp so they can join and view their passbook.', 'Gabana koodi eno eri abakiise ku SMS oba WhatsApp bayeyanga okuyingira nokulaba ppaasibuku zaabwe.')}
               </p>
             </div>
 
@@ -223,14 +235,16 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
             <div className="flex flex-col sm:flex-row gap-2.5 w-full pt-2">
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `*Join our savings group "${successInfo.groupName}"*\nGroup Code: *${successInfo.inviteCode}*\nAccess your digital VSLA passbook and weekly records online or offline.`
+                  language === 'LU'
+                   ? `*Yingira mu kibiina kyaffe ky\'ensimbi "${successInfo.groupName}"*\nKoodi y\'Ekibiina: *${successInfo.inviteCode}*\nLaba ppaasibuku ya VSLA n\'ebitabo by\'olukuŋŋaana online oba offline.`
+                   : `*Join our savings group "${successInfo.groupName}"*\nGroup Code: *${successInfo.inviteCode}*\nAccess your digital VSLA passbook and weekly records online or offline.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 py-2.5 px-4 bg-[#25D366] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-xs hover:brightness-105 transition"
               >
                 <span className="material-symbols-outlined text-[18px]">share</span>
-                Share to WhatsApp
+                 {str('Share to WhatsApp', 'Gabana ku WhatsApp')}
               </a>
               <button
                 type="button"
@@ -241,7 +255,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                 className="flex-1 py-2.5 px-4 bg-primary text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 hover:bg-primary/90 transition"
               >
                 <span className="material-symbols-outlined text-[18px]">dashboard</span>
-                Open Group Dashboard
+                 {str('Open Group Dashboard', 'Ggulawo dashboard y\'ekibiina')}
               </button>
             </div>
           </div>
@@ -263,7 +277,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">domain</span>
-                <span>All Groups ({availableGroups.length})</span>
+                <span>                 {str(`All Groups (${availableGroups.length})`, `Ebibiina byonna (${availableGroups.length})`)}</span>
               </button>
               )}
               <button
@@ -279,7 +293,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">add_circle</span>
-                <span>Register New Group</span>
+                 <span>{str('Register New Group', 'Wandiisa Ekibiina Kipya')}</span>
               </button>
               <button
                 type="button"
@@ -294,7 +308,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">key</span>
-                <span>Join with Code</span>
+                 <span>{str('Join with Code', 'Yingira ku Koodi')}</span>
               </button>
             </div>
 
@@ -311,7 +325,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
               <div className="p-4 overflow-y-auto space-y-3 flex-1">
                 <div className="flex items-center justify-between pb-1">
                   <p className="text-xs text-text-muted">
-                    Switch seamlessly between your registered community savings groups:
+                     {str('Switch seamlessly between your registered community savings groups:', 'Kyusa nga obulungi mu bibiina by\'ensimbi by\'ekizibu ebiriwo mu mbutukiro:')}
                   </p>
                 </div>
 
@@ -334,11 +348,11 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                               {grp.boxIdentifier}
                             </span>
                             <span className="px-1.5 py-0.2 bg-surface-container text-text-muted text-[10px] font-mono rounded">
-                              Code: {grp.inviteCode}
+                               {str('Code', 'Koodi')}: {grp.inviteCode}
                             </span>
                           </div>
                           <div className="flex items-center gap-3 text-xs text-text-muted flex-wrap">
-                            <span>{grp.membersCount} Members</span>
+                             <span>{grp.membersCount} {str('Members', 'Abakiise')}</span>
                           </div>
                         </div>
 
@@ -346,7 +360,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                           {isCurrent ? (
                             <span className="px-3 py-1.5 bg-secondary text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs">
                               <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                              Active Group
+                               {str('Active Group', 'Ekibiina Ekikola')}
                             </span>
                           ) : (
                             <button
@@ -361,7 +375,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                               className="px-3 py-1.5 bg-surface-container hover:bg-primary hover:text-white border border-border-strong rounded-lg text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 text-primary"
                             >
                               <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
-                              Switch
+                               {str('Switch', 'Kyusa')}
                             </button>
                           )}
                         </div>
@@ -377,7 +391,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                     className="w-full py-2.5 border-2 border-dashed border-primary/30 hover:border-primary text-primary rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition bg-primary/5 hover:bg-primary/10"
                   >
                     <span className="material-symbols-outlined text-[18px]">add</span>
-                    Onboard Another Savings Group
+                     {str('Onboard Another Savings Group', 'Yingiza Ekibiina Kinga ky\'Ensimbi')}
                   </button>
                 </div>
               </div>
@@ -390,15 +404,15 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5 border-b border-border-line pb-1.5">
                     <span className="material-symbols-outlined text-primary text-[18px]">groups</span>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-primary">1. Association Details</h4>
+                     <h4 className="text-xs font-bold uppercase tracking-wider text-primary">{str('1. Association Details', '1. Ebisingawo by\'ekibiina')}</h4>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">Group / Association Name *</label>
+                     <label className="text-xs font-bold text-on-surface">{str('Group / Association Name *', 'Erinnya ly\'Ekibiina / Mukwayama *')}</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Kampala Boda Boda Savings Association"
+                       placeholder={str('e.g. Kampala Boda Boda Savings Association', 'okulagala: Kampala Boda Boda Savings Association')}
                       value={regForm.name}
                       onChange={(e) => {
                         const name = e.target.value;
@@ -415,20 +429,20 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Location / Market District</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Location / Market District', 'Ebbaliwo / Disitrikiti y\'Katale')}</label>
                       <input
                         type="text"
-                        placeholder="e.g. Wandegeya Market, Kawempe"
+                         placeholder={str('e.g. Wandegeya Market, Kawempe', 'okulagala: Wandegeya Market, Kawempe')}
                         value={regForm.location}
                         onChange={(e) => setRegForm({ ...regForm, location: e.target.value })}
                         className="w-full px-3 py-2 text-xs border border-border-strong rounded-lg bg-canvas-bg focus:border-primary focus:outline-hidden"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Meeting Schedule</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Meeting Schedule', 'Olukuŋŋaana Olw\'okukyata')}</label>
                       <input
                         type="text"
-                        placeholder="e.g. Every Friday 4:00 PM"
+                         placeholder={str('e.g. Every Friday 4:00 PM', 'okulagala: Buli lwa kukya 4:00 PM')}
                         value={regForm.meetingDay}
                         onChange={(e) => setRegForm({ ...regForm, meetingDay: e.target.value })}
                         className="w-full px-3 py-2 text-xs border border-border-strong rounded-lg bg-canvas-bg focus:border-primary focus:outline-hidden"
@@ -441,47 +455,47 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5 border-b border-border-line pb-1.5">
                     <span className="material-symbols-outlined text-primary text-[18px]">savings</span>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-primary">2. Financial Bylaws</h4>
+                     <h4 className="text-xs font-bold uppercase tracking-wider text-primary">{str('2. Financial Bylaws', '2. Amateeka g\'Ebikwato')}</h4>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Share Value (UGX)</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Share Value (UGX)', 'Omuwendo w\'Emigabo (UGX)')}</label>
                       <select
                         value={regForm.sharePrice}
                         onChange={(e) => setRegForm({ ...regForm, sharePrice: Number(e.target.value) })}
                         className="w-full px-2.5 py-2 text-xs border border-border-strong rounded-lg bg-canvas-bg focus:border-primary focus:outline-hidden"
                       >
                         <option value={5000}>UGX 5,000</option>
-                        <option value={10000}>UGX 10,000 (Standard)</option>
+                         <option value={10000}>UGX 10,000 ({str('Standard', 'Nsuma')})</option>
                         <option value={20000}>UGX 20,000</option>
                         <option value={50000}>UGX 50,000</option>
                       </select>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Monthly Welfare (UGX)</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Monthly Welfare (UGX)', 'Obuyambi bw\'Mwezi (UGX)')}</label>
                       <select
                         value={regForm.welfareMonthly}
                         onChange={(e) => setRegForm({ ...regForm, welfareMonthly: Number(e.target.value) })}
                         className="w-full px-2.5 py-2 text-xs border border-border-strong rounded-lg bg-canvas-bg focus:border-primary focus:outline-hidden"
                       >
                         <option value={2000}>UGX 2,000</option>
-                        <option value={5000}>UGX 5,000 (Standard)</option>
+                         <option value={5000}>UGX 5,000 ({str('Standard', 'Nsuma')})</option>
                         <option value={10000}>UGX 10,000</option>
                       </select>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Cycle Length</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Cycle Length', 'Obudde bw\'Enziringana')}</label>
                       <select
                         value={regForm.cycleDurationMonths}
                         onChange={(e) => setRegForm({ ...regForm, cycleDurationMonths: Number(e.target.value) })}
                         className="w-full px-2.5 py-2 text-xs border border-border-strong rounded-lg bg-canvas-bg focus:border-primary focus:outline-hidden"
                       >
-                        <option value={9}>9 Months</option>
-                        <option value={10}>10 Months (Standard)</option>
-                        <option value={12}>12 Months (Full Year)</option>
+                         <option value={9}>9 {str('Months', 'Mwezi')}</option>
+                         <option value={10}>10 {str('Months (Standard)', 'Mwezi (Nsuma)')}</option>
+                         <option value={12}>12 {str('Months (Full Year)', 'Mwezi (Mwaka Igw\'emu)')}</option>
                       </select>
                     </div>
                   </div>
@@ -491,23 +505,23 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5 border-b border-border-line pb-1.5">
                     <span className="material-symbols-outlined text-primary text-[18px]">badge</span>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-primary">3. Secretary / Administrator</h4>
+                     <h4 className="text-xs font-bold uppercase tracking-wider text-primary">{str('3. Secretary / Administrator', '3. Omuwandiisi / Admin')}</h4>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Admin Full Name *</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Admin Full Name *', 'Erinnya ly\'Admin *')}</label>
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Mark Michael Kato"
+                         placeholder={str('e.g. Mark Michael Kato', 'okulagala: Mark Michael Kato')}
                         value={regForm.adminName}
                         onChange={(e) => setRegForm({ ...regForm, adminName: e.target.value })}
                         className="w-full px-3 py-2 text-xs border border-border-strong rounded-lg bg-canvas-bg focus:border-primary focus:outline-hidden"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Admin Mobile Phone *</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Admin Mobile Phone *', 'Essimu y\'Admin *')}</label>
                       <input
                         type="text"
                         required
@@ -521,7 +535,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
 
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Network Provider</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Network Provider', 'Omulabi wa Network')}</label>
                       <select
                         value={regForm.adminProvider}
                         onChange={(e) => setRegForm({ ...regForm, adminProvider: e.target.value as 'MTN' | 'Airtel' })}
@@ -532,7 +546,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-on-surface">Admin Box PIN (4-Digits)</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Admin Box PIN (4-Digits)', 'PIN ya Admin y\'Sanduuko (Amannya 4)')}</label>
                       <input
                         type="password"
                         maxLength={4}
@@ -555,12 +569,12 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                     {isSubmitting ? (
                       <>
                         <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                        <span>Provisioning Multi-Tenant Group...</span>
+                         <span>{str('Provisioning Multi-Tenant Group...', 'Buzibu ekibiina...')}</span>
                       </>
                     ) : (
                       <>
                         <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
-                        <span>Launch & Register Savings Group</span>
+                         <span>{str('Launch & Register Savings Group', 'Gala n\'wandiisa ekibiina ky\'ensimbi')}</span>
                       </>
                     )}
                   </button>
@@ -573,17 +587,17 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
               <form onSubmit={handleJoinSubmit} className="p-4 overflow-y-auto space-y-4 flex-1">
                 <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 flex items-start gap-2.5 text-xs text-text-muted">
                   <span className="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5">info</span>
-                  <p>
-                    Enter the 6-character Group Invite Code provided by your savings group secretary or chairperson to access your digital passbook.
-                  </p>
+                   <p>
+                     {str('Enter the 6-character Group Invite Code provided by your savings group secretary or chairperson to access your digital passbook.', 'Yingiza Koodi y\'Ekibiina e\'ebiri ey\'olukalu 6 oyikoleetse Omuwandiisi kama Ssabataka okujja mu ppaasibuku yo yasegula.')}
+                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-on-surface">Group Invite Code *</label>
+                   <label className="text-xs font-bold text-on-surface">{str('Group Invite Code *', 'Koodi y\'Ekibiina *')}</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. BAK-4290 or KIB-8821"
+                     placeholder={str('e.g. BAK-4290 or KIB-8821', 'okulagala: BAK-4290 oba KIB-8821')}
                     value={joinForm.inviteCode}
                     onChange={(e) => setJoinForm({ ...joinForm, inviteCode: e.target.value.toUpperCase() })}
                     className="w-full px-3 py-2.5 text-sm font-mono tracking-widest uppercase border border-border-strong rounded-lg bg-canvas-bg focus:border-primary focus:outline-hidden font-bold text-primary"
@@ -592,7 +606,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">Your Full Name *</label>
+                     <label className="text-xs font-bold text-on-surface">{str('Your Full Name *', 'Erinnya lyo *')}</label>
                     <input
                       type="text"
                       required
@@ -603,7 +617,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">Your Mobile Phone *</label>
+                       <label className="text-xs font-bold text-on-surface">{str('Your Mobile Phone *', 'Essimu yo *')}</label>
                     <input
                       type="text"
                       required
@@ -617,7 +631,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
 
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">Network</label>
+                     <label className="text-xs font-bold text-on-surface">{str('Network', 'Muwuk')}</label>
                     <select
                       value={joinForm.provider}
                       onChange={(e) => setJoinForm({ ...joinForm, provider: e.target.value as 'MTN' | 'Airtel' })}
@@ -628,7 +642,7 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-on-surface">Set 4-Digit Passbook PIN</label>
+                     <label className="text-xs font-bold text-on-surface">{str('Set 4-Digit Passbook PIN', 'Londa PIN y\'ppaasibuku ebirimu mannya 4')}</label>
                     <input
                       type="password"
                       maxLength={4}
@@ -649,12 +663,12 @@ export const GroupOnboardingModal: React.FC<GroupOnboardingModalProps> = ({
                     {isSubmitting ? (
                       <>
                         <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                        <span>Enrolling Member...</span>
+                         <span>{str('Enrolling Member...', 'Buyinja omukiise...')}</span>
                       </>
                     ) : (
                       <>
                         <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
-                        <span>Join Group & Open Passbook</span>
+                         <span>{str('Join Group & Open Passbook', 'Yingira mu kibiina era ggulawo ppaasibuku')}</span>
                       </>
                     )}
                   </button>

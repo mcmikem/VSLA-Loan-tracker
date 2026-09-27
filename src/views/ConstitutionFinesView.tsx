@@ -11,6 +11,7 @@ interface ConstitutionFinesViewProps {
   onLevyFine: (fine: PendingFine) => void;
   onNavigate: (screen: ScreenId) => void;
   language?: Language;
+  meetingNumber?: number;
   /** Member directory for face photos (low-literacy verification). */
   members?: Member[];
 }
@@ -29,13 +30,15 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
   onLevyFine,
   onNavigate,
   language = 'EN',
+  meetingNumber = 0,
   members = [],
 }) => {
-  const [selectedMember, setSelectedMember] = useState('Kato Moses');
-  const [selectedMemberNo, setSelectedMemberNo] = useState('12');
+  const [selectedMember, setSelectedMember] = useState('');
+  const [selectedMemberNo, setSelectedMemberNo] = useState('');
   const [selectedInfraction, setSelectedInfraction] = useState('Late Arrival (>10:15 AM)');
   const [fineAmount, setFineAmount] = useState(2000);
-  const [customNote, setCustomNote] = useState('Arrived after opening prayer');
+  const [customNote, setCustomNote] = useState('');
+  const str = (en: string, lu: string) => (language === 'LU' ? lu : en);
 
   const handleInfractionChange = (infr: string, cost: number) => {
     setSelectedInfraction(infr);
@@ -44,14 +47,15 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
 
   const handleLevySubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedMemberNo || !members.some((member) => member.no === selectedMemberNo)) return;
     const newFine: PendingFine = {
       id: 'fine-' + Date.now(),
       memberNo: selectedMemberNo,
       memberName: selectedMember,
       reason: selectedInfraction + ' · ' + customNote,
       amount: fineAmount,
-      timeNote: 'Meeting #28',
-      meetingRef: 'Meeting #28',
+       timeNote: `Meeting #${meetingNumber}`,
+       meetingRef: `Meeting #${meetingNumber}`,
       status: 'pending',
     };
     onLevyFine(newFine);
@@ -62,22 +66,25 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onNavigate('home')}
-            className="w-9 h-9 rounded-lg bg-surface-card border border-border-strong flex items-center justify-center text-primary"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-lg">arrow_back</span>
+            <button
+              onClick={() => onNavigate('home')}
+              className="w-9 h-9 rounded-lg bg-surface-card border border-border-strong flex items-center justify-center text-primary"
+              type="button"
+              aria-label={str('Go back', 'Ddayo')}
+            >
+              <span className="material-symbols-outlined text-lg" aria-hidden="true">arrow_back</span>
           </button>
           <div>
             <h1 className="text-headline-md font-headline-md text-primary font-bold">
-              Ssemateeka n'Emisoso
+              {language === 'LU' ? 'Amateeka n’Amisango' : 'Ssemateeka n\'Emisoso'}
             </h1>
-            <p className="text-xs text-text-muted">VSLA Constitution Rules & Fines Ledger</p>
+            <p className="text-xs text-text-muted">
+              {str('VSLA Constitution Rules & Fines Ledger', 'Amateeka aga-VSLA n’ekitabo ky’amisango')}
+            </p>
           </div>
         </div>
         <span className="px-2 py-0.5 rounded bg-status-warn-bg text-status-warn-tx text-xs font-bold font-mono">
-          DISCIPLINE
+          {str('DISCIPLINE', 'KIKOLOTO')}
         </span>
       </div>
 
@@ -85,17 +92,19 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
       <section className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-sm text-status-warn-tx">gavel</span>
-            Pending Uncollected Fines
+            <span className="material-symbols-outlined text-sm text-status-warn-tx" aria-hidden="true">gavel</span>
+            {str('Pending Uncollected Fines', 'Amisango aga-akungwa')}
           </h3>
           <span className="text-xs font-bold bg-status-bad-bg text-status-bad-tx px-2 py-0.5 rounded font-mono">
-            {fines.filter((f) => f.status === 'pending').length} Unpaid
+            {fines.filter((f) => f.status === 'pending').length} {str('Unpaid', 'Tedda okusubiza')}
           </span>
         </div>
 
         <div className="space-y-2 text-xs">
           {fines.filter((f) => f.status === 'pending').length === 0 ? (
-            <p className="text-text-muted py-2 text-center">All fines collected or settled.</p>
+            <p className="text-text-muted py-2 text-center">
+              {str('All fines collected or settled.', 'Byonna engassi zigyiddwa oba zigizudde.')}
+            </p>
           ) : (
             fines
               .filter((f) => f.status === 'pending')
@@ -128,14 +137,14 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
                       onClick={() => onCollectFine(fine.id)}
                       className="flex-1 py-1.5 bg-secondary text-white font-bold rounded text-[11px] flex items-center justify-center gap-1 active:scale-95"
                     >
-                      <span className="material-symbols-outlined text-xs">payments</span>
-                      Collect Cash
+                      <span className="material-symbols-outlined text-xs" aria-hidden="true">payments</span>
+                      {str('Collect Cash', 'Giggya ssente')}
                     </button>
                     <button
                       onClick={() => onWaiveFine(fine.id)}
                       className="px-2.5 py-1.5 bg-surface-card border border-border-strong text-text-muted hover:text-primary rounded text-[11px] font-semibold"
                     >
-                      Waive
+                      {str('Waive', 'Sizaamu')}
                     </button>
                   </div>
                 </div>
@@ -150,45 +159,34 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
         className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] space-y-3"
       >
         <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
-          Levy Instant Meeting Fine
+          {str('Levy Instant Meeting Fine', 'Sazaamu engassi mu lukuŋŋaana')}
         </h3>
 
         <div>
-          <label className="text-xs font-semibold text-text-muted block mb-1">Offending Member</label>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedMember('Kato Moses');
-                setSelectedMemberNo('12');
-              }}
-              className={`p-2 rounded-lg border text-left ${
-                selectedMemberNo === '12'
-                  ? 'bg-primary-container text-white border-primary-container font-bold'
-                  : 'bg-canvas-bg'
-              }`}
-            >
-              #12 Kato Moses
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedMember('Prossy Namutebi');
-                setSelectedMemberNo('07');
-              }}
-              className={`p-2 rounded-lg border text-left ${
-                selectedMemberNo === '07'
-                  ? 'bg-primary-container text-white border-primary-container font-bold'
-                  : 'bg-canvas-bg'
-              }`}
-            >
-              #07 Prossy Namutebi
-            </button>
-          </div>
+          <label className="text-xs font-semibold text-text-muted block mb-1">
+            {str('Offending Member', 'Omukiise asubidwa')}
+          </label>
+           <div className="grid grid-cols-2 gap-2 text-xs">
+             {members.map((member) => (
+               <button
+                 key={member.no}
+                 type="button"
+                 onClick={() => {
+                   setSelectedMember(member.name);
+                   setSelectedMemberNo(member.no);
+                 }}
+                 className={`p-2 rounded-lg border text-left ${selectedMemberNo === member.no ? 'bg-primary-container text-white border-primary-container font-bold' : 'bg-canvas-bg'}`}
+               >
+                 #{member.no} {member.name.split(' ')[0]}
+               </button>
+             ))}
+           </div>
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-text-muted block mb-1">Infraction Category</label>
+          <label className="text-xs font-semibold text-text-muted block mb-1">
+            {str('Infraction Category', 'Kikomo ky’ekyalo')}
+          </label>
           <div className="space-y-1 text-xs">
             {INFRACTIONS.map((inf) => (
               <button
@@ -212,21 +210,41 @@ export const ConstitutionFinesView: React.FC<ConstitutionFinesViewProps> = ({
           type="submit"
           className="w-full min-h-[44px] bg-primary text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 active:scale-95 transition"
         >
-          <span className="material-symbols-outlined text-base">add_circle</span>
-          <span>Record Fine in Meeting Ledger</span>
+          <span className="material-symbols-outlined text-base" aria-hidden="true">add_circle</span>
+          <span>{str('Record Fine in Meeting Ledger', 'Yika engassi mu kitabo ky’olukuŋŋaana')}</span>
         </button>
       </form>
 
       {/* Constitution Rules Reference Table */}
       <section className="bg-surface-card border border-border-line rounded-xl p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.08)] space-y-2">
         <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
-          Bakwata Adopted Constitution Bylaws
+          {str('Bakwata Adopted Constitution Bylaws', 'Amateeka aga Bakwata gaakamatakulatwa')}
         </h3>
         <ul className="text-xs space-y-1.5 text-text-muted list-disc pl-4 leading-relaxed">
-          <li>Every member must purchase minimum 1 share (UGX 10,000) and maximum 5 shares weekly.</li>
-          <li>Welfare contribution of UGX 2,000 is mandatory at each sitting for emergency coverage.</li>
-          <li>Loans are appraised strictly up to 3x cumulative shares savings of the borrower.</li>
-          <li>All box openings and closings require the physical presence and keys of all 3 keyholders.</li>
+          <li>
+            {str(
+              'Every member must purchase minimum 1 share (UGX 10,000) and maximum 5 shares weekly.',
+              'Buli mukiise alina okugula omugabo 1 (UGX 10,000) n’akakali ku 5 buli wiiki.'
+            )}
+          </li>
+          <li>
+            {str(
+              'Welfare contribution of UGX 2,000 is mandatory at each sitting for emergency coverage.',
+              'Okuyingiza UGX 2,000 mu buyambi kwa kikomo buli lukuŋŋaana kwa kuyamba mu kemergesi.'
+            )}
+          </li>
+          <li>
+            {str(
+              'Loans are appraised strictly up to 3x cumulative shares savings of the borrower.',
+              'Ebbanja biguliriza nga 3× nterekanya y’emigabo gy’omukwatta gy’omuyoola.'
+            )}
+          </li>
+          <li>
+            {str(
+              'All box openings and closings require the physical presence and keys of all 3 keyholders.',
+              'Buli lufumba n’okuggya kasanduuko byona bimina abakwasi batatu okubikira ku mubali ne bisumuluzo byabwe.'
+            )}
+          </li>
         </ul>
       </section>
     </main>

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Language, ScreenId } from '../types';
-import { getTranslations } from '../i18n/translations';
 
 interface LegalViewProps {
   onNavigate: (screen: ScreenId) => void;
@@ -18,7 +17,8 @@ export const LegalView: React.FC<LegalViewProps> = ({
   groupName = 'Bakwata Savings Group',
 }) => {
   const [tab, setTab] = useState<'terms' | 'privacy' | 'constitution'>('terms');
-  const t = getTranslations(language);
+  const str = (en: string, lu: string) => language === 'LU' ? lu : en;
+  const displayGroupName = groupName === 'Savings Group' ? str('Savings Group', 'Ekibiina ky’ensimbi') : groupName;
 
   const pill = (active: boolean) =>
     `flex-1 py-2 px-2 rounded-lg text-xs font-bold transition ${
@@ -28,32 +28,33 @@ export const LegalView: React.FC<LegalViewProps> = ({
   return (
     <main className="w-full max-w-lg mx-auto px-4 pt-4 pb-14 flex-1 space-y-4">
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => onNavigate('home')}
-          className="w-9 h-9 rounded-lg bg-surface-card border border-border-strong flex items-center justify-center text-primary active:scale-95 transition"
-          type="button"
-        >
+         <button
+           onClick={() => onNavigate('home')}
+           className="w-9 h-9 rounded-lg bg-surface-card border border-border-strong flex items-center justify-center text-primary active:scale-95 transition"
+           type="button"
+           aria-label={str('Back', 'Ddayo emabega')}
+         >
           <span className="material-symbols-outlined text-lg">arrow_back</span>
         </button>
         <div>
-          <h1 className="font-bold text-primary">{t.legal.title}</h1>
-          <p className="text-xs text-text-muted">{groupName}</p>
+          <h1 className="font-bold text-primary">{str('Legal & Constitution', 'Amateeka n’Ssemateeka')}</h1>
+           <p className="text-xs text-text-muted">{displayGroupName}</p>
         </div>
       </div>
 
       <div className="flex bg-surface-card p-1 rounded-xl border border-border-strong">
         <button type="button" onClick={() => setTab('terms')} className={pill(tab === 'terms')}>
-          {t.legal.termsTab}
+           {str('Terms', 'Amateeka')}
         </button>
         <button type="button" onClick={() => setTab('privacy')} className={pill(tab === 'privacy')}>
-          {t.legal.privacyTab}
+           {str('Privacy', 'Ebikwata ku kyama')}
         </button>
         <button
           type="button"
           onClick={() => setTab('constitution')}
           className={pill(tab === 'constitution')}
         >
-          {t.legal.constitutionTab}
+           {str('Constitution', 'Ssemateeka')}
         </button>
       </div>
 
@@ -62,8 +63,12 @@ export const LegalView: React.FC<LegalViewProps> = ({
           <>
             <h2 className="font-bold text-sm text-primary">Amateeka n’obukwakkulizo</h2>
             <p>Soma era okkirize amateeka n’obukwakkulizo nga tonnakozesa VSLA UG.</p>
-            <p>Ebikwata ku kibiina n’ab members biterekebwa mu ngeri ey’obukuumi.</p>
-            <p>VSLA UG si bbanka. Kakasa nti ebisigadde mu kasanduuko ak’ensimbi bibaliddwa era bikakhasiddwa ku buli lukuŋŋaana.</p>
+            <p>1. <strong>Okuba eggwanga ly’ekibiina.</strong> VSLA UG si bbanka. Okutwala ssente enkalu, okuyimiriza ebyewolo n’okuzimba amateeka mu kibiina bwe kisobola kuyimirizibwa n’abakuliriza abakozesebwa.</p>
+            <p>2. <strong>Ebikwata ku bweera.</strong> Abawandiisi n’abawanika batandika ebikolo bulungi mu lukuŋŋaana. Okunyonnyola ebikolo mu lulimi lw’ekibiina kikola okwanga mu nsemateeka y’ekibiina.</p>
+            <p>3. <strong>Ebikwatibwa.</strong> Ebikwata ku kibiina bisalibwa ku ssimu yo era, nga bisobola, bisindikwa ku kitabo kya kibiina kyo ekyekka. Kukuna kkopi y’ebitabo buli bw’ekwata n’okukebera bulungi.</p>
+            <p>4. <strong>Kozesa bulungi.</strong> Akawunti emu buli mukiise. Toyagabana PIN za muwanika. Waako omuwanika n’olulunaku lw’ekibiina nga bwe ebizibu bino biikwata.</p>
+            <p>5. <strong>Kuwuliriza.</strong> VSLA UG ekola nga t tekintaneeti; okusindikwa kugomba mutimbagano. Tweganda ku kukola kwa 99%, naye tetulina kuzingo ku msaa n’okukola bweru.</p>
+            <p className="text-text-muted">Yaliyoolerwa mu September 2026 · Kampala, Uganda</p>
           </>
         )}
         {tab === 'terms' && language !== 'LU' && (
@@ -80,7 +85,12 @@ export const LegalView: React.FC<LegalViewProps> = ({
         {tab === 'privacy' && language === 'LU' && (
           <>
             <h2 className="font-bold text-sm text-primary">Enkola y’obukuumi bw’ebikwata ku bantu</h2>
-            <p>Ebikwata ku kibiina byo bisigala bya kyama era bikozesebwa ku lw’okukola omulimu gwa VSLA UG gwokka.</p>
+            <p>1. <strong>Ebikwatibwa.</strong> Amatongo go mukiise, enamba za ssimu, ssente eziterekedwa, amabanja n’ebikwata ku lukuŋŋaana ebyo omulimu ow’owandiika yoleeta. Tewali kuki za kujja, tewali buhando bw’okuddessa.</p>
+            <p>2. <strong>Ebali gyebisigala.</strong> Ku ssimu yo, nga t tekintaneeti, n’ekitabo kya kibiina kyo ekisindikwa, bali nkwatakana n’abawandiisi.</p>
+            <p>3. <strong>Ani alabyo.</strong> Abakiise ba kibiina kyo yokka, ng’abaakiriziddwa mu balabaakaali babwe. Tewali tufuna kulunda ebikwata ku mukiise.</p>
+            <p>4. <strong>Ekkizibu kyo.</strong> Omukiise onyimala asaba kkopi y’ekigwendererwa kyonna kya ppaasibuku ye (Ppaasibuku → Wandiika / Olupapula) n’asuza omwandiisi ayimirize ensobi.</p>
+            <p>5. <strong>Obudde nokusigala.</strong> Ebikwata biggibwa okumala enziringana y’ekibiina n’omwaka gumala ogw’okukebera. Omuwandiisi ayirina okuzibikiza mu kitabo ebyago bye biri.</p>
+            <p className="text-text-muted">Ebizibu: buuza omuwandiisi wa kibiina kandi omujjamaba wa kibiina.</p>
           </>
         )}
         {tab === 'privacy' && language !== 'LU' && (
@@ -96,12 +106,16 @@ export const LegalView: React.FC<LegalViewProps> = ({
         )}
         {tab === 'constitution' && language === 'LU' && (
           <>
-            <h2 className="font-bold text-sm text-primary">Constitution</h2>
-            <p>Article 1 — Erinnya n’ekigendererwa ky’ekibiina.</p>
-            <p>Article 2 — Ab members n’obuvunaanyizibwa bwabwe.</p>
-            <p>Article 3 — Okutereka, emigabo, ne loan.</p>
-            <p>Article 4 — Ensimbi z’obuyambi n’ebibonerezo.</p>
-            <p>Article 5 — Okukola enkyukakyuka mu Constitution.</p>
+            <h2 className="font-bold text-sm text-primary">Ssemateeka ya VSLA ey’ekigezo (yiikirizibwa ku bika by’ekibiina)</h2>
+            <p><strong>Ibisobozeko 1 — Erinina n’ekigendererwa.</strong> Ekibiina kigyezamu ssente ez’oterekeza buli lwa kukya, kikwata ebyewolo ebiriko magaba g’apokukkiriza, era kikwanvuza abakiise mu buzibu okuwa n’essente z’obuyambi.</p>
+            <p><strong>Ibisobozeko 2 — Abakiise n’obuvunaanyizibwa bwabwe.</strong> Kikomo ku abantu abakulu abali bulungi, abakkirizibwa ku lwokusinga ow’amagabi. Ppaasibuku emu buli mukiise. Olukiiko lw’okugenda ku mpaliro buli lwa kukya, nga omukiise atakikkirizibwa.</p>
+            <p><strong>Ibisobozeko 3 — Emigabo.</strong> Omuwendo gw’omugabo tegamuka mu enziringana. Abakiise bagula emigabo 1–5 buli lwa kukya. Ekyewolo ekisinga kya 3× ssente ez’omukiise eziterekedwa kisoboka.</p>
+            <p><strong>Ibisobozeko 4 — Amabanja.</strong> Muggo wa 5% buli mwezi ku bbanja ly’omukiise, era asubirwa ku bbanja ey’obuuka. Abakakikiza abiri basaba. Omusajja ayitwala erinnya. Ebisigala eby’okusinga bw’abakakikiza biggibwa ku nkomerero, nga bwe gumba ssente zabwe zikyaludda.</p>
+            <p><strong>Ibisobozeko 5 — Obuyambi.</strong> Ssente ez’erali buli mwezi. Obuyambi buteyozekedwa kuzibu era kukkirizibwa n’abawandiisi mu kifo ky’obulamu, obuddayo no buzibu omwanga.</p>
+            <p><strong>Ibisobozeko 6 — Isanduuko.</strong> Abakwasi aba abalaw okukubwa. Obuzi bwa mubale bukakikizibwa. Ku buli kaseera k’okubikula, endikita ebibiri zisaba. Tetekikubwa isanduuko nga taluki mu lukuŋŋaana.</p>
+            <p><strong>Ibisobozeko 7 — Engassi.</strong> Kujja mu bwire, kwerayo nga tonnabujja, ensobi y’olusimu — engassi ezikozesebwa n’ekibiina, ezikunganyizibwa mu sanduuko.</p>
+            <p><strong>Ibisobozeko 8 — Kugaba emigabo.</strong> Ekkya y’enziringana, essente zonna n’amagaba zigabanyizibwa mu nkulinganiro ng’emigabo. Amabanja gabatandikwa ku nkomerero.</p>
+            <p className="text-text-muted">Yakkirizibwa ku kisomo ky’ekibiina · Amasigni gakufo: Omujjamaba, Omuwandiisi, Omuwanika.</p>
           </>
         )}
         {tab === 'constitution' && language !== 'LU' && (

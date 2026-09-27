@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Language, ScreenId, ShopProduct } from '../types';
 import { smsHref, waHref } from '../utils/smsReminders';
+import { fileToAvatarDataUrl } from '../utils/photo';
+import { InfoTip } from '../components/InfoTip';
 
 export interface NewProductInput {
   name: string;
@@ -12,6 +14,7 @@ export interface NewProductInput {
   salePrice: number;
   stockQty: number;
   unit: string;
+  imageUrl?: string;
 }
 
 export interface SaleInput {
@@ -27,9 +30,10 @@ interface ShopViewProps {
   boxCashBalance: number;
   onNavigate: (screen: ScreenId) => void;
   onAddProduct: (input: NewProductInput) => string | null;
-  onSell: (sale: SaleInput) => void;
-  onAddExpense: (label: string, amount: number) => void;
+  onSell: (sale: SaleInput) => string | null;
+  onAddExpense: (label: string, amount: number) => string | null;
   language?: Language;
+  canManageGroupStock?: boolean;
   currentUserName?: string;
   currentUserPhone?: string;
 }
@@ -46,18 +50,20 @@ export const ShopView: React.FC<ShopViewProps> = ({
   onSell,
   onAddExpense,
   language = 'EN',
+  canManageGroupStock = true,
   currentUserName = '',
   currentUserPhone = '',
 }) => {
-  const [tab, setTab] = useState<'group' | 'member'>('group');
+  const [tab, setTab] = useState<'group' | 'member'>(canManageGroupStock ? 'group' : 'member');
   const [showAdd, setShowAdd] = useState(false);
   const [sellId, setSellId] = useState<string | null>(null);
   const [addStep, setAddStep] = useState(0);
-  const [form, setForm] = useState({ name: '', sellerName: '', sellerPhone: '', kind: 'product' as 'product' | 'service', costPrice: '', salePrice: '', stockQty: '', unit: 'pcs' });
+  const [form, setForm] = useState({ name: '', sellerName: '', sellerPhone: '', kind: 'product' as 'product' | 'service', costPrice: '', salePrice: '', stockQty: '', unit: 'pcs', imageUrl: '' });
   const [sellForm, setSellForm] = useState({ qty: '1', unitPrice: '', buyer: '', method: 'cash' as 'cash' | 'momo' });
   const [expLabel, setExpLabel] = useState('');
   const [expAmount, setExpAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const imageRef = useRef<HTMLInputElement>(null);
 
   const str = (en: string, lu: string) =>
     language === 'LU' ? lu  : en;
@@ -76,6 +82,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
       salePrice: Math.floor(Number(form.salePrice) || 0),
       stockQty: Math.floor(Number(form.stockQty) || 0),
       unit: form.unit.trim() || (tab === 'member' && form.kind === 'service' ? 'session' : 'pcs'),
+      imageUrl: form.imageUrl || undefined,
     });
     if (err) {
       setError(err);
@@ -83,7 +90,18 @@ export const ShopView: React.FC<ShopViewProps> = ({
     }
     setError(null);
     setShowAdd(false);
-    setForm({ name: '', sellerName: '', sellerPhone: '', kind: 'product', costPrice: '', salePrice: '', stockQty: '', unit: 'pcs' });
+    setForm({ name: '', sellerName: '', sellerPhone: '', kind: 'product', costPrice: '', salePrice: '', stockQty: '', unit: 'pcs', imageUrl: '' });
+  };
+
+  const pickImage = async (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    try {
+      const imageUrl = await fileToAvatarDataUrl(file);
+      setForm((current) => ({ ...current, imageUrl }));
+    } catch (e: any) {
+      setError(e.message || 'Photo failed.');
+    }
   };
 
   const openAdd = () => {
@@ -104,13 +122,18 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
   const submitSell = () => {
     if (!sellProduct) return;
-    onSell({
+    const err = onSell({
       productId: sellProduct.id,
       qty: Math.floor(Number(sellForm.qty) || 0),
       unitPrice: Math.floor(Number(sellForm.unitPrice) || sellProduct.salePrice),
       buyer: sellForm.buyer.trim() || 'Walk-in',
       method: sellForm.method,
     });
+    if (err) {
+      setError(err);
+      return;
+    }
+    setError(null);
     setSellId(null);
     setSellForm({ qty: '1', unitPrice: '', buyer: '', method: 'cash' });
   };
@@ -127,7 +150,7 @@ export const ShopView: React.FC<ShopViewProps> = ({
             <span className="material-symbols-outlined text-lg">arrow_back</span>
           </button>
           <div>
-            <h1 className="font-bold text-[#00261b]">{str('Group Shop', 'Kaduuka k\'Ekibiina')}</h1>
+             <h1 className="font-bold text-[#00261b] flex items-center gap-1">{str('Group Shop', 'Kaduuka k\'ekibiina')} <InfoTip language={language} label={str('About the shop', 'Kikwata kaduuka')}>{str('Products with photos are easier to recognise. Members contact sellers directly; officers manage group stock.', 'Ebizibu ebirina ebifaananyi bya kuyimiriza. Abakiise bateeku mu bazoola; abakozesa bakola ebyamaguzi by’ekibiina.')}</InfoTip></h1>
             <p className="text-xs text-[#4B5563]">{str('Stock, sales & profit back to the loan fund', "Magoba gadde mu ssente z'ebyewolo")}</p>
           </div>
         </div>
@@ -141,9 +164,11 @@ export const ShopView: React.FC<ShopViewProps> = ({
       </div>
 
       <div className="flex bg-white p-1 rounded-xl border border-[#CBD5E1] text-xs font-bold">
-        <button type="button" onClick={() => switchTab('group')} className={`flex-1 py-2 rounded-lg transition ${tab === 'group' ? 'bg-[#0b3d2e] text-white' : 'text-[#4B5563]'}`}>
-          {str('Group stock', "Ebyamaguzi by'ekibiina")}
-        </button>
+        {canManageGroupStock && (
+          <button type="button" onClick={() => switchTab('group')} className={`flex-1 py-2 rounded-lg transition ${tab === 'group' ? 'bg-[#0b3d2e] text-white' : 'text-[#4B5563]'}`}>
+            {str('Group stock', "Ebyamaguzi by'ekibiina")}
+          </button>
+        )}
         <button type="button" onClick={() => switchTab('member')} className={`flex-1 py-2 rounded-lg transition ${tab === 'member' ? 'bg-[#0b3d2e] text-white' : 'text-[#4B5563]'}`}>
           {str('Member businesses', "Bizinesi z'abakiise")}
         </button>
@@ -191,6 +216,23 @@ export const ShopView: React.FC<ShopViewProps> = ({
                 placeholder={tab === 'member' && form.kind === 'service' ? str('e.g. Tailoring, Bodaboda', 'e.g. kutunga, bodaboda') : str('e.g. Maize flour', 'e.g. kasava')}
                 className="w-full min-h-[52px] border-2 border-[#00261b] rounded-lg px-3 text-base"
               />
+              <div className="flex items-center gap-3 rounded-lg border border-dashed border-[#CBD5E1] p-2.5">
+                {form.imageUrl ? (
+                  <img src={form.imageUrl} alt="Product preview" className="w-14 h-14 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-14 h-14 rounded-lg bg-[#E8F5EE] text-[#006d30] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl">add_a_photo</span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => imageRef.current?.click()}
+                  className="min-h-[44px] px-3 rounded-lg bg-[#F6F7F6] border border-[#CBD5E1] text-[#00261b] text-xs font-bold"
+                >
+                  {form.imageUrl ? str('Change photo', 'Sensa ekifaananyi') : str('Add photo', 'Yongera ekifaananyi')}
+                </button>
+                <input ref={imageRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => pickImage(e.target.files?.[0])} />
+              </div>
               <button
                 type="button"
                 disabled={!form.name.trim()}
@@ -367,7 +409,15 @@ export const ShopView: React.FC<ShopViewProps> = ({
 
       {visible.map((p) => (
         <div key={p.id} className="bg-white rounded-xl border border-[#E5E7EB] p-3.5 space-y-2">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            {p.imageUrl ? (
+              <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-lg object-cover shrink-0" />
+            ) : (
+              <div className="w-16 h-16 rounded-lg bg-[#E8F5EE] text-[#006d30] flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-2xl">storefront</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-3 flex-1 min-w-0">
           <div className="min-w-0">
             <p className="text-xs font-bold text-[#00261b] truncate">
               {p.name}
@@ -383,16 +433,19 @@ export const ShopView: React.FC<ShopViewProps> = ({
               {p.kind === 'service' ? str('Slots:', 'Ebifo:') : str('Stock:', 'Zisigadde:')} {p.stockQty} · {str('Sold:', 'Zitundiddwa:')} {p.soldQty}
             </p>
           </div>
-          <button
-            type="button"
-            disabled={p.stockQty <= 0}
-            onClick={() => { setSellId(p.id); setSellForm({ qty: '1', unitPrice: String(p.salePrice), buyer: '', method: 'cash' }); }}
-            className="shrink-0 px-3.5 py-2.5 bg-[#006d30] text-white rounded-lg text-xs font-bold disabled:opacity-40 active:scale-95"
-          >
-            {str('Sell', 'Tunda')}
-          </button>
+          {canManageGroupStock && (
+            <button
+              type="button"
+              disabled={p.stockQty <= 0}
+              onClick={() => { setSellId(p.id); setSellForm({ qty: '1', unitPrice: String(p.salePrice), buyer: '', method: 'cash' }); }}
+              className="shrink-0 px-3.5 py-2.5 bg-[#006d30] text-white rounded-lg text-xs font-bold disabled:opacity-40 active:scale-95"
+            >
+              {str('Sell', 'Tunda')}
+            </button>
+          )}
           </div>
-          {tab === 'member' && p.sellerName !== currentUserName && p.stockQty > 0 && (
+        </div>
+          {tab === 'member' && p.sellerName !== currentUserName && !!p.sellerPhone && p.stockQty > 0 && (
             <div className="grid grid-cols-2 gap-1.5">
               <a
                 href={smsHref(p.sellerPhone || '', `${str('Hi', 'Gyoli')} ${p.sellerName || ''}, ${str(`I'm interested in ${p.name} at UGX ${p.salePrice.toLocaleString()}. Still available?`, `Nkwagala ${p.name} ku UGX ${p.salePrice.toLocaleString()}. Ekyaliwo?`)}`)}
@@ -441,21 +494,30 @@ export const ShopView: React.FC<ShopViewProps> = ({
         </section>
       )}
 
-      {tab === 'group' && (
+      {canManageGroupStock && tab === 'group' && (
         <section className="bg-white rounded-xl border border-[#E5E7EB] p-4 space-y-2">
           <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{str('Shop expense', 'Ssente ezisaasaanye')}</h3>
           <div className="flex gap-2">
             <input value={expLabel} onChange={(e) => setExpLabel(e.target.value)} placeholder={str('What for? (e.g. transport)', 'Kiki? (e.g. entambula)')} className="flex-[2] min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
             <input value={expAmount} onChange={(e) => setExpAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              const amt = Math.floor(Number(expAmount) || 0);
-              if (!expLabel.trim() || amt <= 0) return;
-              onAddExpense(expLabel.trim(), amt);
-              setExpLabel('');
-              setExpAmount('');
+           {error && <p className="text-xs font-bold text-[#B91C1C]">{error}</p>}
+           <button
+             type="button"
+             onClick={() => {
+               const amt = Math.floor(Number(expAmount) || 0);
+               if (!expLabel.trim() || amt <= 0) {
+                 setError('Enter what the expense was for and its amount.');
+                 return;
+               }
+               const expenseError = onAddExpense(expLabel.trim(), amt);
+               if (expenseError) {
+                 setError(expenseError);
+                 return;
+               }
+               setError(null);
+               setExpLabel('');
+               setExpAmount('');
             }}
             className="w-full min-h-[44px] bg-white border border-[#CBD5E1] rounded-lg text-xs font-bold text-[#00261b] active:scale-[0.99]"
           >

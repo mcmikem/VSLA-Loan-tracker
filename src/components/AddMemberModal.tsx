@@ -17,6 +17,7 @@ export interface NewMemberInput {
   business: string;
   /** Compressed face photo data URL (optional). */
   photoUrl: string;
+  pin: string;
 }
 
 interface AddMemberModalProps {
@@ -32,7 +33,7 @@ interface AddMemberModalProps {
 export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose, onRegister, language = 'EN', nextMemNumber, nextMemberNo }) => {
   const [form, setForm] = useState<NewMemberInput>({
     firstName: '', lastName: '', phone: '', provider: 'MTN',
-    nationalId: '', village: '', kinName: '', kinPhone: '', guarantorName: '', guarantorPhone: '', business: '', photoUrl: '',
+    nationalId: '', village: '', kinName: '', kinPhone: '', guarantorName: '', guarantorPhone: '', business: '', photoUrl: '', pin: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -46,13 +47,17 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
   const inputCls = 'w-full min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm';
 
   const submit = () => {
+    if (!/^\d{4}$/.test(form.pin)) {
+      setError('Enter the member\'s 4-digit PIN.');
+      return;
+    }
     const err = onRegister(form);
     if (err) {
       setError(err);
       return;
     }
     setError(null);
-    setForm({ firstName: '', lastName: '', phone: '', provider: 'MTN', nationalId: '', village: '', kinName: '', kinPhone: '', guarantorName: '', guarantorPhone: '', business: '', photoUrl: '' });
+    setForm({ firstName: '', lastName: '', phone: '', provider: 'MTN', nationalId: '', village: '', kinName: '', kinPhone: '', guarantorName: '', guarantorPhone: '', business: '', photoUrl: '', pin: '' });
     onClose();
   };
 
@@ -110,10 +115,14 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose,
             onChange={(e) => pickPhoto(e.target.files?.[0])}
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder={str('First name', 'Erinya')} className={inputCls} />
-          <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder={str('Last name', 'Erinya ly\'ekika')} className={inputCls} />
-        </div>
+         <div className="grid grid-cols-2 gap-2">
+           <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder={str('First name', 'Erinya')} className={inputCls} />
+           <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder={str('Last name', 'Erinya ly\'ekika')} className={inputCls} />
+         </div>
+         <div>
+           <label className="text-[11px] font-bold text-[#4B5563] uppercase">{str('Member PIN (4 digits)', 'PIN y\'omukiise (4 digits)')}</label>
+           <input type="password" inputMode="numeric" maxLength={4} value={form.pin} onChange={(e) => set('pin', e.target.value.replace(/\D/g, '').slice(0, 4))} className={`${inputCls} font-mono tracking-[0.35em]`} />
+         </div>
         <div className="grid grid-cols-2 gap-2">
           <input value={form.phone} onChange={(e) => set('phone', e.target.value)} inputMode="tel" placeholder={str('07XX XXX XXX (optional)', '07XX XXX XXX (si kyetaagisa)')} className={inputCls} />
           <select value={form.provider} onChange={(e) => set('provider', e.target.value as 'MTN' | 'Airtel')} className={`${inputCls} bg-white`}>

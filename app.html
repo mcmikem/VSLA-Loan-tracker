@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>VSLA UG — Village Savings and Loaning Application</title>
+    <meta name="description" content="VSLA UG (Village Savings and Loaning Application) is the offline-first digital strongbox for Ugandan savings groups: digital passbooks, 3-key box reconciliation, loans, welfare fund, receipts and reports in English and Luganda." />
+    <meta name="keywords" content="VSLA UG, VSLA, village savings, savings group Uganda, SACCO, digital passbook, microfinance, Luganda" />
+    <link rel="canonical" href="https://vsla-ug.vercel.app/app" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#00261b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Bakwata VSLA" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="preload" href="/fonts/material-symbols.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-[#F6F7F6] text-[#141b2b] antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Offline-first: the service worker caches this shell (never /api/*).
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {
+            /* offline still works via localStorage */
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

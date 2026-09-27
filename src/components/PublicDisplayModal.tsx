@@ -1,11 +1,12 @@
 import React from 'react';
-import { VSLAState } from '../types';
+import { Language, VSLAState } from '../types';
 import { buildMeetingSms, smsLink, waLink } from '../utils/summary';
 import { GroupLogo } from './GroupLogo';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  language?: Language;
   state: VSLAState;
 }
 
@@ -14,51 +15,58 @@ interface Props {
  * No personal data. For shouting-free verification under the tree.
  * Plus one-tap SMS/WhatsApp summary for feature-phone members.
  */
-export const PublicDisplayModal: React.FC<Props> = ({ isOpen, onClose, state }) => {
+export const PublicDisplayModal: React.FC<Props> = ({ isOpen, onClose, language = 'EN', state }) => {
+  const str = (en: string, lu: string) => language === 'LU' ? lu : en;
   if (!isOpen) return null;
-  const sms = buildMeetingSms(state);
+  const sms = language === 'LU'
+    ? (
+      `${state.groupName || 'VSLA'} Olukuŋŋaana #${state.recentMeetingsCount}: Ssente mu sanduuko UGX ${state.boxCashBalance.toLocaleString()}, ` +
+      `Ebyewolo UGX ${state.loanFundBalance.toLocaleString()}, Obuyambi UGX ${state.welfareFundBalance.toLocaleString()}. ` +
+      `${state.members.length} abakiise. Sitamu y'empaapula = kikomo.`
+    ).slice(0, 300)
+    : buildMeetingSms(state);
   return (
     <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="bg-white text-black rounded-2xl max-w-md w-full p-6 space-y-4 print-area"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-center text-xs font-bold tracking-widest">PUBLIC — SHOW TO ALL MEMBERS</p>
+        <p className="text-center text-xs font-bold tracking-widest">{str('PUBLIC — SHOW TO ALL MEMBERS', 'BANNER — EREBWALO KUMU KIBIINA')}</p>
         <div className="flex justify-center">
           <GroupLogo logoUrl={state.groupProfile?.logoUrl} alt={state.groupName} className="w-12 h-12 rounded-xl" />
         </div>
-        <h2 className="text-center text-xl font-bold">{state.groupName} · Mtg #{state.recentMeetingsCount}</h2>
+        <h2 className="text-center text-xl font-bold">{state.groupName} · {str('Mtg', 'Olukuŋŋaana')} #{state.recentMeetingsCount}</h2>
         <div className="space-y-2 text-center">
           <div className="border-2 border-black rounded-xl p-3">
-            <p className="text-sm font-bold">BOX CASH</p>
+            <p className="text-sm font-bold">{str('BOX CASH', 'SSENTE MU SANDUUKO')}</p>
             <p className="text-4xl font-mono font-bold">UGX {state.boxCashBalance.toLocaleString()}</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="border border-black rounded-xl p-2">
-              <p className="text-xs font-bold">LOAN FUND</p>
+              <p className="text-xs font-bold">{str('LOAN FUND', 'EBYEWOLO')}</p>
               <p className="text-lg font-mono font-bold">UGX {state.loanFundBalance.toLocaleString()}</p>
             </div>
             <div className="border border-black rounded-xl p-2">
-              <p className="text-xs font-bold">WELFARE</p>
+              <p className="text-xs font-bold">{str('WELFARE', 'OBUYAMBI')}</p>
               <p className="text-lg font-mono font-bold">UGX {state.welfareFundBalance.toLocaleString()}</p>
             </div>
           </div>
-          <p className="text-sm">{state.members.length} members · Paper stamp = proof</p>
+          <p className="text-sm">{state.members.length} {str('members', 'abakiise')} · {str('Paper stamp = proof', 'Sitamu y\'empaapula = kikomo')}</p>
         </div>
         <p className="text-xs font-mono bg-gray-100 p-2 rounded">{sms}</p>
         <div className="flex gap-2 no-print">
           <a href={smsLink(sms)} className="flex-1 text-center py-2.5 bg-black text-white rounded-lg text-sm font-bold">
-            Send SMS
+            {str('Send SMS', 'Ohereza SMS')}
           </a>
           <a href={waLink(sms)} target="_blank" rel="noreferrer" className="flex-1 text-center py-2.5 bg-[#006d30] text-white rounded-lg text-sm font-bold">
             WhatsApp
           </a>
           <button type="button" onClick={() => window.print()} className="flex-1 py-2.5 border-2 border-black rounded-lg text-sm font-bold">
-            Print
+            {str('Print', 'Chapisha')}
           </button>
         </div>
-        <button type="button" onClick={onClose} className="w-full py-2 text-sm font-bold underline no-print">
-          Close
+        <button type="button" aria-label={str('Close public display', 'Ggalawo okulaba ku b-public display')} onClick={onClose} className="w-full py-2 text-sm font-bold underline no-print">
+          {str('Close', 'Ggalawo')}
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   CreateGroupPayload,
   GroupSummary,
@@ -24,6 +24,9 @@ interface WelcomeViewProps {
   /** Interrupted setup recovery: a group already saved on this phone. */
   localGroup?: { groupId: string; groupName: string; inviteCode: string; pendingSync: boolean } | null;
   onResumeLocalGroup?: () => Promise<{ ok: boolean; error?: string }>;
+  /** Which door the visitor picked on the landing page. */
+  autoOpenTab?: 'register' | 'join';
+  autoFocusSignIn?: boolean;
 }
 
 /**
@@ -43,6 +46,8 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
   logoUrl,
   localGroup = null,
   onResumeLocalGroup,
+  autoOpenTab,
+  autoFocusSignIn,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<'register' | 'join' | 'directory'>('join');
@@ -89,6 +94,15 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
     setModalTab(tab);
     setModalOpen(true);
   };
+
+  // The visitor picked a door on the landing page (?intent=login|register), so
+  // start them there instead of making them choose again.
+  const signInRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (autoOpenTab) openModal(autoOpenTab);
+    if (autoFocusSignIn) signInRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const resolveSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,9 +256,10 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
           <h2 className="font-bold text-sm text-primary">{lu ? 'Yingira (olina akawunti)' : 'Sign in (you have a login)'}</h2>
           <form onSubmit={resolveSignIn} className="flex gap-2">
             <input
+              ref={signInRef}
               value={signCode}
               onChange={(e) => setSignCode(e.target.value.toUpperCase())}
-              placeholder={lu ? 'Koodi y’ekibiina (e.g. BAK-4290)' : 'Group code (e.g. BAK-4290)'}
+              placeholder={lu ? 'Koodi y’ekibiina (okulagala: BAK-4290)' : 'Group code (e.g. BAK-4290)'}
               className="flex-1 min-h-[48px] border border-border-strong rounded-lg px-3 text-sm font-mono font-bold uppercase bg-white"
             />
             <button
@@ -323,6 +338,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
         onJoinGroup={onJoinGroup}
         defaultTab={modalTab}
         hideDirectory
+        language={language}
       />
     </div>
   );

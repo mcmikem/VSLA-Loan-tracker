@@ -1,4 +1,5 @@
 import type { VSLAState } from '../types';
+import { groupSharePrice } from './policy';
 
 export interface CollectionRow {
   memberId: string;
@@ -29,8 +30,8 @@ export interface CollectionSheet {
  * Explicitly no principal/interest split — VSLA loans are flat.
  */
 export function buildCollectionSheet(state: VSLAState): CollectionSheet {
-  const sharePrice = state.groupProfile?.sharePrice || 10000;
-  const welfareDue = state.groupProfile?.welfareMonthly || 5000;
+  const sharePrice = groupSharePrice(state.groupProfile);
+  const welfareDue = state.groupProfile?.welfareMonthly ?? 5000;
   const members = state.members || [];
   const fines = state.fines || [];
 

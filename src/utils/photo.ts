@@ -66,6 +66,16 @@ export function stripPhotosForSnapshot(state: VSLAState): VSLAState {
       const { photoUrl: _omit, ...rest } = m;
       return rest;
     }),
+    products: (state.products || []).map((p) => {
+      if (!p.imageUrl) return p;
+      const { imageUrl: _omit, ...rest } = p;
+      return rest;
+    }),
+     approvals: (state.approvals || []).map((a) => {
+       if (!a.confirmationCode && !a.confirmationCodeHash && !a.confirmationCodeExpiresAt) return a;
+       const { confirmationCode: _code, confirmationCodeHash: _hash, confirmationCodeExpiresAt: _expires, ...rest } = a;
+       return rest;
+     }),
   };
 }
 
@@ -81,11 +91,17 @@ export function maskContact(value?: string): string {
   const livePhotos = new Map(
     (live.members || []).filter((m) => m.photoUrl).map((m) => [m.id, m.photoUrl as string])
   );
-  if (livePhotos.size === 0) return restored;
+  const liveProductImages = new Map(
+    (live.products || []).filter((p) => p.imageUrl).map((p) => [p.id, p.imageUrl as string])
+  );
+  if (livePhotos.size === 0 && liveProductImages.size === 0) return restored;
   return {
     ...restored,
     members: (restored.members || []).map((m) =>
       !m.photoUrl && livePhotos.has(m.id) ? { ...m, photoUrl: livePhotos.get(m.id) } : m
+    ),
+    products: (restored.products || []).map((p) =>
+      !p.imageUrl && liveProductImages.has(p.id) ? { ...p, imageUrl: liveProductImages.get(p.id) } : p
     ),
   };
 }

@@ -1,46 +1,51 @@
 import React, { useState } from 'react';
-import { Language, ScreenId } from '../types';
+import { Language, Member, ScreenId } from '../types';
 import { getTranslations } from '../i18n/translations';
+import { MeetingReceiptsCard } from '../components/MeetingReceiptsCard';
 
 interface MeetingCloseBoxViewProps {
-  onOpenDiscrepancyModal: () => void;
+  onOpenDiscrepancyModal: (details: { expectedTotal: number; countedTotal: number; meetingNumber: number; difference: number }) => void;
   onNavigate: (screen: ScreenId) => void;
   onCompleteMeeting: (countedCash: number, minutes: string) => void;
   expectedTotal?: number;
   meetingNumber?: number;
   language?: Language;
+  /** Members with phones, so each one can get their own SMS receipt. */
+  members?: Member[];
+  groupName?: string;
+  groupId?: string;
 }
 
 export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
   onOpenDiscrepancyModal,
   onNavigate,
   onCompleteMeeting,
-  expectedTotal = 1420000,
-  meetingNumber = 28,
+  expectedTotal = 0,
+  meetingNumber = 0,
   language = 'EN',
+  members = [],
+  groupName = '',
+  groupId = '',
 }) => {
   const t = getTranslations(language);
+  const str = (en: string, lu: string) => (language === 'LU' ? lu : en);
 
   // Denominations state
-  const [denom50k, setDenom50k] = useState(18);
-  const [denom20k, setDenom20k] = useState(20);
-  const [denom10k, setDenom10k] = useState(10);
+  const [denom50k, setDenom50k] = useState(0);
+  const [denom20k, setDenom20k] = useState(0);
+  const [denom10k, setDenom10k] = useState(0);
   const [denom5k, setDenom5k] = useState(0);
   const [denom2k, setDenom2k] = useState(0);
   const [denom1k, setDenom1k] = useState(0);
-  const [coins, setCoins] = useState(20000);
+  const [coins, setCoins] = useState(0);
 
-  const [step1Checked, setStep1Checked] = useState(true);
-  const [step2Checked, setStep2Checked] = useState(true);
-  const [keyholder1Signed, setKeyholder1Signed] = useState(true);
-  const [keyholder2Signed, setKeyholder2Signed] = useState(true);
-  const [keyholder3Signed, setKeyholder3Signed] = useState(true);
+  const [step1Checked, setStep1Checked] = useState(false);
+  const [step2Checked, setStep2Checked] = useState(false);
+  const [keyholder1Signed, setKeyholder1Signed] = useState(false);
+  const [keyholder2Signed, setKeyholder2Signed] = useState(false);
+  const [keyholder3Signed, setKeyholder3Signed] = useState(false);
 
-  const [minutesText, setMinutesText] = useState(
-    language === 'LU'
-      ? `Olukuŋŋaana #${meetingNumber} lwaggaddwa bulungi ku ssaawa 12:45 ez'emisana. Abakiise bonna babaddewo. Olukuŋŋaana oluddako ku Lwokutaano mu Kalerwe Community Hall.`
-       : `Meeting #${meetingNumber} closed peacefully at 12:45 PM. All members present. Next meeting on Friday at Kalerwe Community Hall.`
-  );
+  const [minutesText, setMinutesText] = useState('');
   const [isLocked, setIsLocked] = useState(false);
 
   const countedTotal =
@@ -71,6 +76,14 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
       );
       return;
     }
+    if (difference !== 0) {
+      alert(
+        language === 'LU'
+          ? 'Enjawulo eteri. Balanza essente teziwera ku bbuli lukiisa kumpi.'
+           : 'The cash count does not match. Resolve the difference or recount before locking.'
+      );
+      return;
+    }
     setIsLocked(true);
     onCompleteMeeting(countedTotal, minutesText);
   };
@@ -87,15 +100,13 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                 {t.meetingClose.meetingLabel(meetingNumber)}
               </h1>
               <p className="font-label-sm text-label-sm text-text-muted text-xs">
-                {language === 'LU'
-                  ? 'Omutendera 8 ku 8 — Bala ensimbi era ggalawo akasanduuko'
-                   : 'Step 8 of 8 — Physical Reconciliation & Padlocking'}
+                {str('Step 8 of 8 — Physical Reconciliation & Padlocking', 'Omutendera 8 ku 8 — bala ensimbi era ggalawo akasanduuko')}
               </p>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-status-ok-bg text-status-ok-tx rounded-full border border-[#bbf7d0]">
               <span className="material-symbols-outlined text-[16px]">check_circle</span>
               <span className="font-label-sm text-label-sm font-semibold tracking-tight text-xs">
-                {language === 'LU' ? 'Okwekebejja Okuliwo'  : 'Live Audit'}
+                {str('Live Audit', 'Okukebera Kitali')}
               </span>
             </div>
           </div>
@@ -106,7 +117,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
               <div key={step} className="flex items-center gap-1 shrink-0">
                 <div
                   className="w-6 h-6 rounded-full bg-status-ok-bg text-status-ok-tx flex items-center justify-center border border-secondary text-xs"
-                  title={`Step ${step} Completed`}
+                  title={str(`Step ${step} completed`, `Omutendera ${step} gumakasedde`)}
                 >
                   <span className="material-symbols-outlined text-[14px]">check</span>
                 </div>
@@ -118,7 +129,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
             <div className="flex items-center shrink-0">
               <div
                 className="w-7 h-7 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-[13px] ring-2 ring-primary ring-offset-1"
-                title="Final Reconciliation"
+                title={str('Final Reconciliation', 'Okukebera Kiggalo')}
               >
                 8
               </div>
@@ -132,7 +143,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
               type="button"
             >
               <span className="material-symbols-outlined text-[16px]">volume_up</span>
-              {language === 'LU' ? 'Soma Ebibaliddwa mu Ddoboozi'  : 'Broadcast Readout'}
+              {str('Broadcast Readout', 'Soma ebibaliddwa mu ddoboozi')}
             </button>
             <button
               onClick={() => onNavigate('backup')}
@@ -151,10 +162,10 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
         <section className="bg-primary-container text-white rounded-xl p-4 shadow-[0px_4px_12px_rgba(11,61,46,0.18)] space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase font-bold text-primary-fixed tracking-wider">
-              {language === 'LU' ? 'Ssente Ezibaliddwa n\'Ezisuubirwa'  : 'Physical Cash vs Expected Audit'}
+              {str('Physical Cash vs Expected Audit', 'Ssente ezibaliddwa n’ezisuubirwa')}
             </span>
             <span className="text-[11px] font-mono bg-white/20 px-2 py-0.5 rounded text-white">
-              Meeting #{meetingNumber}
+              {str(`Meeting #${meetingNumber}`, `Olukuŋŋaana #${meetingNumber}`)}
             </span>
           </div>
 
@@ -191,11 +202,11 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                 {difference > 0 ? t.meetingClose.surplus(difference) : t.meetingClose.shortage(Math.abs(difference))}
               </span>
               <button
-                onClick={onOpenDiscrepancyModal}
+                 onClick={() => onOpenDiscrepancyModal({ expectedTotal, countedTotal, meetingNumber, difference })}
                 className="underline font-bold text-xs"
                 type="button"
               >
-                {language === 'LU' ? 'Tereeza'  : 'Resolve'}
+                {str('Resolve', 'Tereeza')}
               </button>
             </div>
           )}
@@ -207,14 +218,14 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
             <h3 className="text-xs font-bold text-primary uppercase tracking-wider">
               {t.meetingClose.denominationTable}
             </h3>
-            <span className="text-[11px] text-text-muted font-mono">UGX Cash</span>
+            <span className="text-[11px] text-text-muted font-mono">{str('UGX cash', 'Ssente UGX')}</span>
           </div>
 
           <div className="space-y-2.5">
             {/* 50k note */}
             <div className="flex items-center justify-between p-2.5 bg-canvas-bg rounded-lg border border-border-line">
               <div>
-                <span className="font-mono font-bold text-xs text-primary block">UGX 50,000 Note</span>
+                <span className="font-mono font-bold text-xs text-primary block">{str('UGX 50,000 banknote', 'Ekipapula kya UGX 50,000')}</span>
                 <span className="text-[10px] text-text-muted font-mono">
                   = UGX {(denom50k * 50000).toLocaleString('en-US')}
                 </span>
@@ -223,6 +234,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setDenom50k((v) => Math.max(0, v - 1))}
+                  aria-label={str('Remove one UGX 50,000 banknote', 'Ggyayo ekipapula kimwe kya UGX 50,000')}
                   className="w-7 h-7 rounded bg-white border border-border-strong text-primary font-bold hover:bg-surface-container"
                 >
                   -
@@ -231,11 +243,13 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   type="number"
                   value={denom50k}
                   onChange={(e) => setDenom50k(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                   aria-label={str('Number of UGX 50,000 banknotes', "Ennamba y’empapula ez'obuwendo bwa UGX 50,000")}
                   className="w-12 text-center font-mono font-bold text-xs bg-white border rounded py-1"
                 />
                 <button
                   type="button"
                   onClick={() => setDenom50k((v) => v + 1)}
+                  aria-label={str('Add one UGX 50,000 banknote', 'Yongera ekipapula kimwe kya UGX 50,000')}
                   className="w-7 h-7 rounded bg-white border border-border-strong text-primary font-bold hover:bg-surface-container"
                 >
                   +
@@ -246,7 +260,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
             {/* 20k note */}
             <div className="flex items-center justify-between p-2.5 bg-canvas-bg rounded-lg border border-border-line">
               <div>
-                <span className="font-mono font-bold text-xs text-primary block">UGX 20,000 Note</span>
+                <span className="font-mono font-bold text-xs text-primary block">{str('UGX 20,000 banknote', 'Ekipapula kya UGX 20,000')}</span>
                 <span className="text-[10px] text-text-muted font-mono">
                   = UGX {(denom20k * 20000).toLocaleString('en-US')}
                 </span>
@@ -255,6 +269,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setDenom20k((v) => Math.max(0, v - 1))}
+                  aria-label={str('Remove one UGX 20,000 banknote', 'Ggyayo ekipapula kimwe kya UGX 20,000')}
                   className="w-7 h-7 rounded bg-white border border-border-strong text-primary font-bold hover:bg-surface-container"
                 >
                   -
@@ -263,11 +278,13 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   type="number"
                   value={denom20k}
                   onChange={(e) => setDenom20k(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                   aria-label={str('Number of UGX 20,000 banknotes', "Ennamba y’empapula ez’obuwendo bwa UGX 20,000")}
                   className="w-12 text-center font-mono font-bold text-xs bg-white border rounded py-1"
                 />
                 <button
                   type="button"
                   onClick={() => setDenom20k((v) => v + 1)}
+                  aria-label={str('Add one UGX 20,000 banknote', 'Yongera ekipapula kimwe kya UGX 20,000')}
                   className="w-7 h-7 rounded bg-white border border-border-strong text-primary font-bold hover:bg-surface-container"
                 >
                   +
@@ -278,7 +295,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
             {/* 10k note */}
             <div className="flex items-center justify-between p-2.5 bg-canvas-bg rounded-lg border border-border-line">
               <div>
-                <span className="font-mono font-bold text-xs text-primary block">UGX 10,000 Note</span>
+                <span className="font-mono font-bold text-xs text-primary block">{str('UGX 10,000 banknote', 'Ekipapula kya UGX 10,000')}</span>
                 <span className="text-[10px] text-text-muted font-mono">
                   = UGX {(denom10k * 10000).toLocaleString('en-US')}
                 </span>
@@ -287,6 +304,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setDenom10k((v) => Math.max(0, v - 1))}
+                  aria-label={str('Remove one UGX 10,000 banknote', 'Ggyayo ekipapula kimwe kya UGX 10,000')}
                   className="w-7 h-7 rounded bg-white border border-border-strong text-primary font-bold hover:bg-surface-container"
                 >
                   -
@@ -295,11 +313,13 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   type="number"
                   value={denom10k}
                   onChange={(e) => setDenom10k(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                   aria-label={str('Number of UGX 10,000 banknotes', "Ennamba y’empapula ez’obuwendo bwa UGX 10,000")}
                   className="w-12 text-center font-mono font-bold text-xs bg-white border rounded py-1"
                 />
                 <button
                   type="button"
                   onClick={() => setDenom10k((v) => v + 1)}
+                  aria-label={str('Add one UGX 10,000 banknote', 'Yongera ekipapula kimwe kya UGX 10,000')}
                   className="w-7 h-7 rounded bg-white border border-border-strong text-primary font-bold hover:bg-surface-container"
                 >
                   +
@@ -320,6 +340,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   step="1000"
                   value={coins}
                   onChange={(e) => setCoins(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  aria-label={str('Total value of coins', 'Omugatte gw’ebisente')}
                   className="w-24 text-right font-mono font-bold text-xs bg-white border rounded py-1 px-2"
                 />
               </div>
@@ -335,13 +356,14 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
               {t.meetingClose.custodianSignatures}
             </h3>
             <span className="text-[10px] bg-status-ok-bg text-status-ok-tx px-2 py-0.5 rounded font-bold">
-              VSLA Standard
+              {str('VSLA Standard', 'Enkizibu ya VSLA')}
             </span>
           </div>
           <p className="text-xs text-text-muted">
-            {language === 'LU'
-              ? 'Akasanduuko tekasobola kuggalwa nga tewali abakwata ekisumuluzo bonna 3.'
-               : 'The box cannot be locked without the physical key turn of all 3 elected keyholders.'}
+            {str(
+              'The box cannot be locked without the physical key turn of all 3 elected keyholders.',
+              'Akasanduuko tekasobola kuggalwa nga abakwasi b’ebisumuluzo batoro abiri tebawakozi okuyoola ebisumuluzo byabwe.'
+            )}
           </p>
 
           <div className="space-y-2">
@@ -354,7 +376,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   className="w-4 h-4 rounded text-secondary"
                 />
                 <div>
-                  <span className="font-bold text-xs text-primary block">Sarah Nabukalu</span>
+                  <span className="font-bold text-xs text-primary block">Keyholder 1</span>
                   <span className="text-[10px] text-text-muted">{t.meetingClose.custodian1}</span>
                 </div>
               </div>
@@ -370,7 +392,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   className="w-4 h-4 rounded text-secondary"
                 />
                 <div>
-                  <span className="font-bold text-xs text-primary block">Peter Ssemwogerere</span>
+                  <span className="font-bold text-xs text-primary block">Keyholder 2</span>
                   <span className="text-[10px] text-text-muted">{t.meetingClose.custodian2}</span>
                 </div>
               </div>
@@ -386,7 +408,7 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   className="w-4 h-4 rounded text-secondary"
                 />
                 <div>
-                  <span className="font-bold text-xs text-primary block">David Alupo</span>
+                  <span className="font-bold text-xs text-primary block">Keyholder 3</span>
                   <span className="text-[10px] text-text-muted">{t.meetingClose.custodian3}</span>
                 </div>
               </div>
@@ -470,6 +492,14 @@ export const MeetingCloseBoxView: React.FC<MeetingCloseBoxViewProps> = ({
                   ? `Ensimbi ezibaliddwa: UGX ${countedTotal.toLocaleString('en-US')}.`
                    : `Box cash balance of UGX ${countedTotal.toLocaleString('en-US')} committed to durable backend storage.`}
               </p>
+              <MeetingReceiptsCard
+                members={members}
+                groupName={groupName}
+                meetingNo={meetingNumber}
+                boxTotal={countedTotal}
+                language={language}
+                groupId={groupId}
+              />
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => onNavigate('home')}

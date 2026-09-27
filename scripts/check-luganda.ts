@@ -43,8 +43,13 @@ const requireTerm = (paths: string[], term: string, label: string) => {
 };
 
 requireTerm(
-  ['passbook.title', 'passbook.selectMemberPrompt', 'passbook.selectMember', 'passbook.memberBadge'],
-  'Omukiise',
+  ['passbook.title', 'passbook.passbookLedger'],
+  'Akatabo',
+  'passbook wording'
+);
+requireTerm(
+  ['passbook.selectMemberPrompt', 'passbook.selectMember', 'passbook.memberBadge'],
+  'omuntu',
   'member wording'
 );
 

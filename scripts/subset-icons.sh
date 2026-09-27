@@ -12,18 +12,30 @@ KEEP=/tmp/keep.txt
 echo "1/4 downloading full variable font..."
 curl -s -o "$FULL" "https://fonts.gstatic.com/s/materialsymbolsoutlined/v373/kJEhBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oFsI.woff2"
 
-echo "2/4 collecting icon names used in src/..."
+echo "2/4 collecting icon names used in src/ and the root HTML pages..."
 python3 -c "
 import re, pathlib
-pat = re.compile(r'material-symbols-outlined[\"\']?[^>]*>\s*([A-Za-z0-9_]+)\s*<')
-pat2 = re.compile(r'[{\s]icon:\s*\'([A-Za-z0-9_]+)\'')
+pat = re.compile(r'material-symbols-outlined[\"\']?[^>]*>(.{0,200}?)</', re.S)
+pat2 = re.compile(r'class=\"ms[^\"]*\"[^>]*>\s*([A-Za-z0-9_]+)\s*<')  # landing page: <span class=\"ms w-5 h-5\">name</span>
+pat3 = re.compile(r'[{\s]icon:\s*\'([A-Za-z0-9_]+)\'')
+files = list(pathlib.Path('src').rglob('*.tsx')) + list(pathlib.Path('src').rglob('*.ts')) + list(pathlib.Path('.').glob('*.html'))
 names = set()
-for f in list(pathlib.Path('src').rglob('*.tsx')) + list(pathlib.Path('src').rglob('*.ts')):
+for f in files:
     t = f.read_text()
     for m in pat.finditer(t):
-        if not m.group(1).startswith('{'):
-            names.add(m.group(1))
-    for m in pat2.finditer(t):  # data-driven icons like {f.icon}
+        body = m.group(1)
+        # literal text node: <span class=...>home</span>
+        m2 = re.match(r'\s*([A-Za-z0-9_]+)\s*\$', body)
+        if m2 and not m2.group(1).startswith('{'):
+            names.add(m2.group(1))
+        # ternary picks: <span class=...>{playing ? 'stop_circle' : 'volume_up'}</span>
+        for a, b in re.findall(r'\?\s*\'([a-z][a-z0-9_]*)\'\s*:\s*(?:\'([a-z][a-z0-9_]*)\'|[a-zA-Z0-9_.]+)', body):
+            names.add(a)
+            if b:
+                names.add(b)
+    for m in pat2.finditer(t):  # landing page icons
+        names.add(m.group(1))
+    for m in pat3.finditer(t):  # data-driven icons like {f.icon}
         names.add(m.group(1))
 open('$KEEP','w').write(' '.join(sorted(names)) + ' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_. -')
 print(len(names), 'icons')
@@ -57,7 +69,17 @@ for lookup in f['GSUB'].table.LookupList.Lookup:
         for first, ligs in getattr(target, 'ligatures', {}).items():
             for lig in ligs:
                 lig_map[tuple([first] + list(lig.Component))] = lig.LigGlyph
-gids = sorted({f.getGlyphID(lig_map[tuple(cmap[ord(c)] for c in n)]) for n in icons})
+unknown = []
+gids = set()
+for n in icons:
+    seq = tuple(cmap[ord(c)] for c in n)
+    if seq not in lig_map:
+        unknown.append(n)
+        continue
+    gids.add(f.getGlyphID(lig_map[seq]))
+if unknown:
+    print('WARNING not in Material Symbols font:', ' '.join(unknown))
+gids = sorted(gids)
 open('/tmp/lig_gids.txt','w').write(','.join(map(str, gids)))
 "
 # shellcheck disable=SC2046

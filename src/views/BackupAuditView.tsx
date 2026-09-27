@@ -3,6 +3,7 @@ import { VSLAState, BackupSnapshot, Language, ScreenId } from '../types';
 import { formatAuditTime } from '../utils/audit';
 import { RecoverySheetModal } from '../components/RecoverySheetModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { redactBackupState } from '../utils/backupFile';
 
 interface BackupAuditViewProps {
   state: VSLAState;
@@ -12,6 +13,10 @@ interface BackupAuditViewProps {
   onDeleteSnapshot?: (id: string) => void;
   onResetToBaseline: () => Promise<void>;
   onRefreshFromServer: () => Promise<void>;
+  isOnline?: boolean;
+  isSyncing?: boolean;
+  storageShared?: boolean | null;
+  isPractice?: boolean;
   language?: Language;
 }
 
@@ -32,6 +37,32 @@ export function phoneStorageBytes(): { used: number; keys: number } {
   return { used, keys };
 }
 
+function validateRestorePayload(data: VSLAState, current: VSLAState, language: Language): void {
+  if (!data || !Array.isArray(data.members) || !Array.isArray(data.approvals)) {
+    throw new Error(
+      language === 'LU'
+        ? 'Ebitabo bya backup tebigirimu bakiise oba ebyaliwo by’okukkiriza.'
+        : 'Backup is missing members or approvals.'
+    );
+  }
+  if (data.groupId && current.groupId && data.groupId !== current.groupId) {
+    throw new Error(
+      language === 'LU'
+        ? 'Ebitabo bya backup biyu ekibiina ekirala.'
+        : 'This backup belongs to a different group.'
+    );
+  }
+  for (const key of ['boxCashBalance', 'loanFundBalance', 'welfareFundBalance'] as const) {
+    if (data[key] !== undefined && (typeof data[key] !== 'number' || !Number.isFinite(data[key]) || data[key] < 0)) {
+      throw new Error(
+        language === 'LU'
+          ? `Backup erina ${key} eyali onzokera.`
+          : `Backup has an invalid ${key}.`
+      );
+    }
+  }
+}
+
 export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
   state,
   onNavigate,
@@ -40,6 +71,10 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
   onDeleteSnapshot,
   onResetToBaseline,
   onRefreshFromServer,
+  isOnline = true,
+  isSyncing = false,
+  storageShared = null,
+  isPractice = false,
   language = 'EN',
 }) => {
   const [snapshotLabel, setSnapshotLabel] = useState('');
@@ -51,9 +86,31 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
   const [isCopied, setIsCopied] = useState(false);
   const [isRecoveryOpen, setIsRecoveryOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BackupSnapshot | null>(null);
+  const str = (en: string, lu: string) => (language === 'LU' ? lu : en);
+  const displayTime = (value: Date | string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    if (language === 'LU') {
+      return `${date.toLocaleDateString('en-GB')}, ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    }
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  const displayDateTime = (value: Date | string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return language === 'LU'
+      ? `${date.toLocaleDateString('en-GB')}, ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}`
+      : date.toLocaleString();
+  };
+  const displayAuditTime = (value: string) => {
+    if (language === 'EN') return formatAuditTime(value);
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return `${date.toLocaleDateString('en-GB')} ${date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  };
 
   // Generate downloadable JSON
-  const handleDownloadBackup = () => {
+  const buildBackupJson = () => {
     const backupData = {
       schemaVersion: '2.0-VSLA-OFFLINE',
       app: 'Bakwata Village Savings and Loan Association Digital Passbook',
@@ -62,12 +119,54 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
       cycle: state.cycle,
       exportedAt: new Date().toISOString(),
       checksum: `VSLA-${Date.now().toString(36).toUpperCase()}`,
-      data: state,
+       data: redactBackupState(state),
     };
+    return JSON.stringify(backupData, null, 2);
+  };
 
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(backupData, null, 2)
-    )}`;
+  /**
+   * A file in Downloads is a file nobody finds again when the phone is lost.
+   * Android's share sheet can hand the actual backup file to WhatsApp, which is
+   * how a secretary keeps a copy they can actually restore from.
+   */
+  const handleShareBackup = async () => {
+    const json = buildBackupJson();
+    const filename = `bakwata_vsla_backup_${new Date().toISOString().split('T')[0]}.json`;
+    const payload = {
+      title: str('VSLA backup', 'Kkopi y’ebitabo'),
+      text: `${state.groupName || 'VSLA'} — backup ${new Date().toLocaleDateString('en-GB')}`,
+    };
+    try {
+      const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean; share?: (data: ShareData) => Promise<void> };
+      const file = new File([json], filename, { type: 'application/json' });
+      if (nav.share && (!nav.canShare || nav.canShare({ files: [file] }))) {
+        await nav.share({ ...payload, files: [file] });
+        setRestoreFeedback({
+          type: 'ok',
+          message: str('Backup handed to your phone to share.', 'Kkopi y’ebitabo yohereezeddwa ku ssimu yo okugaba.'),
+        });
+      } else {
+        await navigator.clipboard?.writeText(json);
+        setRestoreFeedback({
+          type: 'ok',
+          message: str(
+            'Sharing files is not available here, so the backup was copied. Paste it into WhatsApp.',
+            'Okugaba fayilo tekakiriza, nga bwe kkopi y’ebitabo. Yikate mu WhatsApp.'
+          ),
+        });
+      }
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return; // user closed the sheet
+      setRestoreFeedback({
+        type: 'err',
+        message: str('Could not share. Use Download instead.', 'Tewali kikakasa ku kugaba. Kkandika ko.'),
+      });
+    }
+    setTimeout(() => setRestoreFeedback(null), 4000);
+  };
+
+  const handleDownloadBackup = () => {
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(buildBackupJson())}`;
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', jsonString);
     downloadAnchor.setAttribute(
@@ -80,13 +179,16 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
 
     setRestoreFeedback({
       type: 'ok',
-      message: 'Full backup JSON downloaded successfully to your device.',
+      message: str(
+        'Full backup JSON downloaded successfully to your device.',
+        'Backup yonna ya JSON yookedwa bulungi mu kizibu kyo.'
+      ),
     });
     setTimeout(() => setRestoreFeedback(null), 4000);
   };
 
   const handleCopyClipboard = () => {
-    navigator.clipboard.writeText(JSON.stringify(state, null, 2));
+    navigator.clipboard.writeText(JSON.stringify(redactBackupState(state), null, 2));
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 3000);
   };
@@ -103,9 +205,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
         const parsed = JSON.parse(text);
         const dataToRestore: VSLAState = parsed.data || parsed;
 
-        if (!dataToRestore.members || !Array.isArray(dataToRestore.members)) {
-          throw new Error('Invalid file format: missing group members.');
-        }
+         validateRestorePayload(dataToRestore, state, language);
 
         setIsProcessing(true);
         const success = await onRestoreState(dataToRestore);
@@ -114,19 +214,23 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
         if (success) {
           setRestoreFeedback({
             type: 'ok',
-            message: `Successfully restored ${dataToRestore.members.length} members and balances!`,
+            message: str(
+              `Successfully restored ${dataToRestore.members.length} members and balances!`,
+              `Bakiise ${dataToRestore.members.length} n’ebikomo byabwe zaaliwookelwa bulungi!`
+            ),
           });
         } else {
           setRestoreFeedback({
             type: 'err',
-            message: 'Failed to restore backup.',
+            message: str('Failed to restore backup.', 'Zinzaawo za backup ziikwatawo kizibu.'),
           });
         }
       } catch (err: any) {
         setIsProcessing(false);
         setRestoreFeedback({
           type: 'err',
-          message: 'Error parsing backup file: ' + err.message,
+          message:
+            str('Error parsing backup file: ', 'Kaliwo mu kutoolodora file ya backup: ') + (err?.message || ''),
         });
       }
     };
@@ -140,9 +244,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
       const parsed = JSON.parse(pastedJson);
       const dataToRestore: VSLAState = parsed.data || parsed;
 
-      if (!dataToRestore.members || !Array.isArray(dataToRestore.members)) {
-        throw new Error('Invalid JSON: missing members array.');
-      }
+       validateRestorePayload(dataToRestore, state, language);
 
       setIsProcessing(true);
       const success = await onRestoreState(dataToRestore);
@@ -152,55 +254,79 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
         setPastedJson('');
         setRestoreFeedback({
           type: 'ok',
-          message: `System successfully restored from pasted payload!`,
+          message: str(
+            'System successfully restored from pasted payload!',
+            'System zaaliwookelwa bulungi okuva mu payload ebaliiseddwa!'
+          ),
         });
       } else {
         setRestoreFeedback({
           type: 'err',
-          message: 'Server error restoring state.',
+          message: str('Server error restoring state.', 'Server yaakuwata nga tulinao zikiddwa ekitabo.'),
         });
       }
     } catch (err: any) {
       setIsProcessing(false);
       setRestoreFeedback({
         type: 'err',
-        message: 'Invalid JSON payload: ' + err.message,
+        message: str('Invalid JSON payload: ', 'Payload ya JSON terungi: ') + (err?.message || ''),
       });
     }
   };
 
   const handleCreateSnapshot = async (e: React.FormEvent) => {
     e.preventDefault();
-    const label = snapshotLabel.trim() || `Manual Checkpoint (${new Date().toLocaleTimeString()})`;
+    const label =
+      snapshotLabel.trim() ||
+      str(
+        `Manual Checkpoint (${new Date().toLocaleTimeString()})`,
+        `Kikomerwo kya munaasiki (${displayTime(new Date())})`
+      );
     setIsProcessing(true);
     await onCreateSnapshot(label);
     setIsProcessing(false);
     setSnapshotLabel('');
     setRestoreFeedback({
       type: 'ok',
-      message: `Snapshot "${label}" captured and saved.`,
+      message: str(`Snapshot "${label}" captured and saved.`, `Snapshot "${label}" ekakiddwa n’ekisigidwa.`),
     });
     setTimeout(() => setRestoreFeedback(null), 3500);
   };
 
   const handleRestoreSnapshot = async (snap: BackupSnapshot) => {
     if (!snap.data) {
-      alert('This seed snapshot does not have historical payload data.');
+      alert(
+        str(
+          'This seed snapshot does not have historical payload data.',
+          'Snapshot eno teza nfuna payload y’edaba.'
+        )
+      );
       return;
     }
-    if (confirm(`Restore system to snapshot "${snap.label}" from ${new Date(snap.timestamp).toLocaleString()}?`)) {
+    if (
+      confirm(
+        str(
+          `Restore system to snapshot "${snap.label}" from ${new Date(snap.timestamp).toLocaleString()}?`,
+          `Sikika system ku snapshot "${snap.label}" okuva ku ${displayDateTime(snap.timestamp)}?`
+        )
+      )
+    ) {
       try {
-        const parsed = JSON.parse(snap.data);
-        setIsProcessing(true);
-        await onRestoreState(parsed);
+         const parsed = JSON.parse(snap.data) as VSLAState;
+         validateRestorePayload(parsed, state, language);
+         setIsProcessing(true);
+         const success = await onRestoreState(parsed);
+         setIsProcessing(false);
+          setRestoreFeedback(success ? {
+            type: 'ok',
+            message: str(`Restored to "${snap.label}".`, `Sikiddwa ku snapshot "${snap.label}".`),
+          } : {
+            type: 'err',
+            message: str(`Could not restore "${snap.label}".`, `Tensitwala okusikika ku snapshot "${snap.label}".`),
+          });
+       } catch (err: any) {
         setIsProcessing(false);
-        setRestoreFeedback({
-          type: 'ok',
-          message: `Restored to "${snap.label}".`,
-        });
-      } catch (err: any) {
-        setIsProcessing(false);
-        alert('Could not restore snapshot: ' + err.message);
+        alert(str('Could not restore snapshot: ', 'Tensitwala okusikika ku snapshot: ') + (err?.message || ''));
       }
     }
   };
@@ -214,51 +340,73 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
             onClick={() => onNavigate('home')}
             className="w-9 h-9 rounded-lg bg-surface-card border border-border-strong flex items-center justify-center text-primary hover:bg-surface-container active:scale-95 transition"
             type="button"
+            aria-label={str('Go back', 'Ddayo')}
           >
-            <span className="material-symbols-outlined text-lg">arrow_back</span>
+            <span className="material-symbols-outlined text-lg" aria-hidden="true">arrow_back</span>
           </button>
           <div>
             <h1 className="text-headline-md font-headline-md text-primary font-bold">
-              Backup & Audit Center
+              {str('Backup & Audit Center', 'Ensukusa y’ebitabo n’okukebera')}
             </h1>
-            <p className="text-xs text-text-muted">Kukwata Ebiwandiiko · Offline Vault & Sync</p>
-          </div>
+            <p className="text-xs text-text-muted">
+              {str('Kukwata Ebiwandiiko · Offline Vault & Sync', 'Kulinda ebitabo · Ekisandiruzo n’okwikuza')}
+            </p>
         </div>
         <button
           onClick={onRefreshFromServer}
-          title="Refresh from server"
+          title={str('Refresh from server', 'Funa busula okuva ku server')}
           className="px-2.5 py-1 rounded bg-surface-container border border-border-line text-primary text-xs font-bold flex items-center gap-1 hover:bg-surface-container-high active:scale-95"
           type="button"
         >
-          <span className="material-symbols-outlined text-[16px]">sync</span>
-          Sync
+          <span className="material-symbols-outlined text-[16px]" aria-hidden="true">sync</span>
+          {str('Sync', 'Wikuza')}
         </button>
+      </div>
       </div>
 
       {/* Persistence Health Strip */}
       <div className="bg-surface-card rounded-xl border border-border-strong p-3.5 shadow-sm space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse" />
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              System Storage Engine: Active
+         <div className="flex items-center justify-between">
+           <div className="flex items-center gap-2">
+             <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-secondary' : 'bg-status-warn-tx'}`} />
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                {isSyncing
+                  ? str('Syncing ledger…', 'Ekitabo kiragenda ku server…')
+                  : isOnline
+                    ? str('Connected', 'Wagongotanyuka')
+                    : str('Offline', 'Tewali mutimbagano')}
+              </span>
+           </div>
+              <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${storageShared === true ? 'text-status-ok-tx bg-status-ok-bg border-[#bbf7d0]' : 'text-status-warn-tx bg-status-warn-bg border-amber-300'}`}>
+              {storageShared === true
+                ? str('SHARED WITH GROUP', 'EKISANGANYIZO N’EKIBIINA')
+                : str('SAVED ON THIS PHONE', 'EKIRIIRIZWA KU SSIMU ENO')}
             </span>
-          </div>
-          <span className="text-[11px] font-mono text-status-ok-tx font-bold bg-status-ok-bg px-2 py-0.5 rounded border border-[#bbf7d0]">
-            LOCAL & BACKEND READY
-          </span>
-        </div>
+         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-border-line">
+         {(!isOnline || storageShared !== true) && (
+            <p className="text-[11px] font-bold text-status-warn-tx bg-status-warn-bg border border-amber-200 rounded-lg p-2">
+              {!isOnline
+                ? str(
+                    'No connection. Changes are saved on this phone until sync succeeds.',
+                    'Tewali mutimbagano. Empaakanyo zino zigirizwa ku ssimu eno nga tubanga okwikuza.'
+                  )
+                : str(
+                    'This group is not using a shared database. Other officers may not see these changes yet.',
+                    'Ekibiina kino takikozesa database esanganyizwa. Abakozesa abaandi baye batakulaba yetempola.'
+                  )}
+            </p>
+         )}
+         <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-border-line">
           <div className="bg-canvas-bg p-2 rounded border border-border-line">
-            <span className="text-text-muted block text-[10px] uppercase font-semibold">Backend Endpoint</span>
+             <span className="text-text-muted block text-[10px] uppercase font-semibold">{str('Backend Endpoint', 'Endda ya Backend')}</span>
             <span className="font-mono text-primary font-bold">/api/state</span>
           </div>
           <div className="bg-canvas-bg p-2 rounded border border-border-line">
-            <span className="text-text-muted block text-[10px] uppercase font-semibold">Last Backup</span>
-            <span className="font-mono text-primary font-bold text-[11px]">
-              {new Date(state.lastBackupDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
+             <span className="text-text-muted block text-[10px] uppercase font-semibold">{str('Last Backup', 'Backup y’okutoolodora')}</span>
+             <span className="font-mono text-primary font-bold text-[11px]">
+               {state.lastBackupDate ? displayTime(state.lastBackupDate) : str('Never', 'Tewali')}
+             </span>
           </div>
         </div>
       </div>
@@ -278,10 +426,12 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
             </span>
             <span>{restoreFeedback.message}</span>
           </div>
-          <button
-            onClick={() => setRestoreFeedback(null)}
-            className="text-xs opacity-70 hover:opacity-100"
-          >
+           <button
+             onClick={() => setRestoreFeedback(null)}
+             className="text-xs opacity-70 hover:opacity-100"
+             aria-label={str('Dismiss message', 'Ggya ekizibu')}
+             type="button"
+           >
             ✕
           </button>
         </div>
@@ -298,8 +448,8 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
           }`}
           type="button"
         >
-          <span className="material-symbols-outlined text-sm">download</span>
-          Export Backup
+          <span className="material-symbols-outlined text-sm" aria-hidden="true">download</span>
+          {str('Export Backup', 'Cunda Backup')}
         </button>
         <button
           onClick={() => setActiveTab('restore')}
@@ -310,8 +460,8 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
           }`}
           type="button"
         >
-          <span className="material-symbols-outlined text-sm">upload</span>
-          Restore
+          <span className="material-symbols-outlined text-sm" aria-hidden="true">upload</span>
+          {str('Restore', 'Zikiza ebitabo')}
         </button>
         <button
           onClick={() => setActiveTab('snapshots')}
@@ -322,8 +472,8 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
           }`}
           type="button"
         >
-          <span className="material-symbols-outlined text-sm">history</span>
-          Snapshots ({state.snapshots?.length || 0})
+          <span className="material-symbols-outlined text-sm" aria-hidden="true">history</span>
+          {str('Snapshots', 'Ebizibu zo kuzzaawo')} ({state.snapshots?.length || 0})
         </button>
         <button
           onClick={() => setActiveTab('audit')}
@@ -334,8 +484,8 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
           }`}
           type="button"
         >
-          <span className="material-symbols-outlined text-sm">receipt_long</span>
-          Audit ({state.auditLog?.length || 0})
+          <span className="material-symbols-outlined text-sm" aria-hidden="true">receipt_long</span>
+          {str('Audit', 'Okukebera')} ({state.auditLog?.length || 0})
         </button>
       </div>
 
@@ -347,11 +497,14 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-headline-sm text-sm font-bold text-primary flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-secondary">file_download</span>
-                  Full Group Database File
+                  <span className="material-symbols-outlined text-secondary" aria-hidden="true">file_download</span>
+                  {str('Full Group Database File', 'File yonna ya database y’ekibiina')}
                 </h3>
                 <p className="text-xs text-text-muted mt-0.5">
-                  Readable JSON copy of all {state.members.length} member passbooks, stamp cards, loan appraisals, and audit logs. Keep it secret — anyone with this file can read the books. Not encrypted.
+                  {str(
+                    `Readable JSON copy of all ${state.members.length} member passbooks, stamp cards, loan appraisals, and audit logs. Keep it secret — anyone with this file can read the books. Not encrypted.`,
+                    `Koppa ya JSON esobola okutoolooda ebitabo by'abakiise ${state.members.length}, ikadi za situma, ebizibuza by'ebbanja n'ebikiro by'okukebera. Yikize n'obuzibuza — buli amanyi a file eno asobola okusoma ebitabo. Tegafumba encrypt.`
+                  )}
                 </p>
               </div>
             </div>
@@ -359,17 +512,17 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
             {/* Quick Metrics */}
             <div className="grid grid-cols-3 gap-2 py-2 border-y border-border-line text-center text-xs">
               <div className="bg-canvas-bg p-2 rounded">
-                <span className="text-text-muted block text-[10px]">Members</span>
+                <span className="text-text-muted block text-[10px]">{str('Members', 'Abakiise')}</span>
                 <span className="font-mono font-bold text-primary">{state.members.length}</span>
               </div>
               <div className="bg-canvas-bg p-2 rounded">
-                <span className="text-text-muted block text-[10px]">Box Cash</span>
+                <span className="text-text-muted block text-[10px]">{str('Box Cash', 'Ssente mu Kasanduuko')}</span>
                 <span className="font-mono font-bold text-secondary">
                   UGX {(state.boxCashBalance / 1000).toFixed(0)}k
                 </span>
               </div>
               <div className="bg-canvas-bg p-2 rounded">
-                <span className="text-text-muted block text-[10px]">Welfare</span>
+                <span className="text-text-muted block text-[10px]">{str('Welfare', 'Obuyambi')}</span>
                 <span className="font-mono font-bold text-primary">
                   UGX {(state.welfareFundBalance / 1000).toFixed(0)}k
                 </span>
@@ -379,19 +532,37 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
             <div className="pt-1 flex flex-col gap-2">
               {Math.floor((Date.now() - new Date(state.lastBackupDate).getTime()) / 86400000) >= 7 && (
                 <div className="p-2.5 bg-status-warn-bg border border-[#FDE68A] rounded-lg text-[11px] text-status-warn-tx font-semibold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px]">schedule</span>
+                  <span className="material-symbols-outlined text-[16px]" aria-hidden="true">schedule</span>
                   <span>
-                    Last backup is over a week old. Download a fresh copy below after each meeting.
+                    {str(
+                      'Last backup is over a week old. Download a fresh copy below after each meeting.',
+                      'Backup y’okutoolodora yali wo mwiiki nga wagendera. Doola eŋŋanzi buli lukuŋŋaana oluvannyuma lw’ekisooka.'
+                    )}
                   </span>
                 </div>
               )}
+              <button
+                onClick={handleShareBackup}
+                className="w-full min-h-[52px] bg-[#DCFCE7] text-[#166534] border border-[#86efac] rounded-lg font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.99] transition"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-base" aria-hidden="true">ios_share</span>
+                {str('Send backup on WhatsApp', 'Sindika backup ku WhatsApp')}
+              </button>
+              <p className="text-[11px] text-text-muted text-center px-1">
+                {str(
+                  'Best for a phone: the file goes straight to your own WhatsApp, so a lost phone does not mean lost records.',
+                  'Kikulu ku ssimu: fayilo agenda muntu mu WhatsApp gwo, nga ssimu ekigiddwa tebali kikulu ebitabo.'
+                )}
+              </p>
+
               <button
                 onClick={handleDownloadBackup}
                 className="w-full py-3 bg-secondary hover:bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow active:scale-[0.99] transition"
                 type="button"
               >
-                <span className="material-symbols-outlined text-base">download</span>
-                Download Offline Backup (.json)
+                <span className="material-symbols-outlined text-base" aria-hidden="true">download</span>
+                {str('Download Offline Backup (.json)', 'Koppa Backup y’ekigendererwa (.json)')}
               </button>
 
               <button
@@ -399,7 +570,7 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
                 className="w-full py-3 bg-primary text-white rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow active:scale-[0.99] transition"
                 type="button"
               >
-                <span className="material-symbols-outlined text-base">print</span>
+                <span className="material-symbols-outlined text-base" aria-hidden="true">print</span>
                 {language === 'LU' ? 'Kuba olupapula lw’okuzzaawo' : 'Print recovery sheet'}
               </button>
 
@@ -411,50 +582,55 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
                 <span className="material-symbols-outlined text-base">
                   {isCopied ? 'check' : 'content_copy'}
                 </span>
-                {isCopied ? 'Copied to Clipboard!' : 'Copy Raw JSON String'}
+                {isCopied ? str('Copied to Clipboard!', 'Kikozesezwa ku clipboard!') : str('Copy Raw JSON String', 'Kikopozza nkoma ya JSON')}
               </button>
             </div>
           </section>
 
           {/* Meeting Audit Slip Preview Card */}
           <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm space-y-3">
-            <h3 className="font-headline-sm text-sm font-bold text-primary flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-primary">receipt_long</span>
-              Printable Meeting Audit Slip
-            </h3>
-            <p className="text-xs text-text-muted">
-              Physical sign-off slip generated for the 3 keyholders to countersign at the meeting close.
-            </p>
+             <h3 className="font-headline-sm text-sm font-bold text-primary flex items-center gap-1.5">
+               <span className="material-symbols-outlined text-primary" aria-hidden="true">receipt_long</span>
+               {str('Printable Meeting Audit Slip', 'Olupapula lw’okukebera olw’okukuba')}
+             </h3>
+             <p className="text-xs text-text-muted">
+               {str(
+                 'Physical sign-off slip generated for the 3 keyholders to countersign at the meeting close.',
+                 'Olupapula lw’okusigana buli ekyaliwo ku bakwasi batatu okubasiza nga olukuŋŋaana tulinna.'
+               )}
+             </p>
 
             <div className="bg-[#FFFDF5] border border-[#E5E0D0] p-3 rounded-lg font-mono text-[11px] text-[#333] space-y-1.5">
               <div className="text-center font-bold pb-1 border-b border-[#E5E0D0]">
-                *** BAKWATA SAVINGS GROUP ***<br />
-                MEETING AUDIT & SAFEBOX SLIP
+                 *** {state.groupName || str('SAVINGS GROUP', 'EKIBIINA KY’OKUTEREKA EBY’ALOBA')} ***<br />
+                {str('MEETING AUDIT & SAFEBOX SLIP', 'OLUPAPULA LW’OLUKUŊŊAANA N’OKUKEBERA')}
               </div>
               <div className="flex justify-between">
-                <span>Box ID:</span>
+                <span>{str('Box ID:', 'Namba ya Kasanduuko:')}</span>
                 <span className="font-bold">{state.boxIdentifier}</span>
               </div>
               <div className="flex justify-between">
-                <span>Meeting:</span>
-                <span className="font-bold">#{state.recentMeetingsCount} (Cycle {state.cycle})</span>
+                <span>{str('Meeting:', 'Olukuŋŋaana:')}</span>
+                <span className="font-bold">
+                  #{state.recentMeetingsCount} ({str('Cycle', 'Olukalu')} {state.cycle})
+                </span>
               </div>
               <div className="flex justify-between">
-                <span>Physical Cash in Box:</span>
+                <span>{str('Physical Cash in Box:', 'Ssente ez’ekikoleko mu Kasanduuko:')}</span>
                 <span className="font-bold">UGX {state.boxCashBalance.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>Loan Fund Balance:</span>
+                <span>{str('Loan Fund Balance:', 'Bikomo by’Ebbanja:')}</span>
                 <span className="font-bold">UGX {state.loanFundBalance.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>Welfare Emergency:</span>
+                <span>{str('Welfare Emergency:', 'Obuyambi bwa Kizibu:')}</span>
                 <span className="font-bold">UGX {state.welfareFundBalance.toLocaleString()}</span>
               </div>
               <div className="pt-2 border-t border-dashed border-[#CCC] space-y-1 text-[10px]">
-                <div>Keyholder 1: Sarah Nabukalu [SIGNED]</div>
-                <div>Keyholder 2: Peter Ssemwogerere [SIGNED]</div>
-                <div>Keyholder 3: Sarah Nabukalu [SIGNED]</div>
+                 <div>{str('Keyholder 1:', 'Omukwasi 1:')} __________________ [ ]</div>
+                 <div>{str('Keyholder 2:', 'Omukwasi 2:')} __________________ [ ]</div>
+                 <div>{str('Keyholder 3:', 'Omukwasi 3:')} __________________ [ ]</div>
               </div>
             </div>
 
@@ -465,8 +641,8 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
               className="w-full py-2 bg-surface-container hover:bg-surface-container-high border border-border-strong text-primary rounded-lg text-xs font-bold flex items-center justify-center gap-1.5"
               type="button"
             >
-              <span className="material-symbols-outlined text-base">print</span>
-              Print Slip / Save as PDF
+               <span className="material-symbols-outlined text-base" aria-hidden="true">print</span>
+               {str('Print Slip / Save as PDF', 'Kuba olupapula / Omutwana nka PDF')}
             </button>
           </section>
         </div>
@@ -477,39 +653,45 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
         <div className="space-y-4 animate-in fade-in duration-150">
           {/* File Upload Restore */}
           <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm space-y-3">
-            <h3 className="font-headline-sm text-sm font-bold text-primary flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-primary">upload_file</span>
-              Upload Backup File
-            </h3>
-            <p className="text-xs text-text-muted">
-              Select a previously downloaded <code className="bg-canvas-bg px-1 rounded">.json</code> file to restore the entire VSLA database.
-            </p>
+             <h3 className="font-headline-sm text-sm font-bold text-primary flex items-center gap-1.5">
+               <span className="material-symbols-outlined text-primary" aria-hidden="true">upload_file</span>
+               {str('Upload Backup File', 'Sindika File ya Backup')}
+             </h3>
+             <p className="text-xs text-text-muted">
+               {str('Select a previously downloaded', 'Londa file ya')}{' '}
+               <code className="bg-canvas-bg px-1 rounded">.json</code>{' '}
+               {str('file to restore the entire VSLA database.', 'eyakookeredwa kumala okuzzaawo database yonna ya VSLA.')}
+             </p>
 
             <label className="border-2 border-dashed border-border-strong hover:border-primary rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer bg-canvas-bg transition">
               <span className="material-symbols-outlined text-3xl text-primary mb-1">
                 cloud_upload
               </span>
-              <span className="text-xs font-bold text-primary">Click to select backup file</span>
-              <span className="text-[11px] text-text-muted mt-0.5">Supports .json exports</span>
-              <input
-                type="file"
-                accept=".json,application/json"
-                onChange={handleFileUpload}
-                disabled={isProcessing}
-                className="hidden"
-              />
+               <span className="text-xs font-bold text-primary">{str('Click to select backup file', 'Kikira okulonda file ya backup')}</span>
+               <span className="text-[11px] text-text-muted mt-0.5">{str('Supports .json exports', 'Emirimu emigabo ya .json')}</span>
+               <input
+                 type="file"
+                 accept=".json,application/json"
+                 onChange={handleFileUpload}
+                 disabled={isProcessing}
+                 aria-label={str('Backup file', 'File ya backup')}
+                 className="hidden"
+               />
             </label>
           </section>
 
           {/* Paste JSON Restore */}
           <section className="bg-surface-card rounded-xl border border-border-line p-4 shadow-sm space-y-3">
-            <h3 className="font-headline-sm text-sm font-bold text-primary flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-primary">code</span>
-              Paste Backup Payload
-            </h3>
-            <p className="text-xs text-text-muted">
-              Paste JSON text directly from a phone message, Bluetooth note, or email.
-            </p>
+             <h3 className="font-headline-sm text-sm font-bold text-primary flex items-center gap-1.5">
+               <span className="material-symbols-outlined text-primary" aria-hidden="true">code</span>
+               {str('Paste Backup Payload', 'Fumba Payload ya Backup')}
+             </h3>
+             <p className="text-xs text-text-muted">
+               {str(
+                 'Paste JSON text directly from a phone message, Bluetooth note, or email.',
+                 'Fumba eddoboozi la JSON muntu mu message ya ssimu, mu note ya Bluetooth, oba email.'
+               )}
+             </p>
 
             <textarea
               value={pastedJson}
@@ -696,8 +878,8 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
         </div>
       )}
 
-      {/* DANGER ZONE: RESET TO BASELINE */}
-      <section className="bg-white border border-red-200 rounded-xl p-4 shadow-sm space-y-2">
+      {isPractice && (
+        <section className="bg-white border border-red-200 rounded-xl p-4 shadow-sm space-y-2">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-xs font-bold text-status-bad-tx flex items-center gap-1">
@@ -749,7 +931,8 @@ export const BackupAuditView: React.FC<BackupAuditViewProps> = ({
             </div>
           </div>
         )}
-      </section>
+       </section>
+      )}
 
       <RecoverySheetModal
         isOpen={isRecoveryOpen}

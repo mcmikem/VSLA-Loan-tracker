@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Language, Member, ScreenId, ShopProduct, VSLAState } from '../types';
-import { changeDue, displayFineReason, gapNeedsSecondKey, GAP_TWO_KEY_THRESHOLD, STANDARD_FINE_REASONS } from '../utils/policy';
+import { changeDue, displayFineReason, gapNeedsSecondKey, GAP_TWO_KEY_THRESHOLD, loanRateForTerm, STANDARD_FINE_REASONS } from '../utils/policy';
 import { MemberAvatar } from '../components/MemberAvatar';
 import { MemberFaceGrid } from '../components/MemberFaceGrid';
 import { DenomCounter } from '../components/DenomCounter';
+import { AmountConfirmDialog } from '../components/AmountConfirmDialog';
 
 export interface WizardShareItem {
   memberId: string;
@@ -34,6 +35,8 @@ interface MeetingWizardViewProps {
   products: ShopProduct[];
   meetingNo: number;
   sharePrice: number;
+  maxSharesPerMeeting?: number;
+  loanRates?: { oneMonth: number; twoMonths: number; threeMonths: number };
   welfareAmount: number;
   expectedCash: number;
   language?: Language;
@@ -43,13 +46,12 @@ interface MeetingWizardViewProps {
   onCollectWelfareBulk: (memberIds: string[], amount: number) => void;
   onRequestWelfarePayout: (memberId: string, amount: number, reason: string) => void;
   onRecordRepaymentsBulk: (items: WizardRepayItem[]) => void;
-  onSubmitLoan: (loan: { memberName: string; memberNo: string; amount: number; term: string; serviceFee: number; phone: string; provider: 'MTN' | 'Airtel' }) => void;
+  onSubmitLoan: (loan: { memberName: string; memberNo: string; amount: number; term: string; serviceFee: number; purpose: string; guarantorNos: string[]; phone: string; provider: 'MTN' | 'Airtel' }) => void;
   onRecordFinesBulk: (items: WizardFineItem[]) => void;
   onRecordSalesBulk: (items: { productId: string; qty: number; unitPrice: number; buyer: string }[]) => void;
-  onCompleteMeeting: (countedCash: number, minutes: string) => VSLAState | void;
+  onCompleteMeeting: (countedCash: number, minutes: string, attendance?: Record<string, string>, discrepancyNote?: string) => VSLAState | void;
   /** Download the sealed-state backup file (backup gate before leaving). */
   onDownloadBackup: (sealed: VSLAState) => void;
-  onAdjustDiscrepancy: (amount: number, reason: string, method: string) => void;
   /** Name on the current account — enforces the 2-key gap rule. */
   currentUserName?: string;
   /** Floats excluded from the physical count — shown so nobody recounts them. */
@@ -59,7 +61,7 @@ interface MeetingWizardViewProps {
   groupId?: string;
 }
 
-type AttStatus = 'present' | 'late' | 'absent' | 'excused';
+type AttStatus = 'unrecorded' | 'present' | 'late' | 'absent' | 'excused';
 
 interface Draft {
   step: number;
@@ -84,7 +86,7 @@ interface Draft {
 }
 
 const DRAFT_KEY = 'vsla_meeting_draft_v1';
-const MAX_SHARES = 5;
+const DEFAULT_MAX_SHARES = 5;
 
 /** v1 (8 steps) → v2 (6 steps): shares+welfare and fines+sales merged. */
 export function migrateDraftStep(oldStep: number): number {
@@ -144,6 +146,8 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   products,
   meetingNo,
   sharePrice,
+  maxSharesPerMeeting = DEFAULT_MAX_SHARES,
+  loanRates,
   welfareAmount,
   expectedCash,
   language = 'EN',
@@ -158,7 +162,6 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   onRecordSalesBulk,
   onCompleteMeeting,
   onDownloadBackup,
-  onAdjustDiscrepancy,
   currentUserName = 'Officer',
   momoBalance = 0,
   bankBalance = 0,
@@ -206,13 +209,14 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   ];
   const STEP_COUNT = steps.length;
 
-  const attOf = (id: string): AttStatus => draft.attendance[id] || 'present';
+  const attOf = (id: string): AttStatus => draft.attendance[id] || 'unrecorded';
   const presentIds = useMemo(
     () => members.filter((m) => attOf(m.id) === 'present' || attOf(m.id) === 'late').map((m) => m.id),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [members, draft.attendance]
   );
   const attendanceCount = presentIds.length;
+  const attendanceUnrecorded = members.filter((m) => attOf(m.id) === 'unrecorded').length;
 
   const sharesTotal = Object.values(draft.shares).reduce((s, n) => s + (n || 0), 0);
 
@@ -230,7 +234,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
   const commitShares = () => {
     const items = Object.entries(draft.shares)
       .filter(([, n]) => (n || 0) > 0)
-      .map(([memberId, shares]) => ({ memberId, shares: Math.min(MAX_SHARES, shares || 0) }));
+      .map(([memberId, shares]) => ({ memberId, shares: Math.min(maxSharesPerMeeting, shares || 0) }));
     if (items.length === 0) return;
     onRecordSharesBulk(items);
     patch({ sharesRecorded: true });
@@ -269,7 +273,9 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
       memberNo: loanMember.no,
       amount: loanAmt,
       term: loanForm.term,
-      serviceFee: Math.round(loanAmt * 0.1),
+      serviceFee: Math.round(loanAmt * (loanRateForTerm(loanForm.term, loanRates) / 100)),
+      purpose: 'Meeting loan request',
+      guarantorNos: [],
       phone: loanMember.phone,
       provider: loanMember.provider,
     });
@@ -316,6 +322,12 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
     setPayoutReason('');
   };
 
+  // Money-out guard (M-Sente style): the officer retypes the amount before
+  // the request is queued, so a mis-keyed digit never reaches the queue.
+  const [amountCheck, setAmountCheck] = useState<{ amount: number; headline: string; run: () => void } | null>(null);
+  const askAmountCheck = (amount: number, headline: string, run: () => void) =>
+    setAmountCheck({ amount, headline, run });
+
   const finishMeeting = () => {
     if (draft.counted === '') return;
     if (difference !== 0 && !discrepancyNote.trim()) return;
@@ -335,14 +347,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         return;
       }
     }
-    if (difference !== 0) {
-      onAdjustDiscrepancy(
-        Math.abs(difference),
-        `Meeting #${meetingNo} count variance: ${discrepancyNote.trim()}`,
-        difference < 0 ? 'welfare' : 'topup'
-      );
-    }
-    const sealed = onCompleteMeeting(countedNum, draft.minutes.trim());
+    const sealed = onCompleteMeeting(countedNum, draft.minutes.trim(), draft.attendance, discrepancyNote.trim());
     // Backup gate (gap 5b): the sealed file downloads NOW, in the seal tap.
     if (sealed) {
       try {
@@ -437,7 +442,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => patch({ attendance: {} })}
+               onClick={() => patch({ attendance: Object.fromEntries(members.map((m) => [m.id, 'present'])) })}
               className="text-[11px] font-bold text-[#006d30] underline"
             >
               {str('Mark all present', 'Bonnna beetabye')}
@@ -450,22 +455,28 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                 <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
               </div>
               <div className="flex gap-1 shrink-0">
-                {(['present', 'late', 'absent', 'excused'] as AttStatus[]).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => patch({ attendance: { ...draft.attendance, [m.id]: s } })}
-                    className={`px-2 py-1.5 rounded-md text-[10px] font-bold capitalize ${
-                      attOf(m.id) === s ? 'bg-[#00261b] text-white' : 'bg-[#F6F7F6] text-[#4B5563] border border-[#E5E7EB]'
-                    }`}
-                  >
-                    {s[0].toUpperCase()}
-                  </button>
-                ))}
+                 {([
+                   ['present', str('Here', 'Wooza')],
+                   ['late', str('Late', 'Mu kkwanvu')],
+                   ['absent', str('Absent', 'Taliwo')],
+                   ['excused', str('Excused', 'Obwerezesezza')],
+                 ] as [AttStatus, string][]).map(([s, label]) => (
+                   <button
+                     key={s}
+                     type="button"
+                     onClick={() => patch({ attendance: { ...draft.attendance, [m.id]: s } })}
+                     className={`px-2 py-1.5 rounded-md text-[10px] font-bold ${
+                       attOf(m.id) === s ? 'bg-[#00261b] text-white' : 'bg-[#F6F7F6] text-[#4B5563] border border-[#E5E7EB]'
+                     }`}
+                   >
+                     {label}
+                   </button>
+                 ))}
               </div>
             </div>
           ))}
-          {stepBtn(str('Continue to Shares →', 'Weeyongereyo →'), () => patch({ step: 1 }))}
+            {attendanceUnrecorded > 0 && <p className="text-[11px] font-bold text-[#92400E] bg-[#FEF3C7] rounded-lg p-2">{str('Mark every member before continuing.', 'Wandiika buli mukiise ng’okutandika')}</p>}
+            {stepBtn(str('Continue to Shares →', 'Endereza ku migabo →'), () => patch({ step: 1 }), true, attendanceUnrecorded > 0)}
         </section>
       )}
 
@@ -475,7 +486,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[1]} · {str('Shares', 'Emigabo')}</h3>
             <p className="text-[11px] text-[#4B5563] mt-0.5">
-              UGX {sharePrice.toLocaleString()} {str('per share · max 5 · total staged:', 'buli mugabo ·')} <strong className="font-mono">{sharesTotal}</strong>
+              UGX {sharePrice.toLocaleString()} {str(`per share · max ${maxSharesPerMeeting} · total staged:`, `bwali mugabo · ekkano ${maxSharesPerMeeting} ·`)} <strong className="font-mono">{sharesTotal}</strong>
             </p>
           </div>
           {presentIds.map((id) => {
@@ -488,12 +499,12 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                 <div className="flex items-center gap-2 shrink-0">
                   <button type="button" onClick={() => patch({ shares: { ...draft.shares, [id]: Math.max(0, n - 1) } })} className="w-9 h-9 rounded-lg bg-[#F6F7F6] border border-[#E5E7EB] font-bold">−</button>
                   <span className="font-mono font-bold w-5 text-center">{n}</span>
-                  <button type="button" onClick={() => patch({ shares: { ...draft.shares, [id]: Math.min(MAX_SHARES, n + 1) } })} className="w-9 h-9 rounded-lg bg-[#00261b] text-white font-bold">+</button>
+                   <button type="button" onClick={() => patch({ shares: { ...draft.shares, [id]: Math.min(maxSharesPerMeeting, n + 1) } })} className="w-9 h-9 rounded-lg bg-[#00261b] text-white font-bold">+</button>
                 </div>
               </div>
             );
           })}
-          {draft.sharesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded to passbooks', 'Kikoseddwa')}</p>}
+          {draft.sharesRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Recorded to passbooks', 'Kwandiikibwa mu ppaasibuku')}</p>}
           {stepBtn(
             `${str('Record', 'Kaza')} ${sharesTotal} ${str('shares', 'emigabo')} (UGX ${(sharesTotal * sharePrice).toLocaleString()})`,
             () => {
@@ -511,8 +522,8 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
           </div>
           {stepBtn(
             draft.welfareRecorded
-              ? str('Continue to Repayments →', 'Weeyongereyo →')
-              : `${str('Collect from', 'Kunganyiza okuva ku')} ${presentIds.filter((id) => !draft.welfareDone.includes(id)).length} ${str('members', 'bakiise')} (UGX ${(presentIds.filter((id) => !draft.welfareDone.includes(id)).length * welfareAmount).toLocaleString()})`,
+              ? str('Continue to Repayments →', 'Endereza ku nkasa →')
+              : `${str('Collect from', 'Kunganyiza okuva ku')} ${presentIds.filter((id) => !draft.welfareDone.includes(id)).length} ${str('members', 'abakiise')} (UGX ${(presentIds.filter((id) => !draft.welfareDone.includes(id)).length * welfareAmount).toLocaleString()})`,
             () => {
               if (!draft.welfareRecorded) commitWelfare();
               else patch({ step: 2 });
@@ -525,7 +536,17 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               <input value={payoutAmount} onChange={(e) => setPayoutAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm font-mono" />
               <input value={payoutReason} onChange={(e) => setPayoutReason(e.target.value)} placeholder={str('Reason (e.g. hospital)', 'Ensonga')} className="flex-[2] min-h-[44px] border border-[#E5E7EB] rounded-lg px-3 text-sm" />
             </div>
-            {stepBtn(str('Send payout request', 'Weereza okusaba'), commitPayout, false, !(Math.floor(Number(payoutAmount) || 0) > 0 && payoutReason.trim()))}
+            {stepBtn(
+              str('Send payout request', 'Weereza okusaba'),
+              () =>
+                askAmountCheck(
+                  Math.floor(Number(payoutAmount) || 0),
+                  `${str('Payout to', 'Okuyisa kwa')} ${members.find((m) => m.id === payoutMember)?.name || ''} — ${str('reason', 'ensonga')}: ${payoutReason.trim()}`,
+                  commitPayout
+                ),
+              false,
+              !(Math.floor(Number(payoutAmount) || 0) > 0 && payoutReason.trim())
+            )}
           </div>
         </section>
       )}
@@ -535,7 +556,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
         <section className="space-y-2">
           <div className="bg-white rounded-xl border border-[#E5E7EB] p-4">
             <h3 className="text-xs font-bold text-[#00261b] uppercase tracking-wider">{steps[2]}</h3>
-            <p className="text-[11px] text-[#4B5563] mt-0.5">{debtors.length} {str('members owe', 'beebbanja')}</p>
+            <p className="text-[11px] text-[#4B5563] mt-0.5">{debtors.length} {str('members owe', 'abali n’ebbanja')}</p>
             {(() => {
               const entered = debtors.reduce((s, m) => s + Math.max(0, Math.floor(Number(repayInputs[m.id] || 0))), 0);
               const owed = debtors.reduce((s, m) => s + (m.loanBalance || 0), 0);
@@ -562,7 +583,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
               );
             })()}
           </div>
-          {debtors.length === 0 && <p className="text-xs font-bold text-[#166534] bg-[#DCFCE7] rounded-lg p-3">{str('No outstanding loans. All clean!', 'Tewali bbanja!')}</p>}
+          {debtors.length === 0 && <p className="text-xs font-bold text-[#166534] bg-[#DCFCE7] rounded-lg p-3">{str('No outstanding loans. All clean!', 'Tewali bbanja erisigadde! Byonna birungi!')}</p>}
           {debtors.map((m) => (
             <div key={m.id} className="bg-white rounded-xl border border-[#E5E7EB] p-2.5 space-y-1.5">
               <div className="flex items-center justify-between gap-2">
@@ -570,7 +591,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                   <MemberAvatar name={m.name} initials={m.initials} photoUrl={m.photoUrl} sizeClass="w-9 h-9 text-xs" />
                   <div className="min-w-0">
                     <p className="text-xs font-bold truncate">{m.name} <span className="font-mono text-[#4B5563]">#{m.no}</span></p>
-                    <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Abbanja')} UGX {m.loanBalance.toLocaleString()}</p>
+                    <p className="text-[11px] font-mono text-[#B91C1C]">{str('Owes', 'Alina bbanja')} UGX {m.loanBalance.toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -643,7 +664,17 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
             {loanAmt > 0 && !loanEligible && (
               <p className="text-[11px] font-bold text-[#B91C1C]">{str('Blocked: exceeds limit or member has an active loan.', 'Kigaaniddwa: esukka ekkomo oba alina bbanja.')}</p>
             )}
-            {stepBtn(str('Submit for approval', 'Weereza'), commitLoan, true, !loanEligible)}
+            {stepBtn(
+              str('Submit for approval', 'Weereza'),
+              () =>
+                askAmountCheck(
+                  loanAmt,
+                  `${str('Loan to', 'Ebbanja kwa')} ${loanMember?.name || ''} · ${loanForm.term}`,
+                  commitLoan
+                ),
+              true,
+              !loanEligible
+            )}
             {draft.loansRecorded && <p className="text-xs font-bold text-[#166534]">✓ {str('Request queued for executives', 'Kisindikiddwa')}</p>}
           </div>
           {stepBtn(str('Continue to Fines →', 'Weeyongereyo →'), () => patch({ step: 4 }), false)}
@@ -789,7 +820,7 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
                 label: steps[1],
                 status: draft.sharesRecorded ? 'done' : sharesTotal > 0 ? 'attention' : 'zero',
                 detail: draft.sharesRecorded
-                  ? str('Recorded to passbooks', 'Kikoseddwa')
+                  ? str('Recorded to passbooks', 'Kwandiikibwa mu ppaasibuku')
                   : sharesTotal > 0
                     ? `${sharesTotal} ${str('staged but not recorded', 'biteekeddwateka naye tebinnakwatibwa')}`
                     : str('No shares today', 'Tewali migabo leero'),
@@ -960,6 +991,21 @@ export const MeetingWizardView: React.FC<MeetingWizardViewProps> = ({
       <button type="button" onClick={() => onNavigate('member_passbook')} className="w-full text-xs font-bold text-[#4B5563] underline">
         {str('View passbooks', 'Laba ppaasibuku')}
       </button>
+
+      {amountCheck && (
+        <AmountConfirmDialog
+          isOpen
+          amount={amountCheck.amount}
+          headline={amountCheck.headline}
+          language={language}
+          onCancel={() => setAmountCheck(null)}
+          onConfirmed={() => {
+            const run = amountCheck.run;
+            setAmountCheck(null);
+            run();
+          }}
+        />
+      )}
     </main>
   );
 };

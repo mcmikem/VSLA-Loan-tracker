@@ -1,30 +1,56 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Language } from '../types';
+
+const REASON_OPTIONS = [
+  { en: 'Incorrect Note Count', lu: 'Kikyali mu kubala empeampula' },
+  { en: 'MoMo Cashout Float Error', lu: 'Kikyali ku MoMo cashout float' },
+  { en: 'Unrecorded Late Fine (-2,000)', lu: 'Fine y\'okudda ebirogopolodwa (-2,000)' },
+  { en: 'Missing Share Entry', lu: 'Emigabo ebisabidwa tebiriwo' },
+];
 
 interface CashDiscrepancyModalProps {
   isOpen: boolean;
   onClose: () => void;
+  language?: Language;
   onApplyAdjustment: (amount: number, reason: string, method: string) => void;
+  expectedTotal?: number;
+  countedTotal?: number;
+  meetingNumber?: number;
+  difference?: number;
 }
 
 export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
   isOpen,
   onClose,
+  language = 'EN',
   onApplyAdjustment,
+  expectedTotal = 0,
+  countedTotal = 0,
+  meetingNumber = 0,
+  difference = countedTotal - expectedTotal,
 }) => {
   const [discrepancyType, setDiscrepancyType] = useState<'shortage' | 'surplus'>('shortage');
   const [selectedReason, setSelectedReason] = useState('Incorrect Note Count');
-  const [customReasonText, setCustomReasonText] = useState(
-    'Cashier physical counting error: 1x 20,000 note and 1x 10,000 note double-checked under tray.'
-  );
-  const [adjustmentAmount, setAdjustmentAmount] = useState('30,000');
+  const [customReasonText, setCustomReasonText] = useState('');
+  const [adjustmentAmount, setAdjustmentAmount] = useState(String(Math.abs(difference) || 0));
   const [resolutionMethod, setResolutionMethod] = useState('welfare');
-  const [keyholder3Signed, setKeyholder3Signed] = useState(true);
+  const [keyholder3Signed, setKeyholder3Signed] = useState(false);
+  const str = (en: string, lu: string) => language === 'LU' ? lu : en;
+  const selectedReasonText = REASON_OPTIONS.find((reason) => reason.en === selectedReason)?.[language === 'LU' ? 'lu' : 'en'] || selectedReason;
+
+  useEffect(() => {
+    if (isOpen) {
+      setAdjustmentAmount(String(Math.abs(difference) || 0));
+      setDiscrepancyType(difference < 0 ? 'shortage' : 'surplus');
+    }
+  }, [isOpen, difference]);
 
   if (!isOpen) return null;
 
   const handleApply = () => {
-    const numAmount = parseInt(adjustmentAmount.replace(/,/g, ''), 10) || 30000;
-    onApplyAdjustment(numAmount, selectedReason + ': ' + customReasonText, resolutionMethod);
+    const amount = Math.abs(difference);
+    if (!amount || !keyholder3Signed || !customReasonText.trim()) return;
+    onApplyAdjustment(amount, selectedReasonText + ': ' + customReasonText.trim(), resolutionMethod);
     onClose();
   };
 
@@ -46,15 +72,15 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-status-bad-tx inline-block" />
                 <h2 className="text-headline-sm font-headline-sm font-bold text-primary tracking-tight">
-                  Reconcile Cash Discrepancy
+                   {str('Reconcile Cash Discrepancy', 'Golola Enjawukana y\'Essente')}
                 </h2>
               </div>
               <p className="text-label-sm font-label-sm text-text-muted font-medium mt-0.5">
-                Golola Enjawukana y'Essente
+                 {str('Golola Enjawukana y\'Essente', 'Golola Enjawukana y\'Essente')}
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container text-primary font-mono text-[11px] font-semibold border border-border-line">
-                  Meeting #28 · Box Reconciliation #REC-28-09
+                   Meeting #{meetingNumber} · Box Reconciliation
                 </span>
               </div>
             </div>
@@ -85,7 +111,7 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                 type="button"
               >
                 <span className="material-symbols-outlined text-sm">warning</span>
-                <span>Shortage (-30,000 UGX)</span>
+                 <span>Shortage ({difference < 0 ? `UGX ${Math.abs(difference).toLocaleString()}` : 'UGX 0'})</span>
               </button>
               <button
                 onClick={() => setDiscrepancyType('surplus')}
@@ -112,27 +138,19 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                 </div>
                 <div className="my-2">
                   <span className="text-headline-sm font-currency-lg font-bold text-primary block tracking-tight">
-                    UGX 1,420,000
+                     UGX {expectedTotal.toLocaleString('en-US')}
                   </span>
                 </div>
-                <div className="border-t border-border-line pt-1.5 space-y-1 text-[11px] text-text-muted font-mono">
-                  <div className="flex justify-between">
-                    <span>Shares</span>
-                    <span className="font-medium text-primary">480,000</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Welfare</span>
-                    <span className="font-medium text-primary">150,000</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Loans Repaid</span>
-                    <span className="font-medium text-primary">720,000</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Late Fines</span>
-                    <span className="font-medium text-primary">70,000</span>
-                  </div>
-                </div>
+                 <div className="border-t border-border-line pt-1.5 space-y-1 text-[11px] text-text-muted font-mono">
+                   <div className="flex justify-between">
+                     <span>Expected balance</span>
+                     <span className="font-medium text-primary">{expectedTotal.toLocaleString('en-US')}</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span>Physical count</span>
+                     <span className="font-medium text-primary">{countedTotal.toLocaleString('en-US')}</span>
+                   </div>
+                 </div>
               </div>
 
               {/* Counted */}
@@ -148,23 +166,15 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                 </div>
                 <div className="my-2">
                   <span className="text-headline-sm font-currency-lg font-bold text-status-bad-tx block tracking-tight">
-                    UGX 1,390,000
+                     UGX {countedTotal.toLocaleString('en-US')}
                   </span>
                 </div>
-                <div className="border-t border-border-line pt-1.5 space-y-1 text-[11px] text-text-muted font-mono">
-                  <div className="flex justify-between">
-                    <span>Banknotes (46)</span>
-                    <span className="font-medium text-primary">1,370,000</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Coins in Bag</span>
-                    <span className="font-medium text-primary">20,000</span>
-                  </div>
-                  <div className="flex justify-between text-status-bad-tx font-bold pt-1 border-t border-dashed border-border-line">
-                    <span>Difference</span>
-                    <span>-30,000</span>
-                  </div>
-                </div>
+                 <div className="border-t border-border-line pt-1.5 space-y-1 text-[11px] text-text-muted font-mono">
+                   <div className="flex justify-between text-status-bad-tx font-bold pt-1 border-t border-dashed border-border-line">
+                     <span>Difference</span>
+                     <span>{difference > 0 ? '+' : ''}{difference.toLocaleString('en-US')}</span>
+                   </div>
+                 </div>
               </div>
             </div>
 
@@ -175,10 +185,10 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
               </span>
               <div className="flex-1">
                 <p className="text-label-md font-label-md font-bold text-status-bad-tx">
-                  Cash Shortage Detected: -UGX 30,000
+                   {difference < 0 ? 'Cash shortage' : 'Cash surplus'}: {difference < 0 ? '-' : '+'}UGX {Math.abs(difference).toLocaleString('en-US')}
                 </p>
                 <p className="text-[12px] text-status-bad-tx/90 mt-0.5 leading-relaxed">
-                  Ssente zibulako: Physical notes in the metal box are UGX 30,000 less than calculated meeting transactions.
+                   Physical cash differs from the expected balance. Record the reason, then recount before sealing.
                 </p>
               </div>
             </div>
@@ -236,8 +246,8 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                 </div>
                 <input
                   type="text"
-                  value={adjustmentAmount}
-                  onChange={(e) => setAdjustmentAmount(e.target.value)}
+                   value={adjustmentAmount}
+                   readOnly
                   className="w-full py-2.5 px-3 text-headline-lg font-mono text-primary bg-surface-card border-0 focus:ring-0 tracking-tight"
                 />
                 <div className="flex items-center pr-3 text-text-muted">
@@ -248,14 +258,14 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
               </div>
               <p className="text-body-sm text-text-muted mt-1.5 text-[12px] flex items-center gap-1">
                 <span className="material-symbols-outlined text-secondary text-sm">check_circle</span>
-                <span>Adjusts box ledger to zero difference. Final balanced cash: UGX 1,390,000.</span>
+                <span>                     Records the variance note only. Recount the cash and return here if the count still differs.</span>
               </p>
             </div>
 
             {/* Resolution Action Method */}
             <div>
               <label className="block text-label-md font-label-md font-semibold text-primary mb-2">
-                Resolution Action Method <span className="text-text-muted font-normal text-xs">(Ensonga y'Okugolola)</span>
+                Note category <span className="text-text-muted font-normal text-xs">(Ensonga y'okunyonnyola)</span>
               </label>
               <div className="space-y-2">
                 <label
@@ -278,7 +288,7 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                         Write-off to Welfare Emergency Buffer
                       </span>
                       <span className="text-label-sm bg-status-ok-bg text-status-ok-tx font-bold px-1.5 py-0.5 rounded text-[10px]">
-                        APPROVED
+                         NOTE ONLY
                       </span>
                     </div>
                     <p className="text-[12px] text-text-muted mt-0.5">
@@ -362,7 +372,7 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                     </div>
                     <div>
                       <span className="text-label-sm font-label-sm font-bold text-primary block">
-                        Keyholder 1: Sarah Nabukalu
+                        Keyholder 1
                       </span>
                       <span className="text-[11px] text-text-muted font-mono">
                         Padlock Key #1 · Verified 11:51 AM
@@ -370,7 +380,7 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                     </div>
                   </div>
                   <span className="text-label-sm font-label-sm font-bold text-secondary">
-                    WITNESSED
+                    CHECK MANUALLY
                   </span>
                 </div>
 
@@ -381,7 +391,7 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                     </div>
                     <div>
                       <span className="text-label-sm font-label-sm font-bold text-primary block">
-                        Keyholder 2: Grace Akello
+                        Keyholder 2
                       </span>
                       <span className="text-[11px] text-text-muted font-mono">
                         Padlock Key #2 · Verified 11:52 AM
@@ -389,7 +399,7 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                     </div>
                   </div>
                   <span className="text-label-sm font-label-sm font-bold text-secondary">
-                    WITNESSED
+                    CHECK MANUALLY
                   </span>
                 </div>
 
@@ -427,7 +437,7 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
             type="button"
           >
             <span className="material-symbols-outlined text-lg">check</span>
-            <span>Apply Adjustment & Balance Box (UGX 0 Diff)</span>
+                     <span>Record reason, then recount</span>
           </button>
 
           <button

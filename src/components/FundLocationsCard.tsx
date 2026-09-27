@@ -9,6 +9,8 @@ interface FundLocationsCardProps {
   recentTransfers?: FundTransfer[];
   language?: Language;
   onTransfer?: (from: FundLocation, to: FundLocation, amount: number, note: string) => string | null;
+  /** False when this officer does not hold the box key — the move button explains why. */
+  canMoveFloat?: boolean;
 }
 
 /**
@@ -23,6 +25,7 @@ export const FundLocationsCard: React.FC<FundLocationsCardProps> = ({
   recentTransfers = [],
   language = 'EN',
   onTransfer,
+  canMoveFloat = true,
 }) => {
   const [from, setFrom] = useState<FundLocation>('cash');
   const [to, setTo] = useState<FundLocation>('momo');
@@ -32,6 +35,7 @@ export const FundLocationsCard: React.FC<FundLocationsCardProps> = ({
   const [showForm, setShowForm] = useState(false);
   const str = (en: string, lu: string) => (language === 'LU' ? lu : en);
   const total = cash + momo + bank;
+  const locationLabel = (value: FundLocation) => value === 'cash' ? str('Cash', 'Ssente nkalu') : value === 'momo' ? 'MoMo' : str('Bank', 'Banka');
 
   const submit = () => {
     if (!onTransfer) return;
@@ -62,8 +66,9 @@ export const FundLocationsCard: React.FC<FundLocationsCardProps> = ({
         {onTransfer && (
           <button
             type="button"
+            disabled={!canMoveFloat}
             onClick={() => { setShowForm(!showForm); setError(null); }}
-            className="px-2.5 py-1.5 bg-white/15 border border-white/30 rounded-lg text-[11px] font-bold active:scale-95"
+            className="px-2.5 py-1.5 bg-white/15 border border-white/30 rounded-lg text-[11px] font-bold active:scale-95 disabled:opacity-50"
           >
             {str('Move →', 'Kyusa →')}
           </button>
@@ -98,7 +103,7 @@ export const FundLocationsCard: React.FC<FundLocationsCardProps> = ({
                         (l === 'cash' ? from : to) === opt ? 'bg-[#EAB308] text-[#00261b]' : 'bg-white/10 text-white/70'
                       }`}
                     >
-                      {opt}
+                       {locationLabel(opt)}
                     </button>
                   ))}
                 </div>
@@ -107,11 +112,11 @@ export const FundLocationsCard: React.FC<FundLocationsCardProps> = ({
           </div>
           <div className="flex gap-2">
             <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="numeric" placeholder="UGX" className="flex-1 min-h-[44px] rounded-lg px-3 text-sm font-mono text-black" />
-            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={str('Note (e.g. fees trip)', 'Ensonga')} className="flex-[2] min-h-[44px] rounded-lg px-3 text-sm text-black" />
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={str('Note (e.g. fees trip)', 'Ensonga (eg. ssente za travel)')} className="flex-[2] min-h-[44px] rounded-lg px-3 text-sm text-black" />
           </div>
           {error && <p className="text-[11px] font-bold text-amber-200">{error}</p>}
           <button type="button" onClick={submit} className="w-full min-h-[44px] bg-[#EAB308] text-[#00261b] rounded-lg font-bold text-xs active:scale-[0.99]">
-            {str('Record the move (audited)', 'Wandiika (kikoseddwa)')}
+             {str('Record the move (audited)', 'Wandiika mu kkubo (kikakasseetwa)')}
           </button>
         </div>
       )}
@@ -119,7 +124,7 @@ export const FundLocationsCard: React.FC<FundLocationsCardProps> = ({
         <div className="space-y-1">
           {recentTransfers.slice(0, 3).map((t) => (
             <p key={t.id} className="text-[11px] font-mono text-white/75">
-              UGX {t.amount.toLocaleString()} {t.from} → {t.to} · {t.actorName} · {t.note}
+               UGX {t.amount.toLocaleString()} {locationLabel(t.from)} → {locationLabel(t.to)} · {t.actorName} · {t.note}
             </p>
           ))}
         </div>

@@ -10,9 +10,13 @@ import {
   parseCollectionInput,
   requestCollection,
 } from './lib/momo.js';
+import { roleAtLeast } from './lib/_auth.js';
+import { isDemoGroupId } from './lib/_seed.js';
 
 const app = express();
-const PORT = 3000;
+// PORT is overridable so the same build can run behind a reverse proxy or on
+// a second instance in tests, without editing code.
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -840,6 +844,71 @@ function writeDatabase(data: any, groupId?: string) {
   }
 }
 
+function publicLocalState(state: any) {
+  return {
+    ...state,
+    approvals: (state.approvals || []).map((approval: any) => {
+      const { confirmationCode: _code, confirmationCodeHash: _hash, ...safe } = approval;
+      return safe;
+    }),
+  };
+}
+
+function normalizeLocalStateSecrets(state: any) {
+  return {
+    ...state,
+    approvals: (state.approvals || []).map((approval: any) => {
+      const next = { ...approval };
+      if (next.confirmationCode) {
+        next.confirmationCodeHash = localCodeHash(next.confirmationCode);
+        delete next.confirmationCode;
+      }
+      return next;
+    }),
+  };
+}
+
+function localCodeHash(code: string): string {
+  return crypto.createHash('sha256').update(String(code)).digest('hex');
+}
+
+function appendLocalNotifications(state: any, notifications: any[]) {
+  const now = new Date().toISOString();
+  return {
+    ...state,
+    notifications: [
+      ...notifications.map((notification: any) => ({
+        id: `note-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
+        createdAt: now,
+        read: false,
+        ...notification,
+      })),
+      ...(state.notifications || []),
+    ].slice(0, 100),
+  };
+}
+
+function appendLocalNotification(state: any, notification: any) {
+  return appendLocalNotifications(state, [notification]);
+}
+
+function appendLocalAudit(state: any, actor: string, action: string, details: string, amount?: number) {
+  return {
+    ...state,
+    auditLog: [
+      {
+        id: `audit-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
+        timestamp: new Date().toISOString(),
+        actorName: actor,
+        action,
+        details,
+        amount,
+      },
+      ...(state.auditLog || []),
+    ].slice(0, 300),
+  };
+}
+
 function listAllGroups() {
   ensureDefaultGroups();
   const files = fs.readdirSync(GROUPS_DIR).filter((f) => f.endsWith('.json'));
@@ -1173,24 +1242,197 @@ app.get('/api/groups/:groupId/invite', (req, res) => {
 // 2. Fetch Complete State for Specified Group
 app.get('/api/state', (req, res) => {
   const groupId = resolveGroupId(req);
+  // Full ledger (phones, balances, audit): own-group members only, once enforced.
+  const session = requireRoleLocal(req, res, 'member');
+  if (session === undefined) return;
+  if (!requireGroupLocal(req, res, session, groupId)) return;
   const data = readDatabase(groupId);
-  res.json({ success: true, groupId, state: data, ...data });
+   const safeData = publicLocalState(data);
+   res.json({ success: true, groupId, state: safeData, ...safeData });
 });
 
 // 3. Save/Update Complete State for Specified Group
-app.post('/api/state', (req, res) => {
-  const groupId = resolveGroupId(req);
-  const payload = req.body;
-  const newState = payload.state || payload;
-  if (!newState || typeof newState !== 'object') {
-    return res.status(400).json({ error: 'Invalid state object' });
-  }
+ app.post('/api/state', (req, res) => {
+   const groupId = resolveGroupId(req);
+   const payload = req.body || {};
+   const action = String(payload.action || '').toLowerCase();
+   if (action === 'create-loan' || action === 'request-code' || action === 'approve-code') {
+     // Loan requests are open to members (own account only); both halves of the
+     // two-key ceremony are officer actions.
+     const minRole = action === 'create-loan' ? 'member' : 'keyholder';
+     const session = requireRoleLocal(req, res, minRole);
+     if (session === undefined) return;
+     if (!requireGroupLocal(req, res, session, groupId)) return;
+     const current = readDatabase(groupId);
+     if (action === 'create-loan') {
+       const approvalId = String(payload.approvalId || `app-${Date.now().toString(36)}`);
+       if (current.approvals.some((approval: any) => approval.id === approvalId)) {
+         return res.json({ success: true, groupId, state: publicLocalState(current) });
+       }
+       const member = (current.members || []).find((record: any) => record.no === String(payload.memberNo || ''));
+       if (!member) return res.status(404).json({ error: 'Member record not found.' });
+       if (session?.role === 'member') {
+         // A member may only ask for a loan in their own name.
+         const account = (current.availableAccounts || []).find((record: any) => record.id === session.sub);
+         if (!account || (account.memberId && account.memberId !== member.id) || (account.memberNo && account.memberNo !== member.no)) {
+           return res.status(403).json({ error: 'Members can only request a loan for their own account.' });
+         }
+       }
+       const amount = Number(payload.amount);
+       const profile = current.groupProfile || {};
+       const minimum = Number(profile.loanMinimum || 0);
+       const guarantors = Array.isArray(payload.guarantorNos) ? payload.guarantorNos.map(String) : [];
+       const requiredGuarantors = Number(profile.requiredGuarantors || 0);
+       if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Enter a valid loan amount.' });
+       if (minimum > 0 && amount < minimum) return res.status(400).json({ error: `The minimum loan is UGX ${minimum.toLocaleString()}.` });
+       if ((member.loanBalance || 0) > 0) return res.status(409).json({ error: 'This member already has an active loan.' });
+       if (amount > Number(member.maxBorrowLimit || 0)) return res.status(400).json({ error: 'The request is above this member’s borrowing limit.' });
+       if (amount > Number(current.loanFundBalance || 0)) return res.status(409).json({ error: 'The loan fund does not have enough money.' });
+       if (guarantors.length < requiredGuarantors || new Set(guarantors).size !== guarantors.length || guarantors.some((no: string) => !(current.members || []).some((record: any) => record.no === no))) {
+         return res.status(400).json({ error: `Choose ${requiredGuarantors} real, different confirmer${requiredGuarantors === 1 ? '' : 's'}.` });
+       }
+       const purpose = String(payload.purpose || '').trim();
+       if (!purpose) return res.status(400).json({ error: 'Tell the group what the loan is for.' });
+       const rates = profile.loanRates || { oneMonth: 5, twoMonths: 8, threeMonths: 10 };
+       const term = String(payload.term || '3 months');
+       const rate = term === '1 month' ? Number(rates.oneMonth) : term === '2 months' ? Number(rates.twoMonths) : Number(rates.threeMonths);
+       const approval = {
+         id: approvalId,
+         type: 'vsla_loan',
+         reqNumber: String(payload.reqNumber || `Req #LN-${Date.now().toString(36).slice(-5).toUpperCase()}`),
+         timeText: 'Just now',
+         memberName: member.name,
+         memberNo: member.no,
+         phone: member.phone,
+         provider: member.provider,
+         initiator: payload.initiator || member.name,
+         amount,
+         term,
+         serviceFee: Math.round(amount * (rate / 100)),
+         purpose,
+         guarantorNos: guarantors,
+         status: 'pending',
+         totalSavings: member.sharesTotal,
+         maxBorrowable: member.maxBorrowLimit,
+       };
+       const nextState = appendLocalAudit(
+         appendLocalNotifications(
+           { ...current, approvals: [approval, ...(current.approvals || [])] },
+           [
+             { audience: 'officer', kind: 'loan_request', approvalId, title: `Loan request from ${member.name}`, body: `${approval.reqNumber} · UGX ${amount.toLocaleString()} needs two officers.`, actionScreen: 'approvals' },
+             { audience: 'member', memberNo: member.no, kind: 'loan_request', approvalId, title: 'Loan request sent', body: `${approval.reqNumber} is waiting for the group’s two officers.`, actionScreen: 'member_passbook' },
+           ]
+         ),
+         payload.initiator || member.name,
+         `Submitted loan request ${approval.reqNumber}`,
+         `${member.name} (#${member.no})`,
+         amount
+       );
+       writeDatabase(nextState, groupId);
+       return res.json({ success: true, groupId, state: publicLocalState(nextState) });
+     }
+     const target = (current.approvals || []).find((approval: any) => approval.id === String(payload.approvalId || ''));
+     if (!target || target.type !== 'vsla_loan' || target.status !== 'pending') {
+       return res.status(409).json({ error: 'This loan request is no longer waiting for approval.' });
+     }
+     if (action === 'request-code') {
+       const officer = (current.availableAccounts || []).find((account: any) => account.id === payload.officerId);
+       if (!officer || !officer.permissions?.canApproveLoans || !officer.phone) {
+         return res.status(400).json({ error: 'Choose an officer with approval permission and a phone number.' });
+       }
+       const code = String(crypto.randomInt(100000, 1000000));
+       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+       const nextState = appendLocalAudit(
+         appendLocalNotification(
+           {
+             ...current,
+             approvals: current.approvals.map((approval: any) =>
+               approval.id === target.id
+                 ? { ...approval, confirmationCodeHash: localCodeHash(code), confirmationCodeExpiresAt: expiresAt, confirmationOfficerId: officer.id }
+                 : approval
+             ),
+           },
+           {
+             audience: 'officer',
+             kind: 'approval_code',
+             recipientAccountId: officer.id,
+             approvalId: target.id,
+             title: `Approval code ready for ${target.memberName}`,
+             body: `${target.reqNumber} is waiting for key 1/2. Use the code from the secure message.`,
+             actionScreen: 'approvals',
+           }
+         ),
+         'local-device',
+         `Created phone approval code for ${target.reqNumber}`,
+         `${officer.name} · expires in 10 minutes · no money moved`
+       );
+       writeDatabase(nextState, groupId);
+       return res.json({ success: true, groupId, code, phone: officer.phone, officerName: officer.name, expiresAt, state: publicLocalState(nextState) });
+     }
+     const suppliedCode = String(payload.code || '');
+     const expiresAt = target.confirmationCodeExpiresAt ? new Date(target.confirmationCodeExpiresAt).getTime() : 0;
+     const validHash = target.confirmationCodeHash && target.confirmationCodeHash === localCodeHash(suppliedCode);
+     const validLegacyCode = target.confirmationCode && target.confirmationCode === suppliedCode;
+     if (!validHash && !validLegacyCode) return res.status(400).json({ error: 'That approval code is not correct.' });
+     if (!expiresAt || expiresAt < Date.now()) return res.status(400).json({ error: 'That approval code has expired.' });
+     if (target.firstApprovedBy) return res.status(409).json({ error: 'This request already has key 1/2.' });
+     const officer = (current.availableAccounts || []).find((account: any) => account.id === target.confirmationOfficerId);
+     if (!officer || !officer.permissions?.canApproveLoans) return res.status(409).json({ error: 'The approving officer is no longer authorized on this group.' });
+     const member = (current.members || []).find((record: any) => record.no === target.memberNo);
+     if (!member || (member.loanBalance || 0) > 0 || target.amount > (member.maxBorrowLimit || 0) || target.amount > (current.loanFundBalance || 0)) {
+       return res.status(409).json({ error: 'The request no longer passes the live loan checks.' });
+     }
+     const now = new Date().toISOString();
+     const nextState = appendLocalAudit(
+       appendLocalNotification(
+         {
+           ...current,
+           approvals: current.approvals.map((approval: any) =>
+             approval.id === target.id
+               ? {
+                   ...approval,
+                   firstApprovedBy: officer.name,
+                   firstApprovedAt: now,
+                   payoutMethod: payload.payoutMethod || approval.provider || 'Cash',
+                   confirmationCodeHash: undefined,
+                   confirmationCode: undefined,
+                   confirmationCodeExpiresAt: undefined,
+                 }
+               : approval
+           ),
+         },
+         {
+           audience: 'officer',
+           kind: 'approval',
+           approvalId: target.id,
+           title: `${target.memberName} received key 1/2`,
+           body: `${target.reqNumber} still needs a different officer for key 2/2.`,
+           actionScreen: 'approvals',
+         }
+       ),
+       officer.name,
+       `Phone code approved ${target.reqNumber}`,
+       `${target.memberName} (#${target.memberNo}) · key 1/2 · no money moved`
+     );
+     writeDatabase(nextState, groupId);
+     return res.json({ success: true, groupId, state: publicLocalState(nextState) });
+   }
+   // Whole-ledger write: officer-only (treasurer and above), own group only.
+   // This is the endpoint that can move every balance, so it is the strictest.
+   const writeSession = requireRoleLocal(req, res, 'treasurer');
+   if (writeSession === undefined) return;
+   if (!requireGroupLocal(req, res, writeSession, groupId)) return;
+   const rawState = payload.state || payload;
+   if (!rawState || typeof rawState !== 'object') {
+     return res.status(400).json({ error: 'Invalid state object' });
+   }
 
-  newState.groupId = groupId;
-  newState.lastBackupDate = new Date().toISOString();
-  const success = writeDatabase(newState, groupId);
-  if (success) {
-    res.json({ success: true, groupId, state: newState });
+    const newState = normalizeLocalStateSecrets(rawState);
+    newState.groupId = groupId;
+    newState.lastBackupDate = new Date().toISOString();
+    const success = writeDatabase(newState, groupId);
+    if (success) {
+      res.json({ success: true, groupId, state: publicLocalState(newState) });
   } else {
     res.status(500).json({ error: 'Failed to write to database storage' });
   }
@@ -1199,12 +1441,21 @@ app.post('/api/state', (req, res) => {
 // 3b. User Accounts & Session Switching for Specified Group
 app.get('/api/accounts', (req, res) => {
   const groupId = resolveGroupId(req);
+  // Enforced mode: demo rosters are 404 — the welcome gate only ever asks for
+  // groups resolved from a real invite code (same rule as api/auth.js).
+  if (authEnforced() && isDemoGroupId(groupId)) {
+    return res.status(404).json({ error: 'Demo groups are disabled here. Use practice mode to explore.' });
+  }
   const data = readDatabase(groupId);
+  const pool = authEnforced() ? data.availableAccounts || [] : data.availableAccounts || SEED_ACCOUNTS;
   res.json({
     success: true,
     groupId,
-    currentUser: data.currentUser || data.availableAccounts?.[0] || SEED_ACCOUNTS[0],
-    accounts: data.availableAccounts || SEED_ACCOUNTS,
+    currentUser: data.currentUser || pool[0] || null,
+    accounts: pool.map((a: any) => {
+      const { pin: _pin, ...safe } = a;
+      return safe;
+    }),
   });
 });
 
@@ -1298,15 +1549,54 @@ function requireSecretaryLocal(req: express.Request, res: express.Response): boo
   return true;
 }
 
-// 3b-ii. PIN login — verifies account PIN, migrates legacy PINs to scrypt hash
+/**
+ * Role gate for the ledger routes, matching lib/_auth.js exactly so the local
+ * server can never be more permissive than the Vercel functions.
+ * Returns the session (or null in open-dev mode); `undefined` means "refused,
+ * response already sent".
+ */
+function requireRoleLocal(
+  req: express.Request,
+  res: express.Response,
+  minRole: 'member' | 'keyholder' | 'chairperson' | 'treasurer' | 'secretary' = 'member'
+): any | null | undefined {
+  const session = readSessionLocal(req);
+  if (!session) {
+    if (!authEnforced()) return null; // open-dev mode: allow, audited as 'offline-device'
+    res.status(401).json({ error: 'Sign-in required. POST /api/auth/login with groupId, accountId and PIN.' });
+    return undefined;
+  }
+  if (!roleAtLeast(session.role, minRole)) {
+    res.status(403).json({ error: `Requires ${minRole} role or above.` });
+    return undefined;
+  }
+  return session;
+}
+
+/** A session may only ever touch the group it was issued for. */
+function requireGroupLocal(req: express.Request, res: express.Response, session: any | null, groupId: string): boolean {
+  if (!authEnforced() || !session) return true;
+  if (session.groupId && session.groupId !== groupId) {
+    res.status(403).json({ error: 'This session belongs to another group.' });
+    return false;
+  }
+  return true;
+}
+
+// 3b-ii. PIN login — verifies account PIN, migrates legacy plaintext PINs to scrypt hash
 app.post('/api/auth/login', (req, res) => {
   const groupId = resolveGroupId(req);
   const { accountId, pin } = req.body || {};
   if (!accountId || !/^\d{4,8}$/.test(String(pin || ''))) {
     return res.status(400).json({ error: 'Account and 4–8 digit PIN are required.' });
   }
+  // Enforced mode: never fall back to the demo roster — a real login must be a
+  // real account on a real group (same rule as api/auth.js).
+  if (authEnforced() && isDemoGroupId(groupId)) {
+    return res.status(404).json({ error: 'Demo groups are disabled here. Use practice mode to explore.' });
+  }
   const current = readDatabase(groupId);
-  const pool = current.availableAccounts || SEED_ACCOUNTS;
+  const pool = authEnforced() ? current.availableAccounts || [] : current.availableAccounts || SEED_ACCOUNTS;
   const account = pool.find((a: any) => a.id === accountId);
   if (!account || !verifyPinLocal(String(pin), account.pin)) {
     return res.status(401).json({ error: 'Wrong account or PIN.' });

@@ -18,31 +18,32 @@ export const AboutView: React.FC<AboutViewProps> = ({
   language = 'EN',
   groupName = 'Bakwata Savings Group',
 }) => {
-  const str = (en: string, lu: string) =>
-    language === 'LU' ? lu  : en;
+  const str = (en: string, lu: string) => language === 'LU' ? lu : en;
+  const displayGroupName = groupName === 'Savings Group' ? str('Savings Group', 'Ekibiina ky’ensimbi') : groupName;
 
   const features = [
-    { icon: 'menu_book', t: str('Digital passbooks for every saver', 'Ppaasibuku ya buli mukiise') },
-    { icon: 'lock', t: str('3-key strongbox reconciliation', 'Okusiba sanduuko n\'ebisumuluzo 3') },
-    { icon: 'payments', t: str('Loans, welfare grants & fines', "Ebyewolo, obuyambi n'engassi") },
-    { icon: 'cloud_sync', t: str('Offline-first with safe backups', 'Ekola awatali yintaneeti') },
-    { icon: 'receipt_long', t: str('Receipts, reports & full audit trail', 'Risiti, lipoota n\'okukebera') },
-    { icon: 'translate', t: str('English & Luganda', 'Oluzungu n\'Oluganda') },
+    { icon: 'menu_book', t: str('Digital passbooks for every saver', 'Ppaasibuku ez’ekikino za buli mukiise') },
+    { icon: 'lock', t: str('3-key strongbox reconciliation', 'Okubala ssente mu sanduuko esibwa n’ebisumuluzo 3') },
+    { icon: 'payments', t: str('Loans, welfare grants & fines', 'Ebyewolo, obuyambi n’engassi') },
+    { icon: 'cloud_sync', t: str('Offline-first with safe backups', 'Kikola nga t tekintaneeti era kikwata kkopi ezilondedde') },
+    { icon: 'receipt_long', t: str('Receipts, reports & full audit trail', 'Risiti, lipoota n’olukyalo lwa kikola') },
+    { icon: 'translate', t: str('English & Luganda', 'Oluzungu n’Oluganda') },
   ];
 
   return (
     <main className="w-full max-w-lg mx-auto px-4 pt-4 pb-14 flex-1 space-y-4">
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => onNavigate('home')}
-          className="w-9 h-9 rounded-lg bg-surface-card border border-border-strong flex items-center justify-center text-primary active:scale-95 transition"
-          type="button"
-        >
+         <button
+           onClick={() => onNavigate('home')}
+           className="w-9 h-9 rounded-lg bg-surface-card border border-border-strong flex items-center justify-center text-primary active:scale-95 transition"
+           type="button"
+           aria-label={str('Back', 'Ddayo emabega')}
+         >
           <span className="material-symbols-outlined text-lg">arrow_back</span>
         </button>
         <div>
           <h1 className="font-bold text-primary">{str('About VSLA UG', 'Ebikwata ku VSLA UG')}</h1>
-          <p className="text-xs text-text-muted">{groupName}</p>
+           <p className="text-xs text-text-muted">{displayGroupName}</p>
         </div>
       </div>
 
@@ -51,10 +52,10 @@ export const AboutView: React.FC<AboutViewProps> = ({
           <span className="material-symbols-outlined text-[140px]">account_balance</span>
         </div>
         <p className="text-xs uppercase tracking-wider text-primary-fixed font-bold">
-          {str('The digital strongbox for village savings', 'Sanduuko ya digito')}
+           {str('The digital strongbox for village savings', 'Isanduuko y’abali eky’ekikino')}
         </p>
         <p className="text-sm mt-1.5 leading-relaxed text-white/90">
-          {str('Built with Kampala savings groups: stamp shares, approve loans, seal the box with 3 keys — all from one phone, even offline.', "Kyakolebwa n'ebibiina by'e Kampala: teeka sitampu, kiriza ebyewolo, siba sanduuko — byonna ku ssimu emu, wadde tewali yintaneeti.")}
+           {str('Built with Kampala savings groups: stamp shares, approve loans, seal the box with 3 keys — all from one phone, even offline.', 'Kyakolebwa n’ebibiina by’e Kampala: teeka sitamu, kkiriza ebyewolo, siba sanduuko n’ebisumuluzo 3 — byonna ku ssimu emu, wadde nga t tekintaneeti.')}
         </p>
       </section>
 
@@ -74,14 +75,14 @@ export const AboutView: React.FC<AboutViewProps> = ({
           {str('Install on your phone', 'Teeka ku ssimu yo')}
         </h3>
         <p className="text-xs text-text-muted leading-relaxed">
-          {str('Android (Chrome): menu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen. It then opens full-screen and works offline.', 'Android (Chrome): menu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen.')}
+           {str('Android (Chrome): menu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen. It then opens full-screen and works offline.', 'Android (Chrome): menyu ⋮ → Add to Home Screen. iPhone (Safari): Share → Add to Home Screen. Nga ozi gekyikola, poroguramu gumba ekisoboka okwolesa n’okukola nga t tekintaneeti.')}
         </p>
         <button
           type="button"
           onClick={() => onNavigate('legal')}
           className="w-full min-h-[44px] text-xs font-bold text-primary underline"
         >
-          {str('Read Terms, Privacy & Constitution', 'Soma amateeka')}
+           {str('Read Terms, Privacy & Constitution', 'Soma amateeka, ebikwata ku kyama n’ensemateeka')}
         </button>
       </section>
 

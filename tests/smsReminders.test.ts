@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBalanceSnapshot,
   buildFraudReportMessage,
+  buildMeetingReceipt,
   buildMeetingReminder,
   buildRepaymentReminder,
   isSingleSms,
@@ -35,13 +36,27 @@ describe('sms reminders', () => {
     const t = buildMeetingReminder({ groupName: 'Bakwata', meetingNo: 29, lang: 'LU' });
     expect(isSingleSms(t)).toBe(true);
   });
-
   it('balance snapshot carries all three funds', () => {
     const m = { id: 'm2', no: '02', name: 'Joseph Mukasa', phone: '0772123456', loanBalance: 40000, sharesTotal: 320000, welfareBalance: 5000 };
     const t = buildBalanceSnapshot(m, { groupName: 'Bakwata', lang: 'EN' });
     expect(t).toContain('UGX 320,000');
     expect(t).toContain('UGX 40,000');
     expect(t).toContain('UGX 5,000');
+  });
+
+  it('meeting receipt names the member, the box, and how to query it', () => {
+    const m = { id: 'm2', no: '02', name: 'Joseph Mukasa', phone: '0772123456', loanBalance: 40000, sharesTotal: 320000, welfareBalance: 5000 };
+    const en = buildMeetingReceipt(m, { groupName: 'Bakwata', meetingNo: 29, boxTotal: 4500000, lang: 'EN' });
+    const lu = buildMeetingReceipt(m, { groupName: 'Bakwata', meetingNo: 29, boxTotal: 4500000, lang: 'LU' });
+    for (const t of [en, lu]) {
+      expect(t).toContain('Joseph');
+      expect(t).toContain('UGX 320,000');
+      expect(t).toContain('UGX 40,000');
+      expect(t).toContain('UGX 5,000');
+      expect(t).toContain('UGX 4,500,000');
+      expect(t).toContain('29');
+      expect(isSingleSms(t)).toBe(true);
+    }
   });
 
   it('hrefs encode body and phone', () => {

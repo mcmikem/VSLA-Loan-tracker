@@ -15,7 +15,9 @@
   --color-surface-container-low: #f1f3ff;
   --color-surface-container-high: #e1e8fd;
   --color-border-line: #E5E7EB;
-  --color-border-strong: #CBD5E1;
+  /* WCAG 2.2 SC 1.4.11 needs 3:1 for control boundaries; #CBD5E1 on white
+     was only 1.5:1, so inputs/buttons now use a visible slate edge. */
+  --color-border-strong: #64748B;
   --color-text-muted: #4B5563;
   --color-on-surface: #141b2b;
   --color-on-primary: #ffffff;

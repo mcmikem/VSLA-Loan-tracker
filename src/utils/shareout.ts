@@ -1,4 +1,7 @@
-import { Member } from '../types';
+import { Member, SurplusPolicy } from '../types';
+import { SurplusPlan, buildSurplusPlan } from './surplus';
+
+export const SHAREOUT_INTEREST_RATE = 0.32;
 
 export interface MemberPayout {
   memberId: string;
@@ -16,7 +19,14 @@ export interface ShareOutResult {
   totalSharesSold: number;
   totalShareCapital: number;
   interestEarned: number;
+  interestRate: number;
   finesCollected: number;
+  /** How the surplus is appropriated — the whole of it when no policy is set. */
+  plan: SurplusPlan;
+  /** The part of the surplus members are actually paid. */
+  distributableSurplus: number;
+  /** Kept back into the reserve, education and operations funds. */
+  withheld: number;
   totalPool: number;
   valuePerShare: number;
   profitPercentage: string;
@@ -34,14 +44,18 @@ export function computeShareOut(
   members: Member[],
   loanFundBalance: number,
   finesCollected: number,
-  sharePrice = 10000
+  sharePrice = 10000,
+  policy?: SurplusPolicy
 ): ShareOutResult {
   const totalSharesSold =
     members.length > 0 ? members.reduce((sum, m) => sum + (m.sharesCount || 0), 0) : 0;
   const totalShareCapital =
     members.length > 0 ? members.reduce((sum, m) => sum + (m.sharesTotal || 0), 0) : 0;
-  const interestEarned = Math.round(loanFundBalance * 0.32);
-  const totalPool = totalShareCapital + interestEarned + finesCollected;
+  const interestEarned = Math.round(loanFundBalance * SHAREOUT_INTEREST_RATE);
+  // A recorded surplus policy takes its cut before members are paid; without
+  // one the whole surplus is distributed, exactly as before.
+  const plan = buildSurplusPlan(interestEarned, finesCollected, policy);
+  const totalPool = totalShareCapital + plan.bonus;
   const valuePerShare = totalSharesSold > 0 ? Math.round(totalPool / totalSharesSold) : 0;
   const profitPercentage =
     sharePrice > 0 ? (((valuePerShare - sharePrice) / sharePrice) * 100).toFixed(1) : '0.0';
@@ -69,7 +83,11 @@ export function computeShareOut(
     totalSharesSold,
     totalShareCapital,
     interestEarned,
+    interestRate: SHAREOUT_INTEREST_RATE,
     finesCollected,
+    plan,
+    distributableSurplus: plan.bonus,
+    withheld: plan.withheld,
     totalPool,
     valuePerShare,
     profitPercentage,

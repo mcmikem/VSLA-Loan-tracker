@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Member, ScreenId, UserAccount } from '../types';
+import { Language, Member, ScreenId, UserAccount } from '../types';
 import { PRESET_SCENARIOS, SEED_ACCOUNTS } from '../data/mockData';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -11,6 +11,7 @@ interface AccountProfileModalProps {
   members: Member[];
   groupId?: string;
   authEnforced?: boolean;
+  language?: Language;
   onSwitchAccount: (account: UserAccount) => void;
   onLogout?: () => void;
   /** Returns an error message, or null on success. Receives current + new PIN. */
@@ -39,6 +40,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
   members,
   groupId,
   authEnforced,
+  language = 'EN',
   onSwitchAccount,
   onLogout,
   onChangePin,
@@ -56,6 +58,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
   const [pinMsg, setPinMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pinBusy, setPinBusy] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const str = (en: string, lu: string) => language === 'LU' ? lu : en;
 
   if (!isOpen) return null;
 
@@ -79,11 +82,11 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
     e.preventDefault();
     if (pinBusy || !onChangePin) return;
     if (!/^\d{4}$/.test(newPin)) {
-      setPinMsg({ ok: false, text: 'New PIN must be exactly 4 digits.' });
+       setPinMsg({ ok: false, text: str('New PIN must be exactly 4 digits.', "PIN empya eriragana n'obunaku 4.") });
       return;
     }
     if (newPin !== confirmPin) {
-      setPinMsg({ ok: false, text: 'New PIN and confirmation do not match.' });
+      setPinMsg({ ok: false, text: str('New PIN and confirmation do not match.', 'PIN empya n\'okukyonnyosa tebikwatagana.') });
       return;
     }
     setPinBusy(true);
@@ -98,15 +101,15 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
           body: JSON.stringify({ accountId: currentUser.id, pin: currentPinInput, groupId }),
         });
         if (!res.ok) {
-          setPinMsg({ ok: false, text: 'Current PIN is wrong.' });
+          setPinMsg({ ok: false, text: str('Current PIN is wrong.', 'PIN yo esooka si mungi.') });
           return;
         }
       } else if (currentPinInput !== stored) {
-        setPinMsg({ ok: false, text: 'Current PIN is wrong.' });
+        setPinMsg({ ok: false, text: str('Current PIN is wrong.', 'PIN yo esooka si mungi.') });
         return;
       }
       if (newPin === currentPinInput && !stored.startsWith('hash:')) {
-        setPinMsg({ ok: false, text: 'Pick a PIN different from the current one.' });
+        setPinMsg({ ok: false, text: str('Pick a PIN different from the current one.', 'Londa PIN eyali n\'eyo esooka.') });
         return;
       }
       const err = await onChangePin(newPin, currentPinInput);
@@ -117,7 +120,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
       setCurrentPinInput('');
       setNewPin('');
       setConfirmPin('');
-      setPinMsg({ ok: true, text: 'PIN changed. Use the new PIN next sign-in.' });
+      setPinMsg({ ok: true, text: str('PIN changed. Use the new PIN next sign-in.', 'PIN ekyaliziddwa. Mozesa PIN empya okuyingira kabonako.') });
     } finally {
       setPinBusy(false);
     }
@@ -137,13 +140,14 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-2xl">account_circle</span>
             <div>
-              <h2 className="font-bold text-primary text-base">Actual User Account</h2>
-              <p className="text-[11px] text-text-muted">Bakwata VSLA Authentication & Identity</p>
+               <h2 className="font-bold text-primary text-base">{str('Actual User Account', 'Akawunti y\'Omukulu')}</h2>
+               <p className="text-[11px] text-text-muted">{str('Bakwata VSLA Authentication & Identity', 'Bakwata VSLA — Kuyimiriza n\'Okutandika')}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-surface-card border border-border-strong flex items-center justify-center text-text-muted hover:text-primary transition"
+           <button
+             aria-label={str('Close account profile', 'Ggalawo peesa y\'omukulu')}
+             onClick={onClose}
+             className="w-8 h-8 rounded-full bg-surface-card border border-border-strong flex items-center justify-center text-text-muted hover:text-primary transition"
             type="button"
           >
             <span className="material-symbols-outlined text-lg">close</span>
@@ -162,7 +166,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
             type="button"
           >
             <span className="material-symbols-outlined text-sm">badge</span>
-            Current Profile
+             {str('Current Profile', 'Peesa y\'omuliro')}
           </button>
           <button
             onClick={() => setActiveTab('switcher')}
@@ -174,7 +178,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
             type="button"
           >
             <span className="material-symbols-outlined text-sm">switch_account</span>
-            Switch Account ({availableAccounts.length})
+             {str(`Switch Account (${availableAccounts.length})`, `Kyusa Akawunti (${availableAccounts.length})`)}
           </button>
           {showDevTools && (
           <button
@@ -187,7 +191,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
             type="button"
           >
             <span className="material-symbols-outlined text-sm">tune</span>
-            Seed Presets
+             {str('Seed Presets', 'Mfano okulonda')}
           </button>
           )}
         </div>
@@ -211,7 +215,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                         {currentUser.role === 'keyholder' && (
                           <span
                             className="material-symbols-outlined text-amber-300 text-sm"
-                            title="Padlock Key Custodian"
+                             title={str('Padlock Key Custodian', 'Omukwasi wa Kisumuluzo')}
                           >
                             key
                           </span>
@@ -223,20 +227,20 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     </div>
                   </div>
                   <span className="px-2 py-0.5 rounded bg-white/20 text-[10px] font-mono uppercase font-bold text-white">
-                    {currentUser.memberNo ? `#${currentUser.memberNo}` : 'OFFICIAL'}
+                    {currentUser.memberNo ? `#${currentUser.memberNo}` : str('OFFICIAL', 'KASEKA')}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10 text-[11px]">
                   <div>
-                    <span className="text-[#c0c8c3] block text-[10px]">Mobile Contact</span>
+                     <span className="text-[#c0c8c3] block text-[10px]">{str('Mobile Contact', 'Ssimu y\'okutambula')}</span>
                     <span className="font-mono font-bold">{currentUser.phone}</span>
                     <span className="text-[9px] text-primary-fixed block">
                       {currentUser.provider} Mobile Money
                     </span>
                   </div>
                   <div>
-                    <span className="text-[#c0c8c3] block text-[10px]">Location / Zone</span>
+                     <span className="text-[#c0c8c3] block text-[10px]">{str('Location / Zone', 'Ebbaliwo / Zone')}</span>
                     <span className="font-medium text-white truncate block">{currentUser.zone}</span>
                     <span className="text-[9px] text-[#c0c8c3] font-mono">
                       NIN: {currentUser.nationalId || 'CM84029103KL9'}
@@ -251,31 +255,31 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-primary text-xs uppercase tracking-wider flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm text-secondary">wallet</span>
-                      Personal VSLA Balances
+                       {str('Personal VSLA Balances', 'Ebikwata ku VSLA by\'omukiise')}
                     </span>
                     <button
                       onClick={handleOpenMyPassbook}
                       className="text-xs text-secondary font-bold hover:underline flex items-center gap-0.5"
                       type="button"
                     >
-                      <span>Passbook</span>
+                       <span>{str('Passbook', 'Ppaasibuku')}</span>
                       <span className="material-symbols-outlined text-xs">arrow_forward</span>
                     </button>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="p-2 bg-white rounded-lg border border-border-line">
-                      <span className="text-[10px] text-text-muted block">Shares Saved</span>
+                       <span className="text-[10px] text-text-muted block">{str('Shares Saved', 'Emigabo eseridde')}</span>
                       <span className="font-mono font-bold text-primary text-xs block">
                         UGX {linkedMember.sharesTotal.toLocaleString('en-US')}
                       </span>
                       <span className="text-[9px] text-secondary font-semibold">
-                        {linkedMember.sharesCount} Stamps
+                         {linkedMember.sharesCount} {str('Stamps', 'Sitamu')}
                       </span>
                     </div>
 
                     <div className="p-2 bg-white rounded-lg border border-border-line">
-                      <span className="text-[10px] text-text-muted block">Active Loan</span>
+                       <span className="text-[10px] text-text-muted block">{str('Active Loan', 'Ekyewolo ekikola')}</span>
                       <span
                         className={`font-mono font-bold text-xs block ${
                           linkedMember.loanBalance > 0 ? 'text-status-bad-tx' : 'text-status-ok-tx'
@@ -284,32 +288,32 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                         UGX {linkedMember.loanBalance.toLocaleString('en-US')}
                       </span>
                       <span className="text-[9px] text-text-muted">
-                        {linkedMember.loanBalance > 0 ? 'Due 14 Oct' : 'No Debt'}
+                         {linkedMember.loanBalance > 0 ? str('Due 14 Oct', 'Tusiza 14 Oct') : str('No Debt', 'Tewali bbanja')}
                       </span>
                     </div>
 
                     <div className="p-2 bg-white rounded-lg border border-border-line">
-                      <span className="text-[10px] text-text-muted block">3x Max Limit</span>
+                       <span className="text-[10px] text-text-muted block">{str('3x Max Limit', 'Ekkano ekikulu 3x')}</span>
                       <span className="font-mono font-bold text-secondary text-xs block">
                         UGX {linkedMember.maxBorrowLimit.toLocaleString('en-US')}
                       </span>
-                      <span className="text-[9px] text-text-muted">Eligible</span>
+                       <span className="text-[9px] text-text-muted">{str('Eligible', 'Kiriziddwa')}</span>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="bg-canvas-bg rounded-xl border border-border-strong p-3 text-center space-y-1">
-                  <span className="font-bold text-primary block text-xs">Executive Box Admin Account</span>
-                  <p className="text-[11px] text-text-muted">
-                    Logged in as General Secretary. You have full custody over group ledgers, meeting minutes, and the strongbox audit trail.
-                  </p>
+                   <span className="font-bold text-primary block text-xs">{str('Executive Box Admin Account', 'Akawunti y\'omusajja wa Sanduuko')}</span>
+                   <p className="text-[11px] text-text-muted">
+                     {str('Logged in as General Secretary. You have full custody over group ledgers, meeting minutes, and the strongbox audit trail.', 'Wayingira ng\'Omuwandiisi. Obeerera ku bitabo by\'ekibiina, ebikwata by\'olukuŋŋaana n\'amateeka ga sanduuko.')}
+                   </p>
                 </div>
               )}
 
               {/* Role Authority & Permissions */}
               <div className="bg-surface-card rounded-xl border border-border-strong p-3.5 space-y-2">
                 <span className="font-bold text-primary uppercase text-[11px] tracking-wider block">
-                  Permissions & Governance Authority
+                   {str('Permissions & Governance Authority', 'Kibali n\'Obubali bw\'Obubali')}
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div className="flex items-center gap-1.5 text-on-surface">
@@ -320,7 +324,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     >
                       {currentUser.permissions.canLockBox ? 'check_circle' : 'cancel'}
                     </span>
-                    <span>Padlock Witness / Lock</span>
+                     <span>{str('Padlock Witness / Lock', 'Muji wa Padlock / Funga')}</span>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-on-surface">
@@ -331,7 +335,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     >
                       {currentUser.permissions.canApproveLoans ? 'check_circle' : 'cancel'}
                     </span>
-                    <span>Approve Loan Requests</span>
+                     <span>{str('Approve Loan Requests', 'Kkiriza Ebisaba By\'Ebyewolo')}</span>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-on-surface">
@@ -342,7 +346,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     >
                       {currentUser.permissions.canRecordShares ? 'check_circle' : 'cancel'}
                     </span>
-                    <span>Stamp Shares & Cards</span>
+                     <span>{str('Stamp Shares & Cards', 'Teeka Emigabo n\'Kaadi')}</span>
                   </div>
 
                   <div className="flex items-center gap-1.5 text-on-surface">
@@ -355,7 +359,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     >
                       {currentUser.permissions.canDisburseWelfare ? 'check_circle' : 'cancel'}
                     </span>
-                    <span>Welfare Grants Sign-off</span>
+                     <span>{str('Welfare Grants Sign-off', 'Kikasa Enkoba y\'Obuyambi')}</span>
                   </div>
                 </div>
               </div>
@@ -364,11 +368,11 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
               {isDefaultPin && (
                 <div className="bg-red-50 border border-red-300 rounded-xl p-3 text-xs font-bold text-red-800 flex items-center gap-2">
                   <span className="material-symbols-outlined text-base">warning</span>
-                  <span>You still use the default PIN 1234. Anyone who knows it can sign in as you — change it below.</span>
+                   <span>{str('You still use the default PIN 1234. Anyone who knows it can sign in as you — change it below.', 'Omulandala atoodde PIN endala 1234. Oyo amazzi ki ayanga okuyingira nga ggwe — kikyuuse ku nsi.')}</span>
                 </div>
               )}
               <form onSubmit={submitPinChange} className="bg-surface-container rounded-xl p-3 border border-border-line space-y-2">
-                <span className="font-bold text-primary block text-xs">Change sign-in PIN</span>
+                 <span className="font-bold text-primary block text-xs">{str('Change sign-in PIN', 'Kyuusa PIN okuyingira')}</span>
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     type="password"
@@ -376,8 +380,8 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     maxLength={8}
                     value={currentPinInput}
                     onChange={(e) => setCurrentPinInput(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Current"
-                    aria-label="Current PIN"
+                     placeholder={str('Current', 'Kati')}
+                     aria-label={str('Current PIN', 'PIN yo kati')}
                     className="min-h-[44px] bg-white border border-border-strong rounded-lg px-2 text-center font-mono font-bold text-primary"
                   />
                   <input
@@ -386,8 +390,8 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     maxLength={4}
                     value={newPin}
                     onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-                    placeholder="New 4-digit"
-                    aria-label="New PIN"
+                     placeholder={str('New 4-digit', 'Namba 4 empya')}
+                     aria-label={str('New PIN', 'PIN empya')}
                     className="min-h-[44px] bg-white border border-border-strong rounded-lg px-2 text-center font-mono font-bold text-primary"
                   />
                   <input
@@ -396,8 +400,8 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                     maxLength={4}
                     value={confirmPin}
                     onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Confirm"
-                    aria-label="Confirm new PIN"
+                     placeholder={str('Confirm', 'Kakasa')}
+                     aria-label={str('Confirm new PIN', 'Kakasa PIN empya')}
                     className="min-h-[44px] bg-white border border-border-strong rounded-lg px-2 text-center font-mono font-bold text-primary"
                   />
                 </div>
@@ -409,7 +413,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                   disabled={pinBusy || !onChangePin}
                   className="w-full py-2.5 bg-primary text-white rounded-lg font-bold text-xs disabled:opacity-60"
                 >
-                  {pinBusy ? 'Checking…' : 'Change PIN'}
+                   {pinBusy ? str('Checking…', 'Kukebera…') : str('Change PIN', 'Kyuusa PIN')}
                 </button>
               </form>
 
@@ -420,7 +424,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                 className="w-full py-2.5 bg-primary text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow"
               >
                 <span className="material-symbols-outlined text-base">swap_horiz</span>
-                <span>Switch to Another Seeded Account</span>
+                 <span>{str('Switch to Another Seeded Account', 'Kyusa ku Akawundi Ak\'ekaliro')}</span>
               </button>
             </div>
           )}
@@ -428,9 +432,9 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
           {activeTab === 'switcher' && (
             <div className="space-y-3">
               <p className="text-text-muted text-[11px]">
-                {authEnforced
-                  ? 'Pick an account, then enter its PIN on the sign-in screen:'
-                  : 'Select any seeded account below to test real app permissions and user views:'}
+                 {authEnforced
+                   ? str('Pick an account, then enter its PIN on the sign-in screen:', 'Londa akawunti, olw\'emu ozikyalamu ku lusiko lw\'okuyingira:')
+                   : str('Select any seeded account below to test real app permissions and user views:', 'Londa akawunti y\'okulondola w\'oku wa kikolo n\'endabikwa za muntu:')}
               </p>
 
               <div className="space-y-2">
@@ -476,7 +480,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
 
                       {isSelected ? (
                         <span className="px-2 py-0.5 rounded bg-secondary text-white text-[10px] font-bold">
-                          CURRENT
+                           {str('CURRENT', 'KATI')}
                         </span>
                       ) : (
                         <span className="material-symbols-outlined text-text-muted text-lg">
@@ -493,7 +497,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
           {activeTab === 'presets' && showDevTools && (
             <div className="space-y-3">
               <p className="text-text-muted text-[11px]">
-                Load structured test scenarios to instantly evaluate specific VSLA workflows:
+                 {str('Load structured test scenarios to instantly evaluate specific VSLA workflows:', 'Kikiza mirango egikwata ku kukebera VSLA:')}
               </p>
 
               <div className="space-y-2.5">
@@ -518,7 +522,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                       className="w-full py-2 bg-primary-container text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1 hover:bg-primary transition"
                     >
                       <span className="material-symbols-outlined text-sm">play_arrow</span>
-                      Load & Test This Scenario
+                       {str('Load & Test This Scenario', 'Kikiza n\'ukebera mirango eno')}
                     </button>
                   </div>
                 ))}
@@ -531,15 +535,16 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                   className="w-full py-2 bg-white border border-border-strong text-status-bad-tx hover:bg-rose-50 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition"
                 >
                   <span className="material-symbols-outlined text-sm">restart_alt</span>
-                  Reset Entire Database to Seed Baseline
+                     {str('Reset Entire Database to Seed Baseline', 'Zziza ebitabo byonna ku misinga ya seed')}
                 </button>
               </div>
               <ConfirmDialog
                 isOpen={showResetConfirm}
-                title="Reset everything?"
-                body="All members, cashbox figures and ledgers return to the clean Meeting #28 baseline. Only for testing."
-                confirmLabel="Yes, reset all"
-                danger
+                 title={str('Reset everything?', 'Zziza byonna?')}
+                 body={str('This resets practice/demo data only. Real group records require a protected backup and officer authorization.', 'Eno zzaaza ebizibu by\'ekizibu n\'okuzannya nga byokka. Ebizibu by\'ekibiina bisinga backup ebikwattiddwa n\'olukusa lw\'omukulu.')}
+                 confirmLabel={str('Yes, reset all', 'Yee, zzaaza byonna')}
+                 language={language}
+                 danger
                 onConfirm={() => {
                   setShowResetConfirm(false);
                   onResetToBaseline();
@@ -555,7 +560,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
         <div className="p-3 bg-surface-container-low border-t border-border-line flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-[11px] text-text-muted">
             <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-            <span>{authEnforced ? 'Signed-in session (24h)' : 'Actual Account Mode Active'}</span>
+             <span>{authEnforced ? str('Signed-in session (24h)', 'Kiseera ky\'okuyingira (24h)') : str('Actual Account Mode Active', 'Enkola y\'Akawunti y\'omukulu ekikola')}</span>
           </div>
           <div className="flex items-center gap-2">
             {authEnforced && onLogout && (
@@ -564,7 +569,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
                 onClick={onLogout}
                 className="py-1.5 px-3 bg-white border border-red-300 font-bold text-xs text-status-bad-tx rounded-lg"
               >
-                Sign out
+                 {str('Sign out', 'Fula ku mulyeko')}
               </button>
             )}
             <button
@@ -572,7 +577,7 @@ export const AccountProfileModal: React.FC<AccountProfileModalProps> = ({
               onClick={onClose}
               className="py-1.5 px-4 bg-surface-card border border-border-strong font-bold text-xs text-primary rounded-lg hover:bg-surface-container"
             >
-              Done
+               {str('Done', 'Kikira')}
             </button>
           </div>
         </div>

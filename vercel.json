@@ -22,7 +22,7 @@
     { "source": "/api/momo/webhook", "destination": "/api/momo?action=webhook" },
     { "source": "/api/momo/status", "destination": "/api/momo?action=status" },
     { "source": "/api/seed/preset", "destination": "/api/seed?action=preset" },
-    { "source": "/app", "destination": "/index.html" }
+    { "source": "/app", "destination": "/app.html" }
   ],
   "headers": [
     {

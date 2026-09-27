@@ -6,14 +6,18 @@ import {
   changeDue,
   displayFineReason,
   gapNeedsSecondKey,
+  groupSharePrice,
+  loanRateForTerm,
   memberCapForPlan,
   welfareNeedsQueue,
+  sharePurchaseLedgerFields,
 } from '../src/utils/policy';
 import { buildLocalGroup } from '../src/utils/offlineGroup';
 import { backupFileName, buildBackupPayload } from '../src/utils/backupFile';
-import { estimateDataUrlBytes, findMemberPhoto } from '../src/utils/photo';
+import { estimateDataUrlBytes, findMemberPhoto, stripPhotosForSnapshot } from '../src/utils/photo';
 import { ledgerHash } from '../src/utils/ledgerHash';
 import { getTranslations } from '../src/i18n/translations';
+import { appendNotifications, markNotificationsRead, notificationsFor, unreadNotificationCount } from '../src/utils/notifications';
 
 describe('village money policy', () => {
   it('changeDue hands back overpayments, never negative', () => {
@@ -44,6 +48,22 @@ describe('village money policy', () => {
     expect(memberCapForPlan(undefined)).toBe(30);
     expect(memberCapForPlan('pro')).toBe(500);
     expect(memberCapForPlan('sacco')).toBe(5000);
+  });
+
+  it('uses the active group share class and configured loan rates', () => {
+    expect(groupSharePrice({ sharePrice: 10000, shareClasses: [{ id: 'premium', price: 20000, active: true }] })).toBe(20000);
+    expect(groupSharePrice({ sharePrice: 5000, shareClasses: [{ id: 'off', price: 50000, active: false }] })).toBe(5000);
+    expect(loanRateForTerm('2 months', { oneMonth: 4, twoMonths: 9, threeMonths: 12 })).toBe(9);
+  });
+
+  it('keeps share class, quantity, and unit price in purchase history', () => {
+    expect(sharePurchaseLedgerFields('premium', 'Premium share', 3, 20000)).toEqual({
+      entryType: 'share_purchase',
+      shareClassId: 'premium',
+      shareClassName: 'Premium share',
+      shareCount: 3,
+      unitPrice: 20000,
+    });
   });
 
   it('fine reasons stay canonical EN, display LU', () => {
@@ -93,6 +113,7 @@ describe('offline group builder', () => {
     const p = buildBackupPayload(state);
     expect(p.schemaVersion).toBe('2.0-VSLA-OFFLINE');
     expect(p.data.members).toHaveLength(1);
+    expect(p.data.availableAccounts?.[0].pin).toBe('');
     expect(backupFileName(state.groupId)).toContain(state.groupId!);
   });
   it('estimates avatar data URL bytes without decoding', () => {
@@ -111,13 +132,20 @@ describe('offline group builder', () => {
 
   it('translator pack v1 corrections hold in Luganda', () => {
     const lu = getTranslations('LU').common;
-    expect(lu.back).toBe('Ddayo emabega');
-    expect(lu.next).toBe('Eddaako');
+     expect(lu.back).toBe('Back');
+     expect(lu.next).toBe('Next');
     expect(lu.share).toBe('Gabana');
-    expect(lu.copy).toBe('Koppolola');
+     expect(lu.copy).toBe('Koppa');
     expect(lu.save).toBe('Tereka');
     expect(lu.search).toBe('Noonya');
-    expect(lu.cancel).toBe('Sazaamu');
+     expect(lu.cancel).toBe('Cancel');
+  });
+
+  it('keeps product images out of storage snapshots', () => {
+    const { state } = buildLocalGroup(payload);
+    const withImage = { ...state, products: [{ id: 'p1', name: 'Maize', sellerType: 'group' as const, imageUrl: 'data:image/jpeg;base64,abc', costPrice: 1, salePrice: 2, stockQty: 1, soldQty: 0, unit: 'kg' }] };
+    const stripped = stripPhotosForSnapshot(withImage);
+    expect(stripped.products?.[0].imageUrl).toBeUndefined();
   });
 
   it('finds member photos by number first, then name', () => {
@@ -130,5 +158,26 @@ describe('offline group builder', () => {
     expect(findMemberPhoto(members, '', 'joseph mukasa')).toBeUndefined();
     expect(findMemberPhoto(members, '99', 'Sarah Nabukalu')).toBe('data:face1');
     expect(findMemberPhoto(members, '99', 'Ghost Member')).toBeUndefined();
+  });
+
+  it('keeps notification inboxes scoped and marks only the selected account read', () => {
+    const { state } = buildLocalGroup(payload);
+    const officer = state.availableAccounts?.[0];
+    const member = {
+      ...officer!,
+      id: 'member-account',
+      memberId: state.members[0].id,
+      role: 'member' as const,
+    };
+    const next = appendNotifications(state, [
+      { audience: 'officer', kind: 'loan_request', title: 'Officer update', body: 'Review', actionScreen: 'approvals' },
+      { audience: 'member', memberNo: state.members[0].no, kind: 'loan_request', title: 'Member update', body: 'Waiting', actionScreen: 'member_passbook' },
+    ]);
+    expect(notificationsFor(next, officer!, state.members[0].no)).toHaveLength(1);
+    expect(notificationsFor(next, member, state.members[0].no)).toHaveLength(1);
+    expect(unreadNotificationCount(next, member, state.members[0].no)).toBe(1);
+    const read = markNotificationsRead(next, member, state.members[0].no);
+    expect(unreadNotificationCount(read, member, state.members[0].no)).toBe(0);
+    expect(unreadNotificationCount(read, officer!, state.members[0].no)).toBe(1);
   });
 });

@@ -163,6 +163,9 @@ export default async function handler(req, res) {
 
     const input = validate(createGroupSchema, req.body || {}, res);
     if (!input) return;
+    if (input.adminPin && (!/^\d{4}$/.test(String(input.adminPin)) || input.adminPin === '1234')) {
+      return res.status(400).json({ error: 'Choose a private 4-digit PIN that is not 1234.' });
+    }
 
     const {
       name, boxIdentifier, location, meetingDay, sharePrice,
@@ -192,8 +195,12 @@ export default async function handler(req, res) {
       groupId,
       groupProfile: {
         id: groupId, name, boxIdentifier: boxId, location: location || 'Uganda',
-        meetingDay: meetingDay || 'Every Friday 4:00 PM', sharePrice: price,
-        welfareMonthly: welfare, inviteCode, plan: plan || 'free',
+         meetingDay: meetingDay || 'Every Friday 4:00 PM', sharePrice: price,
+         shareClasses: [{ id: 'standard', name: 'Standard share', price, active: true }],
+         maxSharesPerMeeting: 5, requiredGuarantors: 0, borrowMultiplier: 3,
+         loanMinimum: 100000, loanRates: { oneMonth: 5, twoMonths: 8, threeMonths: 10 },
+         welfareCategoryCaps: { medical: 150000, bereavement: 200000, other: 100000 },
+         welfareMonthly: welfare, inviteCode, plan: plan || 'free',
         createdAt: new Date().toISOString(), adminName, adminPhone,
       },
       groupName: name, boxIdentifier: boxId, inviteCode,
@@ -234,6 +241,9 @@ export default async function handler(req, res) {
 
     const input = validate(joinGroupSchema, req.body || {}, res);
     if (!input) return;
+    if (input.pin && (!/^\d{4}$/.test(String(input.pin)) || input.pin === '1234')) {
+      return res.status(400).json({ error: 'Choose a private 4-digit PIN that is not 1234.' });
+    }
     const { inviteCode, memberName, phone, provider, nationalId, pin } = input;
 
     const code = String(inviteCode).trim().toUpperCase();
@@ -271,7 +281,7 @@ export default async function handler(req, res) {
     targetGroup.members.push({
       id: memberId, no: nextMemberNo, name: memberName, initials, zone: 'Member',
       phone, provider: provider || 'MTN', attendance: '1/1', sharesCount: 0, sharesTotal: 0,
-      maxBorrowLimit: (targetGroup.groupProfile?.sharePrice || 10000) * 3,
+      maxBorrowLimit: 0,
       loanBalance: 0, welfareBalance: 0, isKeyholder: false,
       stamps: [{ week: 1, shares: 0, status: 'next' }], ledger: [],
     });
