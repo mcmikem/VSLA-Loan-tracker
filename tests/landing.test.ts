@@ -61,7 +61,6 @@ describe('landing page is the real / index and the app lives at /app', () => {
     expect(landing).toContain('transition-delay:.14s');
     expect(landing).toContain('data-count=');
     expect(landing).toContain('grid-template-rows:0fr');
-    expect(landing).toContain('class="tabpanel');
     expect(landing).toContain("classList.toggle('scrolled'");
     expect(landing).toContain('new IntersectionObserver');
     // reveals only run when JS is present, so nothing is ever invisible
@@ -106,7 +105,7 @@ describe('landing page is the real / index and the app lives at /app', () => {
     expect(landing).toContain('--maxw:1180px');
     for (const cls of [
       'hero-stage', 'trust-grid', 'trust-item', 'compare-card', 'compare-note',
-      'bento', 'bento-wide', 'flow-rail', 'flow-panel', 'step-num', 'demo-tile',
+      'bento', 'flow-panel', 'step-num', 'who-col', 'who-steps', 'who-step', 'who-num', 'demo-tile',
       'demo-total', 'stat-tile', 'tick-list', 'market-list', 'market-row',
       'price-card--primary', 'faq-list', 'cta-final', 'foot-grid', 'foot-link',
     ]) {
@@ -148,7 +147,7 @@ describe('landing page is the real / index and the app lives at /app', () => {
     const appLinks = [...landing.matchAll(/href="\/app"/g)];
     expect(appLinks.length).toBeGreaterThanOrEqual(4);
     expect(landing).toContain('Open the app');
-    expect(landing).toContain('Ggula poroguramu');
+    expect(landing).toContain('Ggula app');
   });
 
   it('"Open the app" asks which door first: demo, log in, register', () => {
@@ -180,10 +179,13 @@ describe('landing page is the real / index and the app lives at /app', () => {
     expect(welcome).toContain('if (autoFocusSignIn)');
   });
 
-  it('keeps the language switch, drawer, tabs, FAQ and modals working', () => {
+  it('keeps the language switch, drawer, FAQ and modals working', () => {
     expect(landing).toContain('data-lang="lu"');
     expect(landing).toContain('body.is-en .lu{display:none!important}');
-    expect(landing).toContain('role="tablist"');
+    // the toggle is labelled with the language code, LG, not LU
+    expect(landing).toContain('>LG</button>');
+    expect(landing).not.toContain('>LU</button>');
+    expect(landing).toContain('<html lang="lg">');
     expect(landing).toContain('faq-btn');
     expect(landing).toContain('waitlist-open');
     expect(landing).toContain("e.key === 'Escape'");
@@ -307,16 +309,17 @@ describe('landing: the funnel actually ends somewhere', () => {
   });
 
   it('answers the two questions a treasurer asks first', () => {
-    expect(landing).toContain('Who can see your group\u2019s data');
-    expect(landing).toContain('Your records are yours, every day');
     expect(landing).toContain('Who can see my members\u2019 details?');
+    expect(landing).toContain('If you ever stop');
     expect(landing).toContain('If we stop, can we take our records with us?');
+    expect(landing).toContain('Where does the group\u2019s money stay?');
     // and it is not only in the FAQ: there is a section for it
     expect(landing.match(/data-open="false"/g)?.length).toBeGreaterThanOrEqual(9);
   });
 
   it('names only the audiences the group actually serves', () => {
-    expect(landing).toContain('VSLA · SACCO · Investment clubs · Welfare groups');
+    expect(landing).toContain('VSLA · SACCO · Investment clubs · Bibinja by\u2019obuyambi');
+    expect(landing).not.toContain('Welfare groups');
     expect(landing).not.toContain('munaasika');
     expect(landing).not.toContain('secretaries and treasurers');
   });
@@ -337,10 +340,11 @@ describe('landing: the funnel actually ends somewhere', () => {
     // no type under 12px anywhere
     expect(landing).not.toContain('font-size: 10px');
     expect(landing).not.toContain('font-size: 11px');
-    // the hero badge is inside the section that clips its overflow
-    expect(landing).toContain('absolute -left-2 md:-left-6 -bottom-6');
+    // the member tags sit under the account card, not floating over it
+    expect(landing).toContain('class="member-tags mt-5"');
+    expect(landing.match(/class="canva-tag pill px-3 py-1.5"/g)?.length).toBe(3);
     // the dark cards are labelled in the reader's language, not English only
-    for (const word of ['OKUTEREKA', 'EMIGABO', 'KIKAKASIDDWA', 'ZONNA', 'NKALU', 'BANKA', 'KIKWATAGANA']) {
+    for (const word of ['OKUTEREKA', 'OBUYAMBI', 'AMABANJA', 'CASH', 'MOMO', 'BBANKI', 'OMUWENDO GWONNA']) {
       expect(landing, `${word} must be a real label`).toContain(word);
     }
   });
@@ -359,9 +363,9 @@ describe('landing: what the rendered page was actually doing', () => {
     // a `>` immediately before it would mean the attribute is element text
     expect(landing).not.toContain('> data-count=');
     const counts = [...landing.matchAll(/ data-count="(\d+)"/g)].map((m) => m[1]);
-    expect(counts.length).toBeGreaterThanOrEqual(10);
+    expect(counts.length).toBeGreaterThanOrEqual(5);
     // and the number is still there as text for anyone without the script
-    expect(landing).toContain('data-count="25000">25,000');
+    expect(landing).toContain('data-count="780000">780,000');
     // reduced motion must still land the number, not skip it
     expect(landing).toContain('if (reduceMotion) { writeMoney(el, shell, target); return; }');
     expect(landing).toContain('countTargets.forEach(el => countUp(el));');
@@ -397,15 +401,34 @@ describe('landing: what the rendered page was actually doing', () => {
     expect(landing).toContain('--gut:28px');
   });
 
-  it('the wide bento card only becomes a row when it has room for one', () => {
-    // at 768 it went three-across with 224px + 320px fixed columns, leaving
-    // ~32px for the paragraph, which pushed the page 11px into a scrollbar
-    expect(landing).toContain('bento-wide col-span-4 md:col-span-8 lg:col-span-12 p-7 lg:flex lg:items-center lg:gap-10');
-    expect(landing).toContain('lg:w-56 shrink-0');
-    expect(landing).toContain('lg:w-80 shrink-0');
-    expect(landing).not.toContain('md:w-56');
-    expect(landing).not.toContain('md:w-80');
-    expect(landing).not.toContain('md:flex md:items-center md:gap-10');
+  it('is member-first: a member sees themselves before the officers do', () => {
+    const pos = (needle: string) => landing.indexOf(needle);
+    expect(pos('id="members"')).toBeGreaterThan(-1);
+    expect(pos('AKAWWUNTI Y\u2019OMUWAMMEMBA')).toBeLessThan(pos('TRUST AND CONTROL'));
+    expect(pos('id="members"')).toBeLessThan(pos('TRUST AND CONTROL'));
+    expect(pos('id="loans"')).toBeLessThan(pos('id="meeting"'));
+    // the six things a member actually came for, in the reader's own words
+    for (const line of [
+      'Laba eby\u2019okutereka ne shares zo',
+      'Manya embeera y\u2019ebbanja lyo',
+      'Saba ebbanja era ogoberere',
+      'Fuuna okujjukizibwa ku kubazza',
+      'Tunda eri bammemba',
+      'Goberera ebirangiriro by\u2019ekibiina',
+    ]) {
+      expect(landing, `missing member line: ${line}`).toContain(line);
+    }
+  });
+
+  it('shows both audiences at once instead of hiding one behind a tab', () => {
+    // the meeting section used to be a tablist, so a member never saw the
+    // officer steps and an officer never saw the member steps
+    expect(landing).toContain('KU BAMMEMBA');
+    expect(landing).toContain('KU BAKUNGU');
+    expect(landing.match(/class="who-col /g)?.length).toBe(2);
+    expect(landing.match(/class="who-step"/g)?.length).toBe(6);
+    expect(landing).not.toContain('role="tablist"');
+    expect(landing).not.toContain('role="tab"');
   });
 
   it('the brand mark is the one the app uses', () => {
@@ -453,7 +476,7 @@ describe('landing: what the rendered page was actually doing', () => {
     // that quotes a person who does not exist is worse than one with no quote.
     // The proof offered here is the free demo, which any visitor can open and
     // check for themselves, with play money so no real group is at risk.
-    expect(landing).toContain('Sooka mokkatono ku ssente ez’okuzannya');
+    expect(landing).toContain('Kikakase n’ensimbi z’okuzannyisa');
     expect(landing).toContain('Check it with play money');
     expect(landing.match(/class="mono proof-num mb-4"/g)?.length).toBe(3);
     expect(landing).toContain('href="/app?intent=demo"');
@@ -466,7 +489,7 @@ describe('landing: what the rendered page was actually doing', () => {
     // it was one line of copy above 200px of nothing, and its status pill read
     // "Coming soon" in English even to a Luganda reader
     expect(landing).not.toContain('letter-spacing: 0.06rem;">Coming soon</span>');
-    expect(landing).toContain('<span class="lu">Mu ntandikwa</span>');
+    expect(landing).toContain('<span class="lu">Kijja</span>');
     expect(landing).toContain('<span class="en">Coming soon</span>');
     // the plan it is holding the space for
     expect(landing).toContain('Branches, and members who belong to more than one group');
@@ -493,8 +516,8 @@ describe('landing: what the rendered page was actually doing', () => {
   it('the hero shows a working account, not a picture of one', () => {
     // a loan line in the activity list and the four figures underneath, so the
     // card above the fold is doing the thing the page is selling
-    expect(landing).toContain('Looni — bakkirizibwa');
-    expect(landing).toContain('class="passbook-sum mt-5 grid grid-cols-4 gap-2 pt-4"');
+    expect(landing).toContain('Ebbanja lakkiriziddwa');
+    expect(landing).toContain('class="passbook-sum mt-4 grid grid-cols-4 gap-2 pt-4"');
     expect(landing).toContain('.passbook-sum{border-top:1px dashed #E5E7EB}');
     expect(landing.match(/class="canva-text block lu"[^>]*>OKUTEREKA</g)?.length).toBe(1);
   });
@@ -505,7 +528,7 @@ describe('landing: what the rendered page was actually doing', () => {
     for (const m of landing.matchAll(/<(?:span|p)\s+class="[^"]*\b(?:pill|canva-tag)\b[^"]*"[^>]*>([^<]+)</g)) {
       expect(m[1].trim(), `untranslated pill text: ${m[1].trim()}`).toBe('');
     }
-    expect(landing).toContain('<span class="lu" style="font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">AKAWUNTI YA DEMO</span>');
+    expect(landing).toContain('<span class="lu" style="font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">AKAWWUNTI YA DEMO</span>');
     expect(landing).toContain('<span class="en" style="font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">DEMO ACCOUNT</span>');
   });
 });
