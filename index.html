@@ -91,6 +91,9 @@
     .btn-out-d{border:1.5px solid var(--forest)}
     :focus-visible{outline:3px solid var(--amber);outline-offset:3px}
     .passbook{background:#fff;border-radius:var(--r-xl);box-shadow:0 30px 50px -20px rgba(0,38,27,.35),0 50px 90px -30px rgba(0,0,0,.45);overflow:hidden}
+    /* the four figures under the activity list: a divider, then the account at
+       a glance, so the hero reads as a screen someone actually uses */
+    .passbook-sum{border-top:1px dashed #E5E7EB}
     .float{animation:float 7s ease-in-out infinite}
     @keyframes float{50%{transform:translateY(-8px)}}
     .reveal{opacity:0;transform:translateY(16px);animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards}
@@ -143,6 +146,12 @@
     .compare-card ul{display:flex;flex-direction:column;gap:18px;flex:1}
     .compare-card li{align-items:flex-start}
     .compare-paper{opacity:.96}
+    /* The paper card carries a real margin rule, so its ruled texture reads as
+       a deliberate difference between the two cards rather than as one card
+       having been styled by accident. */
+    .compare-paper{position:relative}
+    .compare-paper::before{content:"";position:absolute;left:2rem;top:.75rem;bottom:.75rem;width:1px;
+      background:rgba(220,38,38,.32)}
     .compare-note{border:1px dashed rgba(0,109,48,.35);background:rgba(0,109,48,.04);border-radius:var(--r)}
     :where(.compare-note){padding:14px 16px}
 
@@ -159,6 +168,10 @@
     .flow-rail .step-tab[aria-selected="true"]{box-shadow:0 18px 34px -20px rgba(0,38,27,.45)}
     .step-num{display:inline-grid;place-items:center;width:52px;height:52px;border-radius:14px;font-size:18px;
       color:var(--forest);background:#FEF3C7;border:1px solid rgba(234,179,8,.5)}
+    /* PROOF STEPS — the same number tile the meeting panel uses, so the page
+       keeps one vocabulary for "this is step N". */
+    .proof-num{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:12px;
+      font-size:16px;font-weight:700;color:var(--canopy);background:#EAF7EE;border:1px solid rgba(0,109,48,.2)}
     .flow-panel{border-radius:var(--r-xl);box-shadow:var(--sh-2)}
     .flow-panel .tabpanel{position:relative}
 
@@ -180,6 +193,9 @@
     :where(.market-row){padding:16px}
     .market-row:hover{transform:translateY(-2px);box-shadow:var(--sh-2);border-color:rgba(0,109,48,.3)}
     .market-ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;background:var(--soft)}
+    /* the channel is a quiet tag, so the item name stays the thing you read */
+    .market-tag{display:inline-block;margin-left:.15rem;padding:1px 6px;border-radius:99px;
+      background:#E5E7EB;color:#4B5563;font-size:12px;font-weight:700;letter-spacing:.04em;vertical-align:1px}
 
     /* PRICING — the pilot card is the product; Pro is deliberately quiet. */
     .price-card{border-radius:var(--r-xl)}
@@ -398,14 +414,21 @@
            <p class="canva-tag pill mt-3 px-2.5 py-1" style="background: rgb(231, 243, 236); color: rgb(0, 109, 48);"><span class="pulse-dot" aria-hidden="true"></span><svg class="ms w-4 h-4" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-verified_user" xlink:href="#i-verified_user"/></svg><span class="canva-text lu" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">Kikakasiddwa</span><span class="canva-text en" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">Verified record</span></p>
           </div>
          </div>
-         <div class="px-6 pt-5 pb-16">
-          <p class="mb-2"><span class="canva-text lu" style="color: rgb(156, 163, 175); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">EBYAKAKOLEBWA</span><span class="canva-text en" style="color: rgb(156, 163, 175); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">RECENT ACTIVITY</span></p>
-          <ul>
-           <li class="row-line flex items-center gap-3 py-2.5"><span class="canva-text mono w-14 shrink-0" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 12px;">19 SEP</span><span class="flex-1 min-w-0"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Emigabo × 5</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Shares × 5</span></span><span class="canva-text mono" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 13px;">+25,000</span></li>
-           <li class="row-line flex items-center gap-3 py-2.5"><span class="canva-text mono w-14 shrink-0" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 12px;">19 SEP</span><span class="flex-1 min-w-0"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Welfare</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Welfare</span></span><span class="canva-text mono" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 13px;">+2,000</span></li>
-           <li class="flex items-center gap-3 py-2.5"><span class="canva-text mono w-14 shrink-0" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 12px;">12 SEP</span><span class="flex-1 min-w-0"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Emigabo × 4</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Shares × 4</span></span><span class="canva-text mono" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 13px;">+20,000</span></li>
-          </ul>
-         </div>
+          <div class="px-6 pt-5 pb-16">
+           <p class="mb-2"><span class="canva-text lu" style="color: rgb(156, 163, 175); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">EBYAKAKOLEBWA</span><span class="canva-text en" style="color: rgb(156, 163, 175); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">RECENT ACTIVITY</span></p>
+           <ul>
+            <li class="row-line flex items-center gap-3 py-2.5"><span class="canva-text mono w-14 shrink-0" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 12px;">19 SEP</span><span class="flex-1 min-w-0"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Emigabo × 5</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Shares × 5</span></span><span class="canva-text mono" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 13px;">+25,000</span></li>
+            <li class="row-line flex items-center gap-3 py-2.5"><span class="canva-text mono w-14 shrink-0" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 12px;">19 SEP</span><span class="flex-1 min-w-0"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Welfare</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Welfare</span></span><span class="canva-text mono" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 13px;">+2,000</span></li>
+            <li class="row-line flex items-center gap-3 py-2.5"><span class="canva-text mono w-14 shrink-0" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 12px;">12 SEP</span><span class="flex-1 min-w-0"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Looni — bakkirizibwa</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Loan approved</span></span><span class="canva-text mono" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 13px;">150,000</span></li>
+            <li class="flex items-center gap-3 py-2.5"><span class="canva-text mono w-14 shrink-0" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 12px;">12 SEP</span><span class="flex-1 min-w-0"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Emigabo × 4</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 400; font-size: 14px;">Shares × 4</span></span><span class="canva-text mono" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 13px;">+20,000</span></li>
+           </ul>
+           <div class="passbook-sum mt-5 grid grid-cols-4 gap-2 pt-4">
+            <p><span class="canva-text block lu" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 12px;">OKUTEREKA</span><span class="canva-text block en" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 12px;">SAVINGS</span><span class="canva-text mono block" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 13px;">450,000</span></p>
+            <p><span class="canva-text block lu" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 12px;">EMIGABO</span><span class="canva-text block en" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 12px;">SHARES</span><span class="canva-text mono block" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 13px;">90</span></p>
+            <p><span class="canva-text block lu" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 12px;">WELFARE</span><span class="canva-text block en" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 12px;">WELFARE</span><span class="canva-text mono block" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 13px;">24,000</span></p>
+            <p><span class="canva-text block lu" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 12px;">LOONI</span><span class="canva-text block en" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 12px;">LOANS</span><span class="canva-text mono block" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 13px;">150,000</span></p>
+           </div>
+          </div>
         </div>
         <div class="canva-card absolute -left-2 md:-left-6 -bottom-6 rounded-lg px-4 py-3 flex items-center gap-3" style="box-shadow: rgba(0, 0, 0, 0.35) 0px 12px 24px -8px; background: rgb(6, 43, 29);"><svg class="ms w-4 h-4" aria-hidden="true" focusable="false" style="color:#EAB308" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-groups" xlink:href="#i-groups"/></svg> <span><span class="canva-text lu" style="color: rgb(255, 255, 255); font-weight: 600; font-size: 13px;">Abaserikale 2 bakkirizza</span><span class="canva-text en" style="color: rgb(255, 255, 255); font-weight: 600; font-size: 13px;">2 officers approved</span></span>
         </div>
@@ -430,7 +453,7 @@
       <p class="sec-lede mt-5"><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 17px; line-height: 1.55;">Ekitabo ky’empapula kiyambye ebibinja okumala ebbanga. VSLA UG ekiyambako okubala amangu n’okulaga buli mmemba ebimukwatako.</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 17px; line-height: 1.55;">The paper book has served groups for years. VSLA UG helps it calculate faster and show each member their own records.</span></p>
      </div>
      <div class="col-span-4 md:col-span-8 lg:col-span-7 lg:col-start-6 grid md:grid-cols-2 gap-5 mt-10 lg:mt-0">
-      <div class="compare-card compare-paper paper rounded-2xl p-6">
+      <div class="compare-card compare-paper paper rounded-2xl p-6 pl-10">
        <p class="pill mb-4" style="color:#6B7280"><svg class="ms w-4 h-4" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-book" xlink:href="#i-book"/></svg><span class="canva-text lu" style="color: rgb(107, 114, 128); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">Ekitabo ky’empapula</span><span class="canva-text en" style="color: rgb(107, 114, 128); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">Paper ledger</span></p>
        <ul class="space-y-4">
         <li class="flex gap-3 items-start"><svg class="ms w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" focusable="false" style="color:#DC2626" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-close" xlink:href="#i-close"/></svg><span class="canva-text lu" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 15px; line-height: 1.45;">Empapula zisobola okubula oba okwonooneka</span><span class="canva-text en" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 15px; line-height: 1.45;">Pages can be lost or damaged</span></li>
@@ -575,7 +598,7 @@
      </div>
      <div class="col-span-4 md:col-span-8 lg:col-span-6 lg:col-start-7 mt-8 lg:mt-0">
       <div class="canva-card dcard demo-tile p-6 md:p-8" style="border-top: 3px solid rgb(234, 179, 8);">
-       <div class="flex flex-wrap items-center justify-between gap-3"><span class="canva-tag pill px-3 py-1" style="background: rgb(234, 179, 8); color: rgb(0, 38, 27); font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">AKAWUNTI YA DEMO</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">DEMO ACCOUNT</span> <span><span class="canva-text lu" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 13px;">Ekyokulabirako ky’olukiiko</span><span class="canva-text en" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 13px;">Example meeting view</span></span></div>
+       <div class="flex flex-wrap items-center justify-between gap-3"><span class="canva-tag pill px-3 py-1" style="background: rgb(234, 179, 8); color: rgb(0, 38, 27); font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;"><span class="lu" style="font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">AKAWUNTI YA DEMO</span><span class="en" style="font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">DEMO ACCOUNT</span></span> <span><span class="canva-text lu" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 13px;">Ekyokulabirako ky’olukiiko</span><span class="canva-text en" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 13px;">Example meeting view</span></span></div>
        <p class="sec-lede mt-8"><span class="canva-text lu" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 14px;">Balansi y’ekibinja yonna</span><span class="canva-text en" style="color: rgb(156, 163, 175); font-weight: 400; font-size: 14px;">Total group balance</span></p>
        <p class="canva-text mono demo-total mt-2" style="color: rgb(255, 255, 255); font-weight: 700; font-size: 44px;" data-count="1420000">UGX 1,420,000</p>
        <div class="mt-7 h-2.5 w-full flex gap-1" aria-hidden="true"><span style="width:55%;background:#EAB308"></span><span style="width:30%;background:#006D30"></span><span style="width:15%;background:#9CA3AF"></span></div>
@@ -616,7 +639,7 @@
       <div class="col-span-4 md:col-span-8 lg:col-span-12 grid md:grid-cols-3 gap-4 mt-2">
        <p class="flex gap-3 items-start rounded-lg p-5" style="background:#fff;border:1px solid #E5E7EB"><svg class="ms w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-lock" xlink:href="#i-lock"/></svg><span><span class="block canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Anatu wa kyo n’ekibinja kyo</span><span class="block canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Who can see your group’s data</span><span class="block canva-text lu mt-1" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 14px; line-height: 1.5;">Amatongo, ematteka n’ebikwata bya abamiise mwebweru ekibinja kyaffe. Twobereza gye kiteekateeko okutandika n’okulinda endandikwa — tetunnanga nyina, tetwolodda nnyo, tetwetoolodda bamala. Abakozesa gweyogerako nga baakiriiziddwa n’ekibinja.</span><span class="block canva-text en mt-1" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 14px; line-height: 1.5;">Your members’ names, phone numbers and ID references stay with your group. We receive what is needed to create and protect the records — we do not sell them, read them or share them. Access is limited to the officers your group appointed.</span></span></p>
        <p class="flex gap-3 items-start rounded-lg p-5" style="background:#fff;border:1px solid #E5E7EB"><svg class="ms w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-download" xlink:href="#i-download"/></svg><span><span class="block canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Amateeka gaa gaakola buli kiseeko</span><span class="block canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Your records are yours, every day</span><span class="block canva-text lu mt-1" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 14px; line-height: 1.5;">Wokulaba, kukubibwa n’okutereka ddoboozi buli lunaku. Bwe muggalo, nga tennamala, endandikwa yo ekaba yaffe — era ekitabo kyo ky’impapula kikadde buli kiseeko.</span><span class="block canva-text en mt-1" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 14px; line-height: 1.5;">Open, print and download your records any day. If you ever stop, the records are yours to take with you — and your paper book stays valid the whole time.</span></span></p>
-       <p class="flex gap-3 items-start rounded-lg p-5" style="background:#fff;border:1px dashed rgba(0,109,48,.35)"><svg class="ms w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-info" xlink:href="#i-info"/></svg><span><span class="block canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Bwe ssimu ey’obulamu</span><span class="block canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">If a phone is lost</span><span class="block canva-text lu mt-1" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 14px; line-height: 1.5;">Okuzza records kusinziira ku backup eriwo. Nga kino: kozza ddoboozi buli wiiki, era omufunye nsimbi n’omunaasiki bonera buli ekikolo. Obwe kitsi kintu n’ekibinja kye kisobola okubikira.</span><span class="block canva-text en mt-1" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 14px; line-height: 1.5;">Recovery depends on the backup you keep. So: take a backup every week, and let the treasurer and the secretary each hold a copy. Then no single phone holds the group up.</span></span></p>
+       <p class="flex gap-3 items-start rounded-lg p-5" style="background:#fff;border:1px solid #E5E7EB"><svg class="ms w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-info" xlink:href="#i-info"/></svg><span><span class="block canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Bwe ssimu ey’obulamu</span><span class="block canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">If a phone is lost</span><span class="block canva-text lu mt-1" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 14px; line-height: 1.5;">Okuzza records kusinziira ku backup eriwo. Nga kino: kozza ddoboozi buli wiiki, era omufunye nsimbi n’omunaasiki bonera buli ekikolo. Obwe kitsi kintu n’ekibinja kye kisobola okubikira.</span><span class="block canva-text en mt-1" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 14px; line-height: 1.5;">Recovery depends on the backup you keep. So: take a backup every week, and let the treasurer and the secretary each hold a copy. Then no single phone holds the group up.</span></span></p>
       </div>
      </div>
     </div>
@@ -630,13 +653,44 @@
       <p class="mt-4 flex gap-2 items-start"><svg class="ms w-5 h-5 shrink-0" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-info" xlink:href="#i-info"/></svg><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Ssente z’okutunda zigenda butereevu eri omutunzi — teziyingira mu kibokisi ky’ekibinja.</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Sale proceeds go directly to the seller — they never enter the group cash box.</span></p>
      </div>
      <ul class="market-list col-span-4 md:col-span-8 lg:col-span-6 lg:col-start-7 mt-8 lg:mt-0">
-      <li class="canva-card market-row flex items-center gap-4 rounded-lg p-4"><span class="market-ico"><svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-grass" xlink:href="#i-grass"/></svg></span><span class="flex-1 min-w-0"><span class="block"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Matooke — enkota</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Matooke — one bunch</span></span><span class="canva-text" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 13px;">Namubiru R. · SMS</span></span><span class="canva-text mono" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 14px;">UGX 25,000</span></li>
-      <li class="canva-card market-row flex items-center gap-4 rounded-lg p-4"><span class="market-ico"><svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-content_cut" xlink:href="#i-content_cut"/></svg></span><span class="flex-1 min-w-0"><span class="block"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Okutunga gomesi</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Gomesi tailoring</span></span><span class="canva-text" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 13px;">Achieng J. · WhatsApp</span></span><span class="canva-text mono" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 14px;">UGX 60,000</span></li>
-      <li class="canva-card market-row flex items-center gap-4 rounded-lg p-4"><span class="market-ico"><svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-directions_bike" xlink:href="#i-directions_bike"/></svg></span><span class="flex-1 min-w-0"><span class="block"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Bodaboda — mu kyalo</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 15px;">Bodaboda — local trips</span></span><span class="canva-text" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 13px;">Ssali P. · SMS</span></span><span class="canva-text mono" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 14px;">UGX 3,000</span></li>
+       <li class="canva-card market-row flex items-center gap-4 rounded-lg p-4"><span class="market-ico"><svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-grass" xlink:href="#i-grass"/></svg></span><span class="flex-1 min-w-0"><span class="block"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 16px;">Matooke — enkota</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 16px;">Matooke — one bunch</span></span><span class="canva-text" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 13px;">Namubiru R. · <span class="market-tag">SMS</span></span></span><span class="canva-text mono" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 14px;">UGX 25,000</span></li>
+       <li class="canva-card market-row flex items-center gap-4 rounded-lg p-4"><span class="market-ico"><svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-content_cut" xlink:href="#i-content_cut"/></svg></span><span class="flex-1 min-w-0"><span class="block"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 16px;">Okutunga gomesi</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 16px;">Gomesi tailoring</span></span><span class="canva-text" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 13px;">Achieng J. · <span class="market-tag">WhatsApp</span></span></span><span class="canva-text mono" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 14px;">UGX 60,000</span></li>
+       <li class="canva-card market-row flex items-center gap-4 rounded-lg p-4"><span class="market-ico"><svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-directions_bike" xlink:href="#i-directions_bike"/></svg></span><span class="flex-1 min-w-0"><span class="block"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 16px;">Bodaboda — mu kyalo</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 16px;">Bodaboda — local trips</span></span><span class="canva-text" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 13px;">Ssali P. · <span class="market-tag">SMS</span></span></span><span class="canva-text mono" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 14px;">UGX 3,000</span></li>
+       <li class="canva-card market-row flex items-center gap-4 rounded-lg p-4"><span class="market-ico"><svg class="ms w-5 h-5" aria-hidden="true" focusable="false" style="color:#006D30" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-edit_note" xlink:href="#i-edit_note"/></svg></span><span class="flex-1 min-w-0"><span class="block"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 16px;">Empaapula z’amaayi ga kibiina</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 16px;">Group diary printing</span></span><span class="canva-text" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 13px;">Nabirye M. · <span class="market-tag">WhatsApp</span></span></span><span class="canva-text mono" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 14px;">UGX 15,000</span></li>
      </ul>
     </div>
    </section>
-   <section id="pricing" class="rv canva-section w-full wash" style="background: rgb(253, 252, 247);">
+    <section class="rv canva-section w-full" style="background: rgb(246, 247, 246);">
+     <div class="shell sec">
+      <div class="grid12 items-end mb-10 lg:mb-12">
+       <div class="col-span-4 md:col-span-8 lg:col-span-6">
+        <p class="pill eyebrow mb-4"><span class="canva-text lu" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">SOOKA WOO</span><span class="canva-text en" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">CHECK IT YOURSELF</span></p>
+        <h2 class="fz-40 head-h2"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 800; font-size: 40px;">Sooka mokkatono ku ssente ez’okuzannya</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 800; font-size: 40px;">Check it with play money</span></h2>
+       </div>
+       <p class="col-span-4 md:col-span-8 lg:col-span-5 lg:col-start-8 sec-lede"><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 17px; line-height: 1.55;">Tewali kifo kijja n’otukwa ddoboozi nga bwe ukozewo. Ggula demo, wandiika olukiiko, lwange n'obukwa.</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 17px; line-height: 1.55;">Nothing here asks you to believe us. Open the demo, record a meeting, and decide for yourself.</span></p>
+      </div>
+      <div class="grid12">
+       <article class="canva-card lcard col-span-4 p-7"><p class="mono proof-num mb-4">01</p>
+        <h3 class="fz-21 head-h3"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 21px;">Ggula demo, konna kikyali</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 21px;">Open the demo — no signup</span></h3>
+        <p class="mt-3"><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Wewuza app n’obutunvi. Tewali kigendererwa, tewali ssente ezikusanyiswa, era tewali kuwanyuka.</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">You open the app and look. No account, no money involved, nothing to cancel.</span></p>
+       </article>
+       <article class="canva-card lcard col-span-4 p-7"><p class="mono proof-num mb-4">02</p>
+        <h3 class="fz-21 head-h3"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 21px;">Wandiika olukiiko nga ziri za kuzannya</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 21px;">Record a meeting with play money</span></h3>
+        <p class="mt-3"><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Ebiragero, emigabo, welfare n’amagaba. Bona nga app ebala buli omu, era okutegeezagana ssente enkalu ne ziri mu bbanka.</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Shares, savings, welfare and loans. Watch it total each member, then reconcile cash against the bank.</span></p>
+       </article>
+       <article class="canva-card lcard col-span-4 p-7"><p class="mono proof-num mb-4">03</p>
+        <h3 class="fz-21 head-h3"><span class="canva-text lu" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 21px;">Laba omulimu ow’enjawulo</span><span class="canva-text en" style="color: rgb(0, 38, 27); font-weight: 700; font-size: 21px;">See the two-officer step</span></h3>
+        <p class="mt-3"><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Looni esaba, abaserikale babiri bakakasa, buli omu n’ekikomo kye. Bwa kino owoweza ng’omu y’alaba owaaliwo.</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">A member requests a loan, two officers approve it, each with their own PIN. Then look at what that member sees on their own phone.</span></p>
+       </article>
+      </div>
+      <div class="mt-10 flex flex-wrap items-center justify-center gap-3">
+       <a href="/app?intent=demo" class="canva-button btn" style="background: rgb(0, 109, 48); color: rgb(255, 255, 255);"><span class="lu" style="font-weight: 700; font-size: 16px;">Ggula demo</span><span class="en" style="font-weight: 700; font-size: 16px;">Open the demo</span><svg class="ms w-4 h-4" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-arrow_forward" xlink:href="#i-arrow_forward"/></svg></a>
+       <a class="canva-button btn btn-out-d js-whatsapp" href="https://wa.me/256727790003" style="background: transparent; color: rgb(0, 38, 27);"><svg class="ms w-4 h-4" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-chat" xlink:href="#i-chat"/></svg><span class="lu" style="font-weight: 700; font-size: 16px;">Buzibu ekikwata ku demo</span><span class="en" style="font-weight: 700; font-size: 16px;">Ask a question about the demo</span></a>
+      </div>
+      <p class="canva-text mt-5 text-center" style="color: rgb(107, 114, 128); font-weight: 400; font-size: 14px;"><span class="lu">Demo nayo eri ssente ez’okuzannya. Ssente ez’ekibinja kintu, tetwali.</span><span class="en">The demo runs on play money. No real group money is involved at any point.</span></p>
+     </div>
+    </section>
+    <section id="pricing" class="rv canva-section w-full wash" style="background: rgb(253, 252, 247);">
     <div class="shell sec">
      <div class="max-w-2xl mb-10">
       <p class="pill eyebrow mb-4"><span class="canva-text lu" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">EMPEEREZA</span><span class="canva-text en" style="color: rgb(0, 109, 48); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">PRICING</span></p>
@@ -664,10 +718,16 @@
           <a class="canva-button btn js-call" href="tel:+256752338171" style="background: transparent; color: rgb(255, 255, 255); border:1.5px solid rgba(255,255,255,.3)"><svg class="ms w-4 h-4" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-call" xlink:href="#i-call"/></svg><span class="lu" style="font-weight: 700; font-size: 16px;">Tuddala ku 0752 338 171</span><span class="en" style="font-weight: 700; font-size: 16px;">Call 0752 338 171</span></a>
        </div>
       </article>
-      <article class="canva-card price-card col-span-4 md:col-span-8 lg:col-span-5 rounded-2xl p-8 md:p-10 flex flex-col" style="border: 1.5px solid rgb(0, 38, 27); background: rgb(253, 252, 247);"><span class="canva-tag pill px-3 py-1 w-max" style="background: rgb(246, 247, 246); color: rgb(75, 85, 99); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;">Coming soon</span>
+      <article class="canva-card price-card col-span-4 md:col-span-8 lg:col-span-5 rounded-2xl p-8 md:p-10 flex flex-col" style="border: 1.5px solid rgb(0, 38, 27); background: rgb(253, 252, 247);"><span class="canva-tag pill px-3 py-1 w-max" style="background: rgb(246, 247, 246); color: rgb(75, 85, 99); font-weight: 700; font-size: 12px; letter-spacing: 0.06rem;"><span class="lu">Mu ntandikwa</span><span class="en">Coming soon</span></span>
        <h3 class="fz-26 head-h3 canva-text mt-5" style="color: rgb(0, 38, 27); font-weight: 800; font-size: 26px;">Pro / SACCO</h3>
-       <p class="mt-3 flex-1"><span class="canva-text lu" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 16px; line-height: 1.5;">Eno tennatandika. Weegatte ku lukalala lw’okulinda okumanyibwa ng’etandise.</span><span class="canva-text en" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 16px; line-height: 1.5;">Not available yet. Join the waitlist to hear when it launches.</span></p>
-       <button type="button" id="waitlist-open" class="canva-button btn btn-out-d mt-8" style="background: transparent; color: rgb(0, 38, 27);"><span class="lu" style="font-weight: 700; font-size: 16px;">Weegatte ku lukalala lw’okulinda</span><span class="en" style="font-weight: 700; font-size: 16px;">Join the waitlist</span></button>
+       <p class="mt-3"><span class="canva-text lu" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 16px; line-height: 1.5;">Eno tennatandika. Ebisuubirwa bya wano bisigala mu mutandikwa — tukujja okubuulira nga bwe tukikyala.</span><span class="canva-text en" style="color: rgb(75, 85, 99); font-weight: 400; font-size: 16px; line-height: 1.5;">Not available yet. The list below is what we plan to build — we will ask you before we build any of it.</span></p>
+       <ul class="mt-6 mb-6 flex flex-col gap-3">
+        <li class="flex gap-2.5 items-start"><span class="w-5 h-5 rounded-full grid place-items-center shrink-0 mt-0.5" style="background:#F6F7F6"><svg class="ms w-3 h-3" aria-hidden="true" focusable="false" style="color:#9CA3AF" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-add_business" xlink:href="#i-add_business"/></svg></span><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Ebikolelo n'obuwangwa, ebweru ebizibu bya bibina</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Branches, and members who belong to more than one group</span></li>
+        <li class="flex gap-2.5 items-start"><span class="w-5 h-5 rounded-full grid place-items-center shrink-0 mt-0.5" style="background:#F6F7F6"><svg class="ms w-3 h-3" aria-hidden="true" focusable="false" style="color:#9CA3AF" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-balance" xlink:href="#i-balance"/></svg></span><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Balansi ezikusanyiswa ku bisinga bya PACCA</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Balances that roll up to PACCA or SACCO totals</span></li>
+        <li class="flex gap-2.5 items-start"><span class="w-5 h-5 rounded-full grid place-items-center shrink-0 mt-0.5" style="background:#F6F7F6"><svg class="ms w-3 h-3" aria-hidden="true" focusable="false" style="color:#9CA3AF" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-print" xlink:href="#i-print"/></svg></span><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Empitikulo n insistingi nga PDF nga CSV</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Audit and inspection reports as PDF and CSV</span></li>
+        <li class="flex gap-2.5 items-start"><span class="w-5 h-5 rounded-full grid place-items-center shrink-0 mt-0.5" style="background:#F6F7F6"><svg class="ms w-3 h-3" aria-hidden="true" focusable="false" style="color:#9CA3AF" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use href="#i-sms" xlink:href="#i-sms"/></svg></span><span class="canva-text lu" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Obutumwa bwa SMS ku mmezi buli, ekyali ku bibinja ebisinga</span><span class="canva-text en" style="color: rgb(55, 65, 81); font-weight: 400; font-size: 15px; line-height: 1.5;">Monthly SMS summaries for all groups</span></li>
+       </ul>
+       <button type="button" id="waitlist-open" class="canva-button btn btn-out-d mt-8 lg:mt-auto" style="background: transparent; color: rgb(0, 38, 27);"><span class="lu" style="font-weight: 700; font-size: 16px;">Weegatte ku lukalala lw’okulinda</span><span class="en" style="font-weight: 700; font-size: 16px;">Join the waitlist</span></button>
       </article>
      </div>
     </div>
@@ -880,21 +940,36 @@
     const countTargets = document.querySelectorAll('[data-count]');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const fmtTarget = (el) => Math.round(Number(el.getAttribute('data-count')) || 0).toLocaleString('en-US');
+    // A money figure has a currency word around the digits ("UGX 1,420,000").
+    // Counting up by replacing textContent wholesale dropped that word, and on
+    // the way there the treasurer watched figures that do not add up scroll
+    // past: 25,000 counted as 24,313. So only the digits are ever rewritten.
+    const splitMoney = (el) => {
+      const raw = (el.textContent || '').trim();
+      const m = /^([^0-9]*)([0-9,]*)([^0-9]*)$/.exec(raw);
+      return { prefix: m ? m[1] : '', suffix: m ? m[3] : '' };
+    };
+    const writeMoney = (el, shell, n) => {
+      el.textContent = shell.prefix + Math.round(n).toLocaleString('en-US') + shell.suffix;
+    };
+    const fmtTarget = (el) => {
+      const shell = splitMoney(el);
+      return shell.prefix + Math.round(Number(el.getAttribute('data-count')) || 0).toLocaleString('en-US') + shell.suffix;
+    };
     const countUp = (el) => {
       const target = Number(el.getAttribute('data-count'));
-      const fmt = (n) => Math.round(n).toLocaleString('en-US');
       if (!Number.isFinite(target) || target <= 0) return;
+      const shell = splitMoney(el);
       // Reduced motion means the number appears, not that it never arrives.
-      if (reduceMotion) { el.textContent = fmt(target); return; }
+      if (reduceMotion) { writeMoney(el, shell, target); return; }
       const start = performance.now();
       const ms = Math.min(1400, 700 + String(target).length * 60);
       const step = (now) => {
         const t = Math.min(1, (now - start) / ms);
         const eased = 1 - Math.pow(1 - t, 3);
-        el.textContent = fmt(target * eased);
+        writeMoney(el, shell, target * eased);
         if (t < 1) requestAnimationFrame(step);
-        else el.textContent = fmt(target);
+        else writeMoney(el, shell, target);
       };
       requestAnimationFrame(step);
     };

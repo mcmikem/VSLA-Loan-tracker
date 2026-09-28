@@ -329,9 +329,11 @@ describe('landing: the funnel actually ends somewhere', () => {
   it('holds the design together after the fixes', () => {
     // one icon treatment across the trust strip
     expect(landing.match(/class="trust-ico"/g)?.length).toBe(4);
-    // every marketplace row carries the row treatment, not just the first
-    expect(landing.match(/market-row flex/g)?.length).toBe(3);
-    expect(landing.match(/class="market-ico"/g)?.length).toBe(3);
+    // every marketplace row carries the row treatment, not just the first, and
+    // there are four of them so the list reads as a marketplace rather than
+    // three sample lines
+    expect(landing.match(/market-row flex/g)?.length).toBe(4);
+    expect(landing.match(/class="market-ico"/g)?.length).toBe(4);
     // no type under 12px anywhere
     expect(landing).not.toContain('font-size: 10px');
     expect(landing).not.toContain('font-size: 11px');
@@ -361,7 +363,7 @@ describe('landing: what the rendered page was actually doing', () => {
     // and the number is still there as text for anyone without the script
     expect(landing).toContain('data-count="25000">25,000');
     // reduced motion must still land the number, not skip it
-    expect(landing).toContain('if (reduceMotion) { el.textContent = fmt(target); return; }');
+    expect(landing).toContain('if (reduceMotion) { writeMoney(el, shell, target); return; }');
     expect(landing).toContain('countTargets.forEach(el => countUp(el));');
   });
 
@@ -430,5 +432,80 @@ describe('landing: what the rendered page was actually doing', () => {
     // it once lived inside the two-card grid, where any placement squeezed it
     expect(landing).not.toContain('col-span-2 compare-note');
     expect(landing).toContain('class="col-span-4 md:col-span-8 lg:col-span-12 compare-note mt-6 flex gap-2.5 items-start"');
+  });
+
+  it('the count-up only rewrites digits, so a money figure never loses its currency', () => {
+    // Counting up by assigning textContent dropped the "UGX ", and on the way
+    // there a treasurer watched figures that do not add up scroll past: the
+    // group total counted through 1,343,826 on its way to 1,420,000, and a
+    // 25,000 share showed as 24,313. Only the digits may be rewritten.
+    expect(landing).toContain('const splitMoney = (el) =>');
+    expect(landing).toContain('const writeMoney = (el, shell, n) =>');
+    expect(landing).toContain('writeMoney(el, shell, target * eased)');
+    // the dangerous form must not be there any more
+    expect(landing).not.toContain('el.textContent = fmt(');
+    // and the figure itself keeps its prefix in the markup, for no-JS readers
+    expect(landing).toMatch(/data-count="1420000">UGX 1,420,000/);
+  });
+
+  it('proves the product instead of claiming it, using something checkable', () => {
+    // No invented testimonials and no invented customer names: a sales page
+    // that quotes a person who does not exist is worse than one with no quote.
+    // The proof offered here is the free demo, which any visitor can open and
+    // check for themselves, with play money so no real group is at risk.
+    expect(landing).toContain('Sooka mokkatono ku ssente ez’okuzannya');
+    expect(landing).toContain('Check it with play money');
+    expect(landing.match(/class="mono proof-num mb-4"/g)?.length).toBe(3);
+    expect(landing).toContain('href="/app?intent=demo"');
+    // and it says plainly that no real money is involved
+    expect(landing).toContain('The demo runs on play money');
+    expect(landing).not.toContain('testimonial');
+  });
+
+  it('the Pro card earns its space, and is translated', () => {
+    // it was one line of copy above 200px of nothing, and its status pill read
+    // "Coming soon" in English even to a Luganda reader
+    expect(landing).not.toContain('letter-spacing: 0.06rem;">Coming soon</span>');
+    expect(landing).toContain('<span class="lu">Mu ntandikwa</span>');
+    expect(landing).toContain('<span class="en">Coming soon</span>');
+    // the plan it is holding the space for
+    expect(landing).toContain('Branches, and members who belong to more than one group');
+    expect(landing).toContain('Audit and inspection reports as PDF and CSV');
+    // a gap before the button, so the last planned item never touches it
+    expect(landing).toContain('class="mt-6 mb-6 flex flex-col gap-3"');
+  });
+
+  it('no card is styled as if it were an accident', () => {
+    // the third trust card was dashed while its two siblings were solid, and
+    // the paper ledger card had ruled paper with no margin rule, so the pair
+    // read as one card having been styled by mistake
+    const trustRow = landing.slice(landing.indexOf('class="trust-item'));
+    expect(trustRow).not.toContain('1px dashed');
+    // the dashed treatment that IS deliberate: the comparison note
+    expect(landing).toContain('.compare-note{border:1px dashed');
+    expect(landing).toContain('compare-paper paper rounded-2xl p-6 pl-10');
+    expect(landing).toContain('.compare-paper::before');
+    // the channel in a marketplace row is a tag, not another heading
+    expect(landing).toContain('.market-tag{');
+    expect(landing.match(/class="market-tag"/g)?.length).toBe(4);
+  });
+
+  it('the hero shows a working account, not a picture of one', () => {
+    // a loan line in the activity list and the four figures underneath, so the
+    // card above the fold is doing the thing the page is selling
+    expect(landing).toContain('Looni — bakkirizibwa');
+    expect(landing).toContain('class="passbook-sum mt-5 grid grid-cols-4 gap-2 pt-4"');
+    expect(landing).toContain('.passbook-sum{border-top:1px dashed #E5E7EB}');
+    expect(landing.match(/class="canva-text block lu"[^>]*>OKUTEREKA</g)?.length).toBe(1);
+  });
+
+  it('every pill and label that carries a language exists in both languages', () => {
+    // A bare text node inside a pill stays visible in both modes, so the
+    // Luganda label was still on screen for an English reader.
+    for (const m of landing.matchAll(/<(?:span|p)\s+class="[^"]*\b(?:pill|canva-tag)\b[^"]*"[^>]*>([^<]+)</g)) {
+      expect(m[1].trim(), `untranslated pill text: ${m[1].trim()}`).toBe('');
+    }
+    expect(landing).toContain('<span class="lu" style="font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">AKAWUNTI YA DEMO</span>');
+    expect(landing).toContain('<span class="en" style="font-weight: 800; font-size: 12px; letter-spacing: 0.06rem;">DEMO ACCOUNT</span>');
   });
 });
