@@ -90,7 +90,29 @@ describe('Luganda audit tooling (hands a native speaker a work list)', () => {
     expect(untranslated).toBeGreaterThan(10);
     const keys = gaps.map((g) => g.where);
     expect(keys).toContain('common.cancel');
-    expect(keys.some((k) => k.includes('CashDiscrepancyModal.tsx:'))).toBe(true);
+  });
+
+  it('never puts the Luganda in the English slot of a str() call', () => {
+    // It happened: the cash-discrepancy subtitle read
+    // str('Golola Enjawukana y'Essente', 'Golola Enjawukana y'Essente'), so an
+    // English-speaking treasurer was shown Luganda. The audit no longer reports
+    // it, which is the point: this asserts the fix holds rather than pinning
+    // the broken line in place.
+    expect(audit().gaps.some((g) => g.where.includes('CashDiscrepancyModal.tsx:'))).toBe(false);
+    const source = read('src/components/CashDiscrepancyModal.tsx');
+    for (const m of source.matchAll(/str\(\s*'((?:[^'\\]|\\.)*)'\s*,\s*'((?:[^'\\]|\\.)*)'\s*\)/g)) {
+      expect(m[1], 'the first argument of str() is the English').not.toBe(m[2]);
+      expect(m[1], 'Luganda leaked into the English slot').not.toMatch(/akasaanduuko|akuuma|mulimu|gufuga/i);
+    }
+  });
+
+  it('leaves the words groups already say in English out of the work list', () => {
+    // "Shares", "PIN", "MoMo", "backup" and friends are the words a treasurer
+    // already uses. Chasing them in the audit is noise for a reviewer.
+    const keys = audit().gaps.map((g) => g.where);
+    for (const key of ['passbook.sharesCol', 'topBar.appName']) {
+      expect(keys, `${key} is deliberately English`).not.toContain(key);
+    }
   });
 
   it('does not flag words we verified in the corpus', () => {

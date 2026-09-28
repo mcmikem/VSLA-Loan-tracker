@@ -76,7 +76,7 @@ export const CashDiscrepancyModal: React.FC<CashDiscrepancyModalProps> = ({
                 </h2>
               </div>
               <p className="text-label-sm font-label-sm text-text-muted font-medium mt-0.5">
-                 {str('Golola Enjawukana y\'Essente', 'Golola Enjawukana y\'Essente')}
+                 {str('Cash box does not match', 'Akasanduuko k\'akakwatagana n\'ebyo mubala')}
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container text-primary font-mono text-[11px] font-semibold border border-border-line">

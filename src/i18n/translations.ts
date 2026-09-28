@@ -393,9 +393,12 @@ export const translations = {
       transactionHistory: 'Transaction history',
       dateCol: 'Olunaku',
       typeCol: 'Transaction',
+      // Deliberately left in English: "shares" is the word groups already
+      // use for a purchased share, and it is the one header a treasurer
+      // must not have to translate in their head.
       sharesCol: 'Shares',
-      amountCol: 'Amount',
-      statusCol: 'Status',
+      amountCol: 'Omuwendo',
+      statusCol: 'Obanga',
       noLoansNotice: 'Tewali banja erisigadde.',
       stampModalTitle: 'Buy shares',
       sharesLabel: 'Number of shares',

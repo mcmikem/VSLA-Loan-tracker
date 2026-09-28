@@ -30,6 +30,29 @@ function collectLeaves(node: unknown, path: string[] = []): Array<{ key: string;
   return [];
 }
 
+/**
+ * Words the translator keeps in English on purpose. Groups already say these
+ * out loud in English, and a treasurer should not have to translate one in
+ * their head to read a balance. Listing them here keeps the audit honest: a
+ * word we have decided to keep is not a gap for a reviewer to chase.
+ */
+const KEEP_IN_ENGLISH = new Set([
+  // lower-cased: the comparison is case-insensitive, so "Shares" and "shares"
+  // are the same decision, not two
+  'vsla ug', 'vsla', 'ugx', 'en', 'lg', 'lu', 'pin', 'mtn', 'airtel', 'whatsapp',
+  'sms', 'json', 'momo', 'ok', 'id', 'csv', 'pdf', 'pro', 'sacco', 'atm',
+  'app', 'backup', 'demo', 'pilot', 'share', 'shares', 'cash', 'bank',
+  'treasurer', 'secretary', 'audit', 'waitlist',
+]);
+
+/** Brand names, currency, initialisms and the words we ship in English. */
+export function isKeptInEnglish(value: string): boolean {
+  const v = value.trim();
+  // a bare initialism or acronym: UGX, PIN, SMS, BBIKI
+  if (/^[A-Z]{2,}$/.test(v)) return true;
+  return KEEP_IN_ENGLISH.has(v.toLowerCase());
+}
+
 /** Dictionary leaves where LU still reads as English. */
 export function dictionaryGaps(): Gap[] {
   const en = new Map(collectLeaves(translations.EN).map((l) => [l.key, l.value]));
@@ -37,7 +60,7 @@ export function dictionaryGaps(): Gap[] {
   for (const { key, value } of collectLeaves(translations.LU)) {
     const english = en.get(key);
     // Brand names, codes, currency and proper nouns are allowed to match.
-    if (english === value && !/^(VSLA|UGX|EN|LU|PIN|MTN|Airtel|WhatsApp|SMS|JSON|MoMo|OK|[A-Z]{2,})/.test(value)) {
+    if (english === value && !isKeptInEnglish(value)) {
       gaps.push({ where: key, english: value });
     }
   }
