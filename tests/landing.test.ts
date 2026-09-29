@@ -424,7 +424,7 @@ describe('landing: what the rendered page was actually doing', () => {
     // the meeting section used to be a tablist, so a member never saw the
     // officer steps and an officer never saw the member steps
     expect(landing).toContain('KU BAMMEMBA');
-    expect(landing).toContain('KU BAKUNGU');
+    expect(landing).toContain('KU ABAKUNGU');
     expect(landing.match(/class="who-col /g)?.length).toBe(2);
     expect(landing.match(/class="who-step"/g)?.length).toBe(6);
     expect(landing).not.toContain('role="tablist"');

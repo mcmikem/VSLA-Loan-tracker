@@ -85,11 +85,14 @@ describe('village simplicity guards', () => {
 });
 
 describe('Luganda audit tooling (hands a native speaker a work list)', () => {
-  it('lists untranslated strings with their key or file:line', () => {
+  it('keeps the work list short, and empty of what is already decided', () => {
+    // The translator has been through it: the app used to hand a reviewer 30
+    // English stubs. That list is now empty, and the assertion is a ceiling so
+    // a future English string cannot quietly reappear unnoticed.
     const { gaps, untranslated } = audit();
-    expect(untranslated).toBeGreaterThan(10);
-    const keys = gaps.map((g) => g.where);
-    expect(keys).toContain('common.cancel');
+    const keys = gaps.map((g) => g.where).filter((k) => !k.startsWith('index.html'));
+    expect(untranslated, 'app strings still untranslated').toBeLessThan(3);
+    expect(keys, `unexpected gaps: ${keys.join(', ')}`).toEqual([]);
   });
 
   it('never puts the Luganda in the English slot of a str() call', () => {
@@ -119,6 +122,10 @@ describe('Luganda audit tooling (hands a native speaker a work list)', () => {
     const keys = audit().gaps.map((g) => g.where);
     expect(keys).not.toContain('a11y.menu');
     expect(keys).not.toContain('a11y.help');
+    // every settings label the translator supplied is in place
+    for (const key of ['a11y.display', 'a11y.simple', 'a11y.advanced', 'a11y.language', 'a11y.showOnScreen']) {
+      expect(keys, `${key} is translated now`).not.toContain(key);
+    }
   });
 
   it('English never leaks Luganda back into the EN dictionary', () => {

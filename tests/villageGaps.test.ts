@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   GAP_TWO_KEY_THRESHOLD,
   WELFARE_FAST_TRACK_CAP,
@@ -130,15 +131,42 @@ describe('offline group builder', () => {
     expect(ledgerHash([])).toMatch(/^[0-9A-F]{5}$/);
   });
 
-  it('translator pack v1 corrections hold in Luganda', () => {
+  it('the translator\u2019s own Luganda holds for the common buttons', () => {
+    // The last English left in the app, supplied by the translator. The stubs
+    // are gone; these are the words a member actually reads.
     const lu = getTranslations('LU').common;
-     expect(lu.back).toBe('Back');
-     expect(lu.next).toBe('Next');
+    expect(lu.cancel).toBe('Sazaamu');
+    expect(lu.close).toBe('Ggalawo');
+    expect(lu.back).toBe('Ddayo');
+    expect(lu.next).toBe('Ekiddako');
+    expect(lu.loading).toBe('Lindako...');
+    expect(lu.success).toBe('Kiwedde');
+    expect(lu.error).toBe('Ensobi');
+    expect(lu.copied).toBe('Kikopeddwa');
+    // and the ones that were already right
     expect(lu.share).toBe('Gabana');
-     expect(lu.copy).toBe('Koppa');
+    expect(lu.copy).toBe('Koppa');
     expect(lu.save).toBe('Tereka');
     expect(lu.search).toBe('Noonya');
-     expect(lu.cancel).toBe('Cancel');
+  });
+
+  it('the landing page and the app name the same things the same way', () => {
+    // A treasurer who reads the marketing page then opens the app must not
+    // meet two words for one thing. The settled vocabulary:
+    // mmemba, ebbanja, sasula, amagoba, Ebokisi, abakungu.
+    const landing = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    for (const word of ['mmemba', 'ebbanja', 'okusula', 'amagoba', 'ebokisi', 'abakungu']) {
+      expect(landing, `landing must use ${word}`).toContain(word);
+    }
+    for (const gone of ['muwammemba', 'okubazza', 'emmundu', 'kasanduuko', 'sanduuko', 'ekibanja']) {
+      expect(landing, `${gone} must not return to the landing`).not.toContain(gone);
+    }
+    const flat = (o: any, p = ''): [string, string][] =>
+      Object.entries(o).flatMap(([k, v]) => (typeof v === 'object' && v ? flat(v, p + k + '.') : [[p + k, String(v)]]));
+    for (const gone of ['omuntu', 'ekibanja', 'sanduuko', 'kasanduuko', 'emmundu']) {
+      const hits = flat(getTranslations('LU') as any).filter(([, v]) => v.toLowerCase().includes(gone));
+      expect(hits.map(([k]) => k), `${gone} must not return to the app`).toEqual([]);
+    }
   });
 
   it('keeps product images out of storage snapshots', () => {

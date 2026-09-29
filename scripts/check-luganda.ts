@@ -47,11 +47,25 @@ requireTerm(
   'Akatabo',
   'passbook wording'
 );
+// The settled vocabulary. These are the words groups and the landing page both
+// use now, so a treasurer meets the same word for the same thing everywhere.
 requireTerm(
   ['passbook.selectMemberPrompt', 'passbook.selectMember', 'passbook.memberBadge'],
-  'omuntu',
+  'mmemba',
   'member wording'
 );
+requireTerm(
+  ['nav.loans', 'home.loanFund', 'home.newLoan', 'passbook.loanBalance', 'passbook.applyLoanBtn', 'loan.title'],
+  'ebbanja',
+  'loan wording'
+);
+requireTerm(
+  ['home.strongboxTitle', 'home.vaultStatus', 'home.boxCashBalance', 'meetingClose.title', 'meetingClose.lockBoxBtn'],
+  'ebokisi',
+  'cash box wording'
+);
+requireTerm(['home.recordRepayment', 'passbook.repayCashBtn'], 'sasula', 'repayment wording');
+requireTerm(['loan.interestRateNotice'], 'magoba', 'interest wording');
 
 const sharePrice = atPath(lu, 'home.sharePrice');
 const shareValue = atPath(lu, 'home.shareValue');
