@@ -412,7 +412,7 @@ describe('landing: what the rendered page was actually doing', () => {
       'Laba eby\u2019okutereka ne shares zo',
       'Manya embeera y\u2019ebbanja lyo',
       'Saba ebbanja era ogoberere',
-      'Fuuna okujjukizibwa ku kubazza',
+      'Fuuna okujjukizibwa ku Ssula',
       'Tunda eri bammemba',
       'Goberera ebirangiriro by\u2019ekibiina',
     ]) {

@@ -1114,7 +1114,7 @@ export function App() {
       if (!check.ok) return check.error || 'Unknown officer.';
       officerName = check.name;
     } else if (isDefaultPin(currentUser.pin)) {
-      return language === 'LU' ? 'Kyuusa PIN (1234) esooke.' : 'Change your default PIN 1234 first (Account → Change PIN). Money cannot move on a default PIN.';
+      return language === 'LU' ? 'Kyusa PIN eyakuweleddwa osobole okukozesa App.' : 'Change your default PIN 1234 first (Account → Change PIN). Money cannot move on a default PIN.';
     }
     const method = payoutMethod || targetItem.provider || 'Cash';
     const payoutBalance = method === 'Cash' ? vslaState.boxCashBalance : (vslaState.momoBalance || 0);
@@ -1344,7 +1344,7 @@ export function App() {
     if (!hasPermission(currentUser, 'canApproveLoans')) {
       return permissionRefusal(currentUser, 'canApproveLoans', language);
     }
-    if (isDefaultPin(currentUser.pin)) return 'Change the default PIN before confirming a payout.';
+    if (isDefaultPin(currentUser.pin)) return language === 'LU' ? 'Kyusa PIN eyakuweleddwa osobole okukozesa App.' : 'Change the default PIN before confirming a payout.';
     const targetItem = vslaState.approvals.find((a) => a.id === id);
     if (!targetItem || targetItem.status !== 'approved') return 'This request is not awaiting payout.';
     if (targetItem.payoutStatus === 'confirmed') return 'This payout was already confirmed.';
@@ -1826,9 +1826,9 @@ export function App() {
       return permissionRefusal(currentUser, 'canDisburseWelfare', language);
     }
     if (isDefaultPin(currentUser.pin)) {
-      alert(language === 'LU' ? 'Kyuusa PIN (1234) esooke — obuyambi tebufuluma ku PIN 1234.' : 'Change your default PIN 1234 first. Welfare money cannot move on a default PIN.');
+      alert(language === 'LU' ? 'Kyusa PIN eyakuweleddwa osobole okukozesa App — obuyambi tebufuluma ku PIN 1234.' : 'Change your default PIN 1234 first. Welfare money cannot move on a default PIN.');
       setIsAccountModalOpen(true);
-      return language === 'LU' ? 'Kyuusa PIN esooke.' : 'Change your default PIN first.';
+      return language === 'LU' ? 'Kyusa PIN eyakuweleddwa osobole okukozesa App.' : 'Change your default PIN first.';
     }
     // Gap 4b: one rule, two doors. Direct payout is the emergency fast-track:
     // capped single-key; anything bigger must pass the 2-key approvals queue.
@@ -2075,10 +2075,10 @@ export function App() {
     }
     if (isDefaultPin(currentUser.pin)) {
       if (key) {
-        return { error: language === 'LU' ? 'Kyuusa PIN (1234) esooke — share-out tekola ku PIN 1234.' : 'Change your default PIN 1234 first. Share-out cannot run on a default PIN.' };
+        return { error: language === 'LU' ? 'Kyusa PIN eyakuweleddwa osobole okukozesa App — share-out tekola ku PIN 1234.' : 'Change your default PIN 1234 first. Share-out cannot run on a default PIN.' };
       }
       setIsAccountModalOpen(true);
-      return { error: language === 'LU' ? 'Kyuusa PIN (1234) esooke — share-out tekola ku PIN 1234.' : 'Change your default PIN 1234 first. Share-out cannot run on a default PIN.' };
+      return { error: language === 'LU' ? 'Kyusa PIN eyakuweleddwa osobole okukozesa App — share-out tekola ku PIN 1234.' : 'Change your default PIN 1234 first. Share-out cannot run on a default PIN.' };
     }
     // Same gate as the screen: money never leaves the group on a split the
     // members have not approved.
@@ -2912,9 +2912,11 @@ export function App() {
       )}
       {currentUser.pin === '1234' && (
         <div className="bg-red-50 border-b border-red-200 text-red-800 text-[11px] font-bold px-4 py-1.5 text-center">
-          You use the default PIN 1234.{' '}
+          {language === 'LU'
+            ? 'Kyusa PIN eyakuweleddwa osobole okukozesa App'
+            : 'You are still using the default PIN 1234.'}{' '}
           <button type="button" onClick={() => setIsAccountModalOpen(true)} className="underline">
-            Change it now
+            {language === 'LU' ? 'Kyusa itukule' : 'Change it now'}
           </button>
         </div>
       )}
