@@ -17,6 +17,8 @@ export interface Gap {
   /** Dotted key path for dictionary strings, or file:line for inline ones. */
   where: string;
   english: string;
+  /** The Luganda we found, when it exists and is not the English. */
+  luganda?: string;
   note?: string;
 }
 
@@ -45,10 +47,15 @@ const KEEP_IN_ENGLISH = new Set([
   'treasurer', 'secretary', 'audit', 'waitlist',
 ]);
 
-/** Brand names, currency, initialisms and the words we ship in English. */
+/**
+ * Brand names, currency, initialisms and the words we ship in English.
+ * Note: this only catches a Luganda value identical to its English. A
+ * half-finished string such as "Repayment amount (UGX)" for "Cash Repayment
+ * Amount (UGX)" differs, so it never appeared on the work list. An ASCII-only
+ * heuristic was tried and rejected: it flagged 177 correct strings.
+ */
 export function isKeptInEnglish(value: string): boolean {
   const v = value.trim();
-  // a bare initialism or acronym: UGX, PIN, SMS, BBIKI
   if (/^[A-Z]{2,}$/.test(v)) return true;
   return KEEP_IN_ENGLISH.has(v.toLowerCase());
 }
@@ -130,7 +137,10 @@ if (process.argv[1] && process.argv[1].endsWith('audit-luganda.ts')) {
     console.log(JSON.stringify({ untranslated, inline, gaps }, null, 2));
   } else {
     console.log(`Luganda audit — ${untranslated} dictionary strings + ${inline} inline strings still English\n`);
-    for (const g of gaps) console.log(`  ${g.where.padEnd(34)} ${g.english}`);
+    for (const g of gaps) {
+      const found = g.luganda && g.luganda !== g.english ? `  <- still English: "${g.luganda}"` : '';
+      console.log(`  ${g.where.padEnd(34)} ${g.english}${found}`);
+    }
     console.log(`\nThese are the words to hand a Luganda speaker.`);
   }
   if (process.argv.includes('--fail') && gaps.length > 0) process.exit(1);

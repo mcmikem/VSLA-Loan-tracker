@@ -155,10 +155,10 @@ describe('offline group builder', () => {
     // meet two words for one thing. The settled vocabulary:
     // mmemba, ebbanja, sasula, amagoba, Ebokisi, abakungu.
     const landing = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-    for (const word of ['mmemba', 'ebbanja', 'Ssula', 'amagoba', 'ebokisi', 'abakungu']) {
+    for (const word of ['mmemba', 'ebbanja', 'okusasula', 'kukusasula', 'amagoba', 'ebokisi', 'abakungu']) {
       expect(landing, `landing must use ${word}`).toContain(word);
     }
-    for (const gone of ['muwammemba', 'okubazza', 'okubaza', 'okusula', 'kubazza', 'emmundu', 'kasanduuko', 'sanduuko', 'ekibanja']) {
+    for (const gone of ['muwammemba', 'okubazza', 'okubaza', 'okusula', 'kubazza', 'oku Ssula', 'emmundu', 'kasanduuko', 'sanduuko', 'ekibanja']) {
       expect(landing, `${gone} must not return to the landing`).not.toContain(gone);
     }
     const flat = (o: any, p = ''): [string, string][] =>

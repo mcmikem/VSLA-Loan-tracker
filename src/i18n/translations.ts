@@ -405,8 +405,8 @@ export const translations = {
       sharePriceNotice: (price: number) => `UGX ${price.toLocaleString()} per share`,
       confirmStampBtn: 'Confirm purchase',
       repaymentModalTitle: 'Sasula ebbanja',
-      amountToRepay: 'Repayment amount (UGX)',
-      confirmRepaymentBtn: 'Confirm repayment',
+      amountToRepay: 'Omuwendo gwo okusasula (UGX)',
+      confirmRepaymentBtn: 'Kakasa okusasula',
     },
     // Meeting Close & Strongbox Reconciliation View (Oluganda)
     meetingClose: {
@@ -452,7 +452,7 @@ export const translations = {
         agriculture: 'Agriculture',
         emergency: 'Emergency',
       },
-      durationMonths: 'Repayment period',
+      durationMonths: 'Obunaku bwo okusasula',
       interestRateNotice: 'Amagoba',
       monthlyPaymentEst: 'Monthly repayment',
       guarantorsLabel: 'Abakkiriza',

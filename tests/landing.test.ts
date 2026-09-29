@@ -412,7 +412,7 @@ describe('landing: what the rendered page was actually doing', () => {
       'Laba eby\u2019okutereka ne shares zo',
       'Manya embeera y\u2019ebbanja lyo',
       'Saba ebbanja era ogoberere',
-      'Fuuna okujjukizibwa ku Ssula',
+      'Fuuna okujjukizibwa kukusasula',
       'Tunda eri bammemba',
       'Goberera ebirangiriro by\u2019ekibiina',
     ]) {
@@ -511,6 +511,35 @@ describe('landing: what the rendered page was actually doing', () => {
     // the channel in a marketplace row is a tag, not another heading
     expect(landing).toContain('.market-tag{');
     expect(landing.match(/class="market-tag"/g)?.length).toBe(4);
+  });
+
+  it('a card inside a 12-column grid declares how many columns it takes', () => {
+    // The privacy cards were written with no col-span at all, so each one
+    // auto-placed into a single 1/12 track: 68px wide, one word per line, and
+    // nine empty columns beside them. A card with no span in a grid is a
+    // silent layout bug, so the pattern is pinned here.
+    expect(landing).not.toMatch(/class="flex gap-3 items-start rounded-lg p-5"/);
+    const privacy = landing.slice(landing.indexOf('id="privacy"'), landing.indexOf('id="pricing"'));
+    const cards = [...privacy.matchAll(/class="(col-span-4[^"]*)"/g)].map((m) => m[1]);
+    expect(cards.length, 'the privacy section has three cards').toBe(3);
+    for (const c of cards) {
+      expect(c, `privacy card must span a third of the row: ${c}`).toContain('flex gap-3 items-start');
+    }
+    // the marketplace list, the member grid and the two pricing cards all do
+    // declare a span, and that is the shape the rest of the page follows
+    expect(landing.match(/col-span-4/g)?.length ?? 0).toBeGreaterThan(20);
+  });
+
+  it('a collapsed FAQ answer cannot show a sliver of its own text', () => {
+    // `overflow: hidden` clips to the PADDING box, so the padding has to live
+    // inside the clipped element. With px-5 pb-5 on .faq-a-in itself, the 0fr
+    // track resolved to 20px and the first line of every answer stayed visible
+    // under its question.
+    expect(landing).not.toContain('class="faq-a-in px-5 pb-5"');
+    expect(landing).toContain('class="faq-a-in"><div class="px-5 pb-5">');
+    expect(landing).toContain('.faq-a-in{overflow:hidden;min-height:0}');
+    // and the no-JavaScript path must still lay every answer open
+    expect(landing).toContain('.faq-a{grid-template-rows:1fr}');
   });
 
   it('the hero shows a working account, not a picture of one', () => {
