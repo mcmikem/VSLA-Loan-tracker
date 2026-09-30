@@ -451,6 +451,12 @@ export interface AppNotification {
 
 export interface VSLAState {
   groupId?: string;
+  /**
+   * Sequence number of the last journalled commit. Compared against the
+   * journal on launch to complete a write that was interrupted, so a phone
+   * that died mid-meeting does not lose the meeting silently.
+   */
+  journalSeq?: number;
   groupProfile?: GroupProfile;
   groupName: string;
   boxIdentifier: string;

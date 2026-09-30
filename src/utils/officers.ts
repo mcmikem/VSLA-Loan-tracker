@@ -12,6 +12,7 @@
  *  - the last officer who may approve payments can never be removed or demoted
  */
 import { PendingOfficerChange, UserAccount } from '../types';
+import { derivePinVerifier } from './pin';
 
 export type OfficerChangeKind = 'add' | 'role' | 'permissions' | 'pin' | 'remove';
 
@@ -218,7 +219,7 @@ export function officerFromDraft(draft: NewOfficerDraft, id: string): UserAccoun
     role: draft.role,
     roleTitle: draft.roleTitle.trim() || draft.role,
     zone: 'Officer',
-    pin: draft.pin,
+    pin: derivePinVerifier(draft.pin),
     avatarInitials: draft.name
       .trim()
       .split(/\s+/)
@@ -301,7 +302,7 @@ export function buildPending(
             phone: draft.phone.trim() || undefined,
             role: draft.role,
             roleTitle: draft.roleTitle.trim() || draft.role,
-            ...(draft.pin ? { pin: draft.pin } : {}),
+            ...(draft.pin ? { pin: derivePinVerifier(draft.pin) } : {}),
             permissions: {
               canLockBox: draft.canLockBox,
               canApproveLoans: draft.canApproveLoans,

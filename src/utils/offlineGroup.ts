@@ -1,4 +1,5 @@
 import type { CreateGroupPayload, GroupSummary, VSLAState } from '../types';
+import { derivePinVerifier } from './pin';
 
 const PENDING_GROUP_KEY = 'vsla_pending_group_v1';
 
@@ -37,7 +38,8 @@ export function buildLocalGroup(payload: CreateGroupPayload): {
     role: 'secretary' as const,
     roleTitle: 'General Secretary & Box Teller',
     zone: payload.location?.trim() || 'Headquarters',
-    pin: payload.adminPin || '1234',
+    // the PIN itself is never written to storage; only a verifier is
+    pin: derivePinVerifier(payload.adminPin || '1234'),
     avatarInitials: initials,
     avatarBg: 'bg-emerald-700',
     permissions: {

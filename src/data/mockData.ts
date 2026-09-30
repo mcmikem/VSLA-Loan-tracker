@@ -1,4 +1,5 @@
 import { ApprovalItem, Member, PendingFine, UserAccount, WelfareGrant } from '../types';
+import { derivePinVerifier } from '../utils/pin';
 
 export const SEED_ACCOUNTS: UserAccount[] = [
   {
@@ -10,7 +11,7 @@ export const SEED_ACCOUNTS: UserAccount[] = [
     role: 'secretary',
     roleTitle: 'General Secretary & Box Teller',
     zone: 'Kalerwe Central Office',
-    pin: '1234',
+    pin: derivePinVerifier('1234'),
     avatarInitials: 'GA',
     avatarBg: 'bg-emerald-700',
     nationalId: 'CM84029103KL9',
@@ -33,7 +34,7 @@ export const SEED_ACCOUNTS: UserAccount[] = [
     role: 'keyholder',
     roleTitle: 'Keyholder 1 (Padlock Key A)',
     zone: 'Kalerwe Market Zone B · Produce',
-    pin: '1234',
+    pin: derivePinVerifier('1234'),
     avatarInitials: 'SN',
     avatarBg: 'bg-amber-600',
     nationalId: 'CF79018492KA4',
@@ -56,7 +57,7 @@ export const SEED_ACCOUNTS: UserAccount[] = [
     role: 'treasurer',
     roleTitle: 'Group Treasurer & Keyholder 2 (Key B)',
     zone: 'Kalerwe Zone A · Hardware',
-    pin: '1234',
+    pin: derivePinVerifier('1234'),
     avatarInitials: 'PS',
     avatarBg: 'bg-blue-700',
     nationalId: 'CM75043128KB1',
@@ -78,7 +79,7 @@ export const SEED_ACCOUNTS: UserAccount[] = [
     role: 'keyholder',
     roleTitle: 'Keyholder 3 (Padlock Key C)',
     zone: 'Kalerwe Zone C · Elder Council',
-    pin: '1234',
+    pin: derivePinVerifier('1234'),
     avatarInitials: 'DA',
     avatarBg: 'bg-purple-700',
     nationalId: 'CM68019342KC9',
@@ -101,7 +102,7 @@ export const SEED_ACCOUNTS: UserAccount[] = [
     role: 'member',
     roleTitle: 'Active Member (Bodaboda Stage)',
     zone: 'Kalerwe Zone B · Agriculturalist',
-    pin: '1234',
+    pin: derivePinVerifier('1234'),
     avatarInitials: 'JM',
     avatarBg: 'bg-teal-700',
     nationalId: 'CM91054231KD3',
@@ -124,7 +125,7 @@ export const SEED_ACCOUNTS: UserAccount[] = [
     role: 'member',
     roleTitle: 'Active Member (Market Tailor)',
     zone: 'Kalerwe Zone B · Tailor',
-    pin: '1234',
+    pin: derivePinVerifier('1234'),
     avatarInitials: 'PN',
     avatarBg: 'bg-rose-700',
     nationalId: 'CF88034192KE7',
@@ -147,7 +148,7 @@ export const SEED_ACCOUNTS: UserAccount[] = [
     role: 'member',
     roleTitle: 'Active Member (Produce Cashier)',
     zone: 'Kalerwe Market · Cashier',
-    pin: '1234',
+    pin: derivePinVerifier('1234'),
     avatarInitials: 'KM',
     avatarBg: 'bg-indigo-700',
     nationalId: 'CM86092143KF2',

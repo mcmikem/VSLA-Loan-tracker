@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { verifyPinLocally } from '../src/utils/pin';
 import {
   GAP_TWO_KEY_THRESHOLD,
   WELFARE_FAST_TRACK_CAP,
@@ -105,7 +106,11 @@ describe('offline group builder', () => {
     expect(state.recentMeetingsCount).toBe(0);
     expect(state.members[0].sharesTotal).toBe(0);
     expect(state.members[0].maxBorrowLimit).toBe(0);
-    expect(state.availableAccounts?.[0].pin).toBe('5678');
+    // the PIN itself must never be written to storage
+    expect(state.availableAccounts?.[0].pin).not.toBe('5678');
+    expect(state.availableAccounts?.[0].pin.startsWith('offline1:')).toBe(true);
+    expect(verifyPinLocally('5678', state.availableAccounts?.[0].pin)).toBe(true);
+    expect(verifyPinLocally('9999', state.availableAccounts?.[0].pin)).toBe(false);
     expect(group.id).toBe(state.groupId);
   });
 

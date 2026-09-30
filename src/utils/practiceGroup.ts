@@ -1,4 +1,5 @@
 import type { Member, VSLAState } from '../types';
+import { derivePinVerifier } from './pin';
 
 export const PRACTICE_GROUP_ID = 'practice-play-money';
 const STASH_STATE_KEY = 'vsla_practice_stash_state_v1';
@@ -105,7 +106,7 @@ export function buildPracticeState(): VSLAState {
       role: 'secretary',
       roleTitle: 'Practice Secretary',
       zone: 'Practice Zone',
-      pin: '1234',
+      pin: derivePinVerifier('1234'),
       avatarInitials: 'PS',
       avatarBg: 'bg-emerald-700',
       permissions: {

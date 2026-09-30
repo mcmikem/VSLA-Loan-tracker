@@ -89,7 +89,8 @@ import {
   verifyOfficerKey,
 } from './utils/dualApproval';
 import { mergePhotosIntoRestored, stripPhotosForSnapshot } from './utils/photo';
-import { isDefaultPin } from './utils/pin';
+import { isDefaultPin, migratePlaintextPins } from './utils/pin';
+import { journalCommit, recoverUnfinishedCommit } from './utils/journal';
 import { hasPermission, permissionRefusal } from './utils/permissions';
 import { PublicDisplayModal } from './components/PublicDisplayModal';
 import { WelcomeView } from './components/WelcomeView';
@@ -196,6 +197,34 @@ export function App() {
       return PRACTICE_GROUP_ID;
     }
   });
+  /**
+   * A group created before the PIN verifier existed still holds its officer's
+   * PIN in plaintext, and that plaintext is in localStorage and in every
+   * backup. This replaces it with a verifier while the PIN is still in hand,
+   * so it is never written again. Runs on adopt and on every persist, and is a
+   * no-op once there is nothing left to migrate.
+   */
+  const adoptState = useCallback((incoming: VSLAState): VSLAState => {
+    // A commit that was journalled but never finished is newer than what we
+    // were handed: the phone died between the two writes. Take the journal's.
+    const { state: recovered } = recoverUnfinishedCommit(currentGroupId, incoming);
+    let next = recovered;
+
+    const accounts = next?.availableAccounts;
+    if (Array.isArray(accounts) && accounts.length) {
+      const { accounts: upgraded, migrated } = migratePlaintextPins(accounts);
+      if (migrated) {
+        next = {
+          ...next,
+          availableAccounts: upgraded,
+          currentUser: next.currentUser?.pin
+            ? { ...next.currentUser, pin: upgraded.find((a) => a.id === next.currentUser?.id)?.pin ?? next.currentUser.pin }
+            : next.currentUser,
+        };
+      }
+    }
+    return next;
+  }, [currentGroupId]);
   const [availableGroups, setAvailableGroups] = useState<GroupSummary[]>([]);
   // Groups signed in on THIS phone (id → name + session token). The switcher
   // and directory only ever offer these — strangers' groups are unreachable.
@@ -313,11 +342,12 @@ export function App() {
       if (res.ok) {
         const data = await res.json();
         if (data.state && Array.isArray(data.state.members)) {
-          setVslaState(data.state);
+          const adopted = adoptState(data.state);
+          setVslaState(adopted);
           setCurrentGroupId(gid);
-           setSelectedBox(`${data.state.groupName || 'Savings Group'} • ${data.state.boxIdentifier || 'BOX'}`);
+           setSelectedBox(`${adopted.groupName || 'Savings Group'} • ${adopted.boxIdentifier || 'BOX'}`);
           try {
-            localStorage.setItem('bakwata_vsla_state', JSON.stringify(data.state));
+            localStorage.setItem('bakwata_vsla_state', JSON.stringify(adopted));
             localStorage.setItem('bakwata_active_group_id', gid);
           } catch (e) {}
            setIsServerConnected(true);
@@ -334,7 +364,11 @@ export function App() {
   }, [currentGroupId]);
 
   // Persist to Server and LocalStorage
-  const persistState = useCallback(async (nextState: VSLAState) => {
+  const persistState = useCallback(async (rawState: VSLAState) => {
+    // Write-ahead: the journal is written BEFORE the state key, so a phone
+    // that dies here leaves a recoverable trace rather than a silently lost
+    // meeting. journalCommit never throws, so a full phone still saves.
+    const nextState = journalCommit(currentGroupId, adoptState(rawState));
     nextState.groupId = currentGroupId;
     setVslaState(nextState);
     try {
@@ -415,7 +449,8 @@ export function App() {
   };
 
   const handleCreateGroup = async (payload: CreateGroupPayload) => {
-    const applyState = (state: VSLAState, gid: string) => {
+    const applyState = (rawState: VSLAState, gid: string) => {
+      const state = adoptState(rawState);
       setVslaState(state);
       setCurrentGroupId(gid);
       setSelectedBox(`${state.groupName} • ${state.boxIdentifier}`);

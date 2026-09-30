@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { verifyPinLocally } from '../src/utils/pin';
 import { readFileSync } from 'node:fs';
 import {
   EMPTY_OFFICER,
@@ -99,7 +100,12 @@ describe('adding an officer', () => {
 
   it('builds an account that can actually turn a key', () => {
     const account = officerFromDraft(draft, 'o-new');
-    expect(account).toMatchObject({ id: 'o-new', name: 'Alice Namutebi', role: 'keyholder', pin: '9182' });
+    expect(account).toMatchObject({ id: 'o-new', name: 'Alice Namutebi', role: 'keyholder' });
+    // the PIN is stored as a verifier, never as itself
+    expect(String(account.pin).startsWith('offline1:')).toBe(true);
+    expect(String(account.pin)).not.toContain('9182');
+    expect(verifyPinLocally('9182', account.pin)).toBe(true);
+    expect(verifyPinLocally('9183', account.pin)).toBe(false);
     expect(account.permissions.canApproveLoans).toBe(true);
     expect(account.avatarInitials).toBe('AN');
   });
@@ -217,7 +223,12 @@ describe('key 1 freezes the change, key 2 writes it', () => {
       '2026-05-01T10:00:00.000Z',
       'oc-3'
     );
-    expect(applyPending(roster, pending).find((a) => a.id === chair.id)?.pin).toBe('7788');
+    const reset = applyPending(roster, pending).find((a) => a.id === chair.id);
+    // a PIN reset writes a verifier too, so the new PIN is not on the device
+    expect(String(reset?.pin).startsWith('offline1:')).toBe(true);
+    expect(String(reset?.pin)).not.toContain('7788');
+    expect(verifyPinLocally('7788', reset?.pin)).toBe(true);
+    expect(verifyPinLocally('1111', reset?.pin)).toBe(false);
   });
 
   it('removal drops the account', () => {

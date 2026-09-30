@@ -1,4 +1,5 @@
 import { ApprovalItem, Language, UserAccount } from '../types';
+import { isDefaultPin, verifyPinLocally } from './pin';
 
 /**
  * Two-key rule for village trust.
@@ -130,9 +131,15 @@ export function verifyOfficerKey(
     error: officerKeyErrorMessage(code, name, language),
   });
   if (options.requireApprover && !account.permissions?.canApproveLoans) return fail('not-approved');
+  // The server's scrypt format cannot be checked in the browser, so an account
+  // that signs in securely must be approved from the signed-in session.
   if (String(account.pin || '').startsWith('hash:')) return fail('secure');
-  if (!pin || pin !== String(account.pin)) return fail('wrong');
-  if (String(account.pin) === '1234') return fail('default');
+  // A verifier, or a legacy plaintext PIN from a group created before the
+  // verifier existed. verifyPinLocally covers both, in constant time.
+  if (!pin || !verifyPinLocally(pin, account.pin)) return fail('wrong');
+  // isDefaultPin reads the flag out of a verifier, so the gate that stops a
+  // default PIN moving money still works now that the PIN is not stored.
+  if (isDefaultPin(account.pin)) return fail('default');
   return { ok: true, name };
 }
 
