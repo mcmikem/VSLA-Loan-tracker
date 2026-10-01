@@ -10,7 +10,16 @@
  */
 import { z } from 'zod';
 import { cors, rateLimit, validate } from '../lib/_lib.js';
-import { authEnforced, hashPin, issueSession, readSession, verifyPin } from '../lib/_auth.js';
+import {
+  authEnforced,
+  clearPinFailures,
+  hashPin,
+  issueSession,
+  notePinFailure,
+  pinLockedFor,
+  readSession,
+  verifyPin,
+} from '../lib/_auth.js';
 import { groupExists, loadGroup, saveGroup, storageInfo } from '../lib/_db.js';
 import { getSeedForGroup, isDemoGroupId, resolveGroupId, SEED_ACCOUNTS } from '../lib/_seed.js';
 
@@ -56,13 +65,31 @@ async function handleLogin(req, res) {
   const pool = group.availableAccounts || [];
   const account = pool.find((a) => a.id === input.accountId);
 
-  // Uniform error to avoid account enumeration.
+  // Uniform error to avoid account enumeration. Account ids are generated
+  // (acc-admin-<base36 timestamp>), so there is nothing to enumerate anyway.
   if (!account || !verifyPin(input.pin, account.pin)) {
+    if (account) {
+      const waitMs = pinLockedFor(account);
+      if (waitMs > 0) {
+        // A real wait, and an honest number, so a treasurer who fumbled twice
+        // knows to come back rather than keep guessing.
+        res.setHeader('Retry-After', String(Math.ceil(waitMs / 1000)));
+        const minutes = Math.ceil(waitMs / 60000);
+        return res.status(429).json({
+          error: minutes > 1
+            ? `Too many wrong PINs. Try again in ${minutes} minutes.`
+            : `Too many wrong PINs. Try again in ${Math.ceil(waitMs / 1000)} seconds.`,
+        });
+      }
+      notePinFailure(account);
+      await saveGroup(groupId, group);
+    }
     return res.status(401).json({ error: 'Wrong account or PIN.' });
   }
+  clearPinFailures(account);
 
-  if (!String(account.pin || '').startsWith('hash:')) {
-    account.pin = hashPin(input.pin);
+  if (!String(account.pin || '').startsWith('hash:') || account.pinLock) {
+    account.pin = String(account.pin || '').startsWith('hash:') ? account.pin : hashPin(input.pin);
     await saveGroup(groupId, group);
   }
 
@@ -193,7 +220,19 @@ async function handleChangePin(req, res) {
     if (!input.oldPin) {
       return res.status(400).json({ error: 'Enter your current PIN first.' });
     }
+    const waitMs = pinLockedFor(account);
+    if (waitMs > 0) {
+      res.setHeader('Retry-After', String(Math.ceil(waitMs / 1000)));
+      const minutes = Math.ceil(waitMs / 60000);
+      return res.status(429).json({
+        error: minutes > 1
+          ? `Too many wrong PINs. Try again in ${minutes} minutes.`
+          : `Too many wrong PINs. Try again in ${Math.ceil(waitMs / 1000)} seconds.`,
+      });
+    }
     if (!verifyPin(input.oldPin, account.pin)) {
+      notePinFailure(account);
+      await saveGroup(groupId, group);
       return res.status(401).json({ error: 'Current PIN is wrong.' });
     }
   }
